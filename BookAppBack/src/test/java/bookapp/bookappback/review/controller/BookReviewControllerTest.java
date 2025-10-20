@@ -5,6 +5,8 @@ import bookapp.bookappback.book.dto.KakaoBookDto;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.review.dto.ReviewRequest;
+import bookapp.bookappback.review.entity.BookReview;
+import bookapp.bookappback.review.repository.BookReviewRepository;
 import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
@@ -22,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -41,6 +43,9 @@ class BookReviewControllerTest {
 
     @Autowired
     private BookRepository bookRepository;
+
+    @Autowired
+    private BookReviewRepository bookReviewRepository;
 
     private User testUser;
     private Book testBook;
@@ -85,11 +90,71 @@ class BookReviewControllerTest {
         String jsonRequest = objectMapper.writeValueAsString(reviewRequest);
 
         // when & then
-        mockMvc.perform(post("/api/book/" + testBook.getId() + "/review")
+        mockMvc.perform(post("/api/books/" + testBook.getId() + "/review")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
                 .andExpect(status().isCreated())
                 .andExpect(header().exists("Location"))
                 .andExpect(jsonPath("$.success").value(true));
+    }
+
+    @Test
+    @DisplayName("리뷰 작성 실패 - 인증 없음")
+    void createReview_unauthorized() throws Exception {
+        ReviewRequest reviewRequest = new ReviewRequest();
+        reviewRequest.setComment("인증 없이 작성 시도");
+        reviewRequest.setRating(4.0);
+
+        mockMvc.perform(post("/api/books/" + testBook.getId() + "/review")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewRequest)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("리뷰 작성 실패 - 존재하지 않는 책")
+    void createReview_bookNotFound() throws Exception {
+        UserDetailsImpl userDetails = new UserDetailsImpl(testUser);
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        ReviewRequest reviewRequest = new ReviewRequest();
+        reviewRequest.setComment("없는 책 리뷰 작성 시도");
+        reviewRequest.setRating(5.0);
+
+        mockMvc.perform(post("/api/books/99999/review")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewRequest)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("책에 대한 리뷰 목록 조회 성공")
+    void getReviewsByBook_success() throws Exception {
+        // given: 리뷰 데이터 하나 생성
+        UserDetailsImpl userDetails = new UserDetailsImpl(testUser);
+        BookReview review = new BookReview();
+        review.setBook(testBook);
+        review.setUser(testUser);
+        review.setComment("테스트 리뷰입니다");
+        review.setRating(4.5);
+        bookReviewRepository.save(review);
+
+        // when & then
+        mockMvc.perform(get("/api/books/" + testBook.getId() + "/reviews")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data[0].comment").value("테스트 리뷰입니다"));
+    }
+
+    @DisplayName("리뷰 목록 조회 실패 - 리뷰 없음")
+    void getReviewsByBook_notFound() throws Exception {
+        mockMvc.perform(get("/api/books/" + testBook.getId() + "/reviews")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("REVIEW_NOT_FOUND"));
     }
 }

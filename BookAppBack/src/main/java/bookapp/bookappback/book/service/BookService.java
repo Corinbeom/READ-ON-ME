@@ -4,17 +4,21 @@ import bookapp.bookappback.book.dto.KakaoBookDto;
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.repository.BookRepository;
-import lombok.extern.slf4j.Slf4j; // Add this import
+import bookapp.bookappback.common.exception.BookExceptions;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
+import reactor.util.retry.Retry;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 @Service
-@Slf4j // Add this annotation
+@Slf4j
 public class BookService {
 
     private final BookRepository bookRepository;
@@ -26,62 +30,65 @@ public class BookService {
         this.kakaoBookService = kakaoBookService;
     }
 
-    // 카카오 API에서 책 검색 (target 파라미터 포함)
-    public Mono<KakaoBookSearchResponse> searchBooksFromKakao(
-            String query,
-            int page,
-            int size,
-            String sort,
-            String target
+
+    // ✅ 카카오 API에서 책 검색 (동기식)
+    public KakaoBookSearchResponse searchBooksFromKakao(
+            String query, int page, int size, String sort, String target
     ) {
-        return kakaoBookService.searchBooks(query, page, size, sort, target);
+        try {
+            return kakaoBookService.searchBooks(query, page, size, sort, target)
+                    .retryWhen(Retry.fixedDelay(1, Duration.ofMillis(300)))
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .block(); // ✅ Mono → 동기 변환
+        } catch (Exception e) {
+            log.error("카카오 API 호출 실패: {}", e.getMessage());
+            throw new BookExceptions.ExternalApiException("카카오 API 호출 실패: " + e.getMessage());
+        }
     }
 
-    // Overloaded method with default parameters
-    public Mono<KakaoBookSearchResponse> searchBooksFromKakao(String query) {
+    // 기본값 오버로드
+    public KakaoBookSearchResponse searchBooksFromKakao(String query) {
         return searchBooksFromKakao(query, 1, 10, "accuracy", null);
     }
 
-    // ISBN으로 책 상세 정보 가져오기
-    public Mono<Book> getBookByIsbn(String isbn) {
-        // 1. DB에서 ISBN13 기준으로 조회
-        return Mono.justOrEmpty(bookRepository.findByIsbn13(isbn).stream().findFirst())
-                .switchIfEmpty(Mono.defer(() -> {
-                    // 2. DB에 없으면 카카오 API에서 조회
-                    return kakaoBookService.searchBookByIsbn(isbn)
-                            .map(response -> {
-                                if (response.getDocuments().isEmpty()) {
-                                    log.warn("No book found for ISBN {} from Kakao API.", isbn); // Log if no book from Kakao
-                                    return null;
-                                }
-                                KakaoBookDto kakaoBookDto = response.getDocuments().get(0);
-                                // 3. 카카오 API에서 가져온 책을 DB에 저장하고 반환
-                                return saveBookToUserLibrary(kakaoBookDto);
-                            });
-                }))
-                .doOnNext(book -> { // Add logging here
-                    if (book != null) {
-                        log.info("Returning book with ID: {} for ISBN: {}", book.getId(), isbn);
-                    } else {
-                        log.warn("Returning null book for ISBN: {}", isbn);
+    // ✅ ISBN으로 책 상세 정보 조회
+    public Book getBookByIsbn(String isbn) {
+        return bookRepository.findByIsbn13(isbn).stream().findFirst()
+                .orElseGet(() -> {
+                    KakaoBookSearchResponse response;
+                    try {
+                        response = kakaoBookService.searchBookByIsbn(isbn)
+                                .subscribeOn(Schedulers.boundedElastic())
+                                .block();
+                    } catch (Exception e) {
+                        throw new BookExceptions.ExternalApiException("카카오 API 호출 실패: " + e.getMessage());
                     }
+
+                    if (response == null || response.getDocuments().isEmpty()) {
+                        throw new BookExceptions.BookNotFoundException("검색 결과가 없습니다: " + isbn);
+                    }
+
+                    return saveBookToUserLibrary(response.getDocuments().get(0));
                 });
     }
 
-    // 사용자가 서재에 추가할 때만 DB에 저장
+    // ✅ DB에 책 저장 (사용자 서재 추가 시)
     public Book saveBookToUserLibrary(KakaoBookDto kakaoBook) {
-        // ISBN13 우선 사용, 없으면 ISBN10 사용
-        String[] isbns = kakaoBook.getIsbn().split(" ");
-        String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
-        String isbn10 = isbns.length > 0 ? isbns[0] : null;
+        try {
+            String[] isbns = kakaoBook.getIsbn().split(" ");
+            String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
+            String isbn10 = isbns.length > 0 ? isbns[0] : null;
 
-        // DB에 이미 존재하는지 체크 (ISBN13 기준)
-        Book existingBook = bookRepository.findByIsbn13(isbn13).stream().findFirst().orElse(null);
-        if (existingBook != null) {
-            return existingBook;
-        } else {
+            Book existingBook = bookRepository.findByIsbn13(isbn13).stream().findFirst().orElse(null);
+            if (existingBook != null) {
+                return existingBook;
+            }
+
             Book book = Book.fromKakaoApiResponse(kakaoBook);
             return bookRepository.save(book);
+        } catch (Exception e) {
+            log.error("책 저장 중 오류 발생: {}", e.getMessage());
+            throw new BookExceptions.ExternalApiException("DB 저장 실패: " + e.getMessage());
         }
     }
 
@@ -91,7 +98,6 @@ public class BookService {
                 book.getTitle(),
                 book.getContents() != null ? book.getContents() : "",
                 book.getUrl() != null ? book.getUrl() : "",
-                // ISBN 합치기 (isbn10 + 공백 + isbn13)
                 (book.getIsbn10() != null ? book.getIsbn10() : "") +
                         (book.getIsbn13() != null ? " " + book.getIsbn13() : ""),
                 book.getPublishDate() != null ? book.getPublishDate().toString() : "",
@@ -101,12 +107,12 @@ public class BookService {
                 book.getPrice() != null ? book.getPrice() : 0,
                 book.getSalePrice() != null ? book.getSalePrice() : 0,
                 book.getThumbnail() != null ? book.getThumbnail() : "",
-                "" // status는 Book 엔티티에 없음
+                ""
         );
     }
 
+    // 인기 도서 조회
     public List<Book> getPopularBooks(int limit) {
-        // 현재는 단순히 최근 추가된 책 기준으로 조회
         return bookRepository.findAll()
                 .stream()
                 .sorted((b1, b2) -> b2.getCreatedAt().compareTo(b1.getCreatedAt()))
