@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
+import axios, { AxiosError } from 'axios';
 import {
   ActivityIndicator,
   Image,
@@ -97,7 +98,11 @@ export default function BookDetailScreen() {
         setReviews(res.data.data);
       }
     } catch (error) {
-      console.error('리뷰 조회 실패:', error);
+      if (axios.isAxiosError(error)) {
+        console.log('리뷰 조회 실패(Axios Erro):', error.response?.data || error.message);
+      } else {
+        console.log('알 수 없는 오류:', error);
+      }
     }
   };
 

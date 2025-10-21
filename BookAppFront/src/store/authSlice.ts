@@ -1,4 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../services/api';
 
 export interface User {
@@ -27,16 +28,36 @@ const initialState: AuthState = {
 
 export const signIn = createAsyncThunk(
   'auth/signIn',
-  async (credentials: { email: string; password: string }, { rejectWithValue }) => {
+  async (
+    credentials: { email: string; password: string },
+    { rejectWithValue }
+  ) => {
     try {
       const response = await authApi.signIn(credentials);
-      if (response.data.success) {
-        return response.data.data;
-      } else {
-        return rejectWithValue(response.data.message);
+
+      // ✅ READ-ON-ME 백엔드 구조 기준
+      const { success, data, message } = response.data;
+
+      if (!success || !data) {
+        return rejectWithValue(message || '로그인 실패');
       }
+
+      const { access_token, user } = data;
+
+      if (!access_token) {
+        return rejectWithValue('JWT 토큰이 응답에 없습니다.');
+      }
+
+      // ✅ AsyncStorage에 토큰 저장
+      await AsyncStorage.setItem('accessToken', access_token);
+      console.log('🔐 로그인 성공 — 토큰 저장 완료:', access_token);
+
+      return { token: access_token, user };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || '로그인 실패');
+      console.error('로그인 실패:', error.response?.data);
+      return rejectWithValue(
+        error.response?.data?.message || '로그인 중 오류가 발생했습니다.'
+      );
     }
   }
 );
@@ -82,6 +103,7 @@ const authSlice = createSlice({
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
+      AsyncStorage.removeItem('accessToken');
     },
     clearError: (state) => {
       state.error = null;
@@ -98,7 +120,7 @@ const authSlice = createSlice({
       })
       .addCase(signIn.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.token = action.payload.access_token;
+        state.token = action.payload.token;
         state.user = action.payload.user;
         state.isAuthenticated = true;
         state.error = null;

@@ -1,47 +1,82 @@
 // BookAppFront/src/services/api.ts
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
+import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
-// 디바이스/에뮬레이터 환경별 기본 URL 설정
-// - iOS 시뮬레이터: localhost 접근 가능
-// - Android 에뮬레이터: 10.0.2.2 사용
-// - 실제 디바이스: 같은 네트워크의 개발 머신 IP 사용
+// 📍 환경별 Base URL 설정
 const API_BASE_URL = (() => {
   if (Platform.OS === 'android') return 'http://10.0.2.2:8080';
   return 'http://localhost:8080';
 })();
 
+// 📍 공통 Axios 인스턴스
 export const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// 인증 관련 API
+api.interceptors.request.use(async (config) => {
+  const noAuthPaths = [
+    '/api/books/search',
+    '/api/books/detail',
+    '/api/books/popular',
+    // '/api/books', 
+    '/api/users/signin',
+    '/api/users/signup',
+  ];
+  
+  const shouldSkipAuth = noAuthPaths.some((path) =>
+    config.url?.includes(path)
+  );
+  const token = await AsyncStorage.getItem('accessToken');
+
+  console.log('📤 요청 URL:', config.url);
+  console.log('🔐 shouldSkipAuth:', shouldSkipAuth);
+  console.log('🔑 토큰:', token);
+
+  if (!shouldSkipAuth) {
+    const token = await AsyncStorage.getItem('accessToken');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+// ✅ 전역 인터셉터 — 모든 API 오류를 한 곳에서 처리
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    const message = handleApiError(error);
+    customAlert('오류', message); // 사용자에게 표시
+    return Promise.reject(error);
+  }
+);
+
+//
+// 👇 아래부터는 기존의 API 모듈들 그대로 유지
+//
+
+// 🔹 인증 관련 API
 export const authApi = {
-  // 로그인
   signIn: (data: { email: string; password: string }) =>
     api.post('/api/users/signin', data),
 
-  // 회원가입
   signUp: (data: { email: string; password: string; nickname: string }) =>
     api.post('/api/users/signup', data),
 
-  // 프로필 조회
   getProfile: (token: string) =>
     api.get('/api/users/profile', {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  // API 테스트
   test: () => api.get('/api/users/test'),
 };
 
-// 책 관련 API
+// 🔹 책 관련 API
 export const bookApi = {
-  // 책 검색
   searchBooks: (params: {
     query: string;
     page?: number;
@@ -50,45 +85,35 @@ export const bookApi = {
     target?: 'title' | 'isbn' | 'publisher' | 'person';
   }) => api.get('/api/books/search', { params }),
 
-  // 책 상세 조회
   getBookDetail: (isbn: string) => api.get(`/api/books/detail/${isbn}`),
-
-  // 인기 책 조회
   getPopularBooks: () => api.get('/api/books/popular'),
-
-  // API 테스트
   test: () => api.get('/api/books/test'),
 };
 
-
-// 리뷰 관련 API
+// 🔹 리뷰 관련 API
 export const reviewApi = {
-  // 리뷰 생성
   createReview: (
     bookId: number,
     data: { comment: string; rating: number },
     token: string
   ) =>
-    api.post(`/api/book/${bookId}/review`, data, {
+    api.post(`/api/books/${bookId}/review`, data, {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  // 특정 책의 리뷰 목록 조회
-  getReviewsByBook: (bookId: number) => api.get(`/api/book/${bookId}/reviews`),
+  getReviewsByBook: (bookId: number) => api.get(`/api/books/${bookId}/reviews`),
 
-  // 리뷰 수정
   updateReview: (
     reviewId: number,
     data: { comment: string; rating: number },
     token: string
   ) =>
-    api.put(`/api/book/review/${reviewId}`, data, {
+    api.put(`/api/books/review/${reviewId}`, data, {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
-  // 리뷰 삭제
   deleteReview: (reviewId: number, token: string) =>
-    api.delete(`/api/book/review/${reviewId}`, {
+    api.delete(`/api/books/review/${reviewId}`, {
       headers: { Authorization: `Bearer ${token}` },
     }),
 };
