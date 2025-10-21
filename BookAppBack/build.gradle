@@ -44,6 +44,10 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.3")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.3")
 
+	// env
+	implementation 'io.github.cdimascio:java-dotenv:5.2.2'
+
+
 	// 테스트
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")
