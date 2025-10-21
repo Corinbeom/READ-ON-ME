@@ -27,8 +27,8 @@ public class JwtUtil {
         Date expiryDate = new Date(now.getTime() + jwtConfig.getExpiration());
 
         return Jwts.builder()
-                .setSubject(userId.toString())
-                .claim("email", email)
+                .setSubject(email)
+                .claim("userId", userId)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(secretKey)

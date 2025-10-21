@@ -55,9 +55,6 @@ public class BookReviewService {
                 .orElseThrow(() -> new BookExceptions.BookNotFoundException(String.valueOf(bookId)));
 
         List<BookReview> reviews = bookReviewRepository.findByBook(book);
-        if (reviews.isEmpty()) {
-            throw new ReviewExceptions.ReviewNotFoundException(bookId);
-        }
 
         return reviews.stream()
                 .map(ReviewResponse::new)
