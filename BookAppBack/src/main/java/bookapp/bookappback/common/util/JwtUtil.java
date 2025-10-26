@@ -36,22 +36,16 @@ public class JwtUtil {
     }
 
     public Long getUserIdFromToken(String token) {
-        try {
-            Claims claims = getClaimsFromToken(token);
-            return Long.parseLong(claims.getSubject());
-        } catch (Exception e) {
-            return null;
-        }
+        Claims claims = getClaimsFromToken(token);
+        Number userId = claims.get("userId", Number.class);
+        return userId != null ? userId.longValue() : null;
     }
 
     public String getEmailFromToken(String token) {
-        try {
-            Claims claims = getClaimsFromToken(token);
-            return (String) claims.get("email");
-        } catch (Exception e) {
-            return null;
-        }
+        Claims claims = getClaimsFromToken(token);
+        return claims.getSubject();
     }
+
 
     // extractUsername 메서드 추가
     public String extractUsername(String token) {
