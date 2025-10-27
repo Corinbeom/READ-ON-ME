@@ -44,6 +44,12 @@ public class BookController {
         return ResponseEntity.ok(book);
     }
 
+    @GetMapping("/{isbn}/editions")
+    public ResponseEntity<List<Book>> getBookEditions(@PathVariable String isbn) {
+        List<Book> editions = bookService.getBookEditions(isbn);
+        return ResponseEntity.ok(editions);
+    }
+
     // ✅ 인기 도서 조회
     @GetMapping("/popular")
     @Operation(summary = "메인화면 인기책", description = "메인화면에 인기 책을 렌더링해주는 메소드.")

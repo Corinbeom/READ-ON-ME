@@ -16,6 +16,8 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -72,16 +74,30 @@ public class BookService {
                 });
     }
 
+    public List<Book> getBookEditions(String isbn) {
+        Book originalBook = bookRepository.findByIsbn13(isbn)
+                .orElseThrow(() -> new BookExceptions.BookNotFoundException("책을 찾을 수 없습니다: " + isbn));
+
+        String groupTitle = originalBook.getGroupTitle();
+
+        if (groupTitle == null || groupTitle.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        return bookRepository.findByGroupTitle(groupTitle).stream()
+                .filter(book -> !book.getIsbn13().equals(originalBook.getIsbn13()))
+                .collect(Collectors.toList());
+    }
+
     // ✅ DB에 책 저장 (사용자 서재 추가 시)
     public Book saveBookToUserLibrary(KakaoBookDto kakaoBook) {
         try {
             String[] isbns = kakaoBook.getIsbn().split(" ");
             String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
-            String isbn10 = isbns.length > 0 ? isbns[0] : null;
 
-            Book existingBook = bookRepository.findByIsbn13(isbn13).stream().findFirst().orElse(null);
-            if (existingBook != null) {
-                return existingBook;
+            Optional<Book> existingBook = bookRepository.findByIsbn13(isbn13);
+            if (existingBook.isPresent()) {
+                return existingBook.get();
             }
 
             Book book = Book.fromKakaoApiResponse(kakaoBook);

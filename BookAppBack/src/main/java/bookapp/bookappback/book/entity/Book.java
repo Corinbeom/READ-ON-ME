@@ -36,6 +36,9 @@ public class Book {
     @Column(nullable = false)
     private String title;
 
+    @Column(name = "group_title")
+    private String groupTitle;
+
     @Column(columnDefinition = "TEXT")
     private String contents;
 
@@ -75,6 +78,7 @@ public class Book {
         book.setIsbn10(isbns.length > 0 ? isbns[0] : null);
         book.setIsbn13(isbns.length > 1 ? isbns[1] : book.getIsbn10());
         book.setTitle(dto.getTitle());
+        book.setGroupTitle(generateGroupTitle(dto.getTitle()));
         book.setContents(dto.getContents());
         book.setAuthors(dto.getAuthors() != null ? String.join(",", dto.getAuthors()) : null);
         book.setPublisher(dto.getPublisher());
@@ -87,6 +91,14 @@ public class Book {
         }
         book.setUrl(dto.getUrl());
         return book;
+    }
+
+    public static String generateGroupTitle(String title) {
+        if (title == null) return "";
+        return title.toLowerCase()
+                .replaceAll("\\(.*?\\)", "")
+                .replaceAll("\\[.*?\\]", "")
+                .replaceAll("[^a-zA-Z0-9가-힣]", "");
     }
 
     public void addReview(BookReview review) {

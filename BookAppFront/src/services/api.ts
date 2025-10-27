@@ -88,6 +88,8 @@ export const bookApi = {
   getBookDetail: (isbn: string) => api.get(`/api/books/detail/${isbn}`),
   getPopularBooks: () => api.get('/api/books/popular'),
   test: () => api.get('/api/books/test'),
+
+  getBookEditions: (isbn: string) => api.get(`api/books/${isbn}/editions`),
 };
 
 // 🔹 리뷰 관련 API

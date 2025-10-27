@@ -10,6 +10,7 @@ import bookapp.bookappback.user.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -32,6 +33,7 @@ public class DataLoader implements CommandLineRunner {
         testuser.setEmail("test@test.com");
         testuser.setPassword("1111");
         testuser.setNickname("tester");
+        testuser.setCreatedAt(LocalDateTime.now());
         userRepository.save(testuser);
 
         List<String> initialTitles = List.of(

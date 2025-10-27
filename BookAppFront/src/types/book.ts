@@ -1,18 +1,20 @@
 // BookAppFront/src/types/Book.ts
 export interface Book {
+    id: number; // Add this
     title: string;
     contents: string;
     url: string;
     isbn10: string;
     isbn13: string;
     datetime: string;
-    authors: string[];
+    authors: string; // Change from string[] to string
     publisher: string;
-    translators?: string[];
+    translators?: string; // Change from string[] to string
     price: number;
     sale_price: number;
     thumbnail: string;
     status: string;
+    groupTitle?: string; // Add this
   }
   
   export interface BookSearchResponse {

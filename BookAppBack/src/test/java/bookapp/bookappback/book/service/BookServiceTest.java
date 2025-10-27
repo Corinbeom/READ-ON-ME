@@ -15,6 +15,7 @@ import reactor.core.publisher.Mono;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -43,7 +44,7 @@ class BookServiceTest {
         mockBook.setId(1L);
         mockBook.setIsbn13("9781234567890");
 
-        when(bookRepository.findByIsbn13("9781234567890")).thenReturn(List.of(mockBook));
+        when(bookRepository.findByIsbn13("9781234567890")).thenReturn(Optional.of(mockBook));
 
         Book result = bookService.getBookByIsbn("9781234567890");
 

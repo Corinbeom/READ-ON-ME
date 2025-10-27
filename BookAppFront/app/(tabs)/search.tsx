@@ -13,11 +13,12 @@ import axios from 'axios';
 import { Link } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Book } from '../../src/types/book';
+import { KakaoBook } from '../../src/types/kakaoBook'; // Import KakaoBook
 import customAlert from '../../src/utils/alert'; // Use customAlert
 import { getIsbn13 } from '../../src/utils/bookUtils';
 
 interface SearchResponse {
-  documents: Book[];
+  documents: KakaoBook[]; // Use KakaoBook here
   meta: {
     total_count: number;
     is_end: boolean;
@@ -26,7 +27,7 @@ interface SearchResponse {
 
 export default function SearchScreen() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [books, setBooks] = useState<Book[]>([]);
+  const [books, setBooks] = useState<KakaoBook[]>([]); // Use KakaoBook here
   const [loading, setLoading] = useState(false);
 
   const searchBooks = async () => {
@@ -52,8 +53,8 @@ export default function SearchScreen() {
 
   
 
-  const renderBookItem = ({ item }: { item: Book }) => {
-    const isbn13 = getIsbn13(item);
+  const renderBookItem = ({ item }: { item: KakaoBook }) => {
+    const isbn13 = getIsbn13(item); // getIsbn13 needs to be updated to handle KakaoBook
     const bookContent = (
       <TouchableOpacity style={styles.bookItem} activeOpacity={0.8} disabled={!isbn13}>
         <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
@@ -92,7 +93,7 @@ export default function SearchScreen() {
       <FlatList
         data={books}
         renderItem={renderBookItem}
-        keyExtractor={(item) => item.isbn13 || item.isbn10 || item.title}
+        keyExtractor={(item) => item.isbn || item.title} // Revert keyExtractor
         style={styles.bookList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={

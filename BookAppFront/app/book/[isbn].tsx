@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Image,
@@ -25,15 +25,17 @@ import { Review } from '@/src/types/review';
 type BookDetail = {
   id: number;
   title?: string;
-  authors?: string[];
+  authors?: string;
   publisher?: string;
   thumbnail?: string;
   contents?: string;
-  isbn: string; // isbn is used as a key, ensure it exists
+  isbn13: string; // Change from 'isbn' to 'isbn13'
+  groupTitle?: string;
 };
 
 export default function BookDetailScreen() {
   const { isbn } = useLocalSearchParams<{ isbn?: string }>();
+  const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
   // Global state
@@ -44,6 +46,7 @@ export default function BookDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<BookDetail | null>(null);
+  const [otherEditions, setOtherEditions] = useState<BookDetail[]>([]);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
 
@@ -58,7 +61,7 @@ export default function BookDetailScreen() {
       setLoading(false);
       return;
     }
-    fetchBookDetails();
+    fetchBookDetailsAndEditions(normalizedIsbn); // Pass normalizedIsbn to the fetch function
   }, [normalizedIsbn]);
 
   useEffect(() => {
@@ -67,13 +70,18 @@ export default function BookDetailScreen() {
     }
   }, [book, dispatch]);
 
-  const fetchBookDetails = async () => {
+  const fetchBookDetailsAndEditions = async (currentIsbn: string) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await bookApi.getBookDetail(normalizedIsbn);
+      const res = await bookApi.getBookDetail(currentIsbn);
       if (res.data) {
-        setBook(res.data); // The response is the book object itself
+        setBook(res.data); 
+
+        const editionRes = await bookApi.getBookEditions(currentIsbn);
+        if (editionRes.data) {
+          setOtherEditions(editionRes.data);
+        }
       } else {
         throw new Error('책 정보를 찾을 수 없습니다.');
       }
@@ -161,6 +169,23 @@ export default function BookDetailScreen() {
                 <Text style={styles.description}>{book?.contents || '소개 정보가 없습니다.'}</Text>
               </View>
             </View>
+            {otherEditions.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>다른 판본 보기</Text>
+                {otherEditions.map((edition) => (
+                  <TouchableOpacity
+                  key={edition.isbn13} // Use isbn13 for key
+                  style={styles.editionsItem}
+                  onPress={() => {
+                    router.push(`/book/${edition.isbn13}`); // Navigate using isbn13
+                  }}
+                  >
+                    <Text style={styles.editionTitle}>{edition.title}</Text>
+                    <Text style={styles.editionMeta}>{edition.publisher} | {edition.authors}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
             <View style={styles.reviewSection}>
               <Text style={styles.reviewSectionTitle}>리뷰</Text>
               {isAuthenticated && !userHasReviewed && (
@@ -247,4 +272,18 @@ const styles = StyleSheet.create({
   likeText: { color: '#888' },
   likeTextLiked: { color: '#007AFF', fontWeight: 'bold' },
   noReviews: { textAlign: 'center', color: '#888', marginTop: 20, paddingBottom: 40 },
+  editionsItem: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  editionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  editionMeta: {
+    fontSize: 12,
+    color: '#666',
+  },
 });

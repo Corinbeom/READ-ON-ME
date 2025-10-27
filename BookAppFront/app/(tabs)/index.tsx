@@ -94,7 +94,7 @@ export default function HomeScreen() {
           data={popularBooks}
           horizontal
           showsHorizontalScrollIndicator={false}
-          keyExtractor={(item) => item.isbn13 || item.isbn10 || item.title}
+          keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={renderPopularBookItem}
         />
