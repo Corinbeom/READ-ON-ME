@@ -7,6 +7,7 @@ import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
@@ -34,6 +35,7 @@ public class BookService {
 
 
     // ✅ 카카오 API에서 책 검색 (동기식)
+    @Cacheable(value = "bookSearchCache", key = "#query + #page + #size + #sort + #target")
     public KakaoBookSearchResponse searchBooksFromKakao(
             String query, int page, int size, String sort, String target
     ) {
@@ -55,16 +57,9 @@ public class BookService {
 
     // ✅ ISBN으로 책 상세 정보 조회
     public Book getBookByIsbn(String isbn) {
-        return bookRepository.findByIsbn13(isbn).stream().findFirst()
+        return bookRepository.findByIsbn13(isbn)
                 .orElseGet(() -> {
-                    KakaoBookSearchResponse response;
-                    try {
-                        response = kakaoBookService.searchBookByIsbn(isbn)
-                                .subscribeOn(Schedulers.boundedElastic())
-                                .block();
-                    } catch (Exception e) {
-                        throw new BookExceptions.ExternalApiException("카카오 API 호출 실패: " + e.getMessage());
-                    }
+                    KakaoBookSearchResponse response = fetchKakaoBookByIsbnAndCache(isbn); // Call the cached method
 
                     if (response == null || response.getDocuments().isEmpty()) {
                         throw new BookExceptions.BookNotFoundException("검색 결과가 없습니다: " + isbn);
@@ -134,5 +129,18 @@ public class BookService {
                 .sorted((b1, b2) -> b2.getCreatedAt().compareTo(b1.getCreatedAt()))
                 .limit(limit)
                 .toList();
+    }
+
+    // ✅ 카카오 API에서 ISBN으로 책을 가져와 캐시하는 private 메소드
+    @Cacheable(value = "bookSearchCache", key = "#isbn")
+    private KakaoBookSearchResponse fetchKakaoBookByIsbnAndCache(String isbn) {
+        try {
+            return kakaoBookService.searchBookByIsbn(isbn)
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .block();
+        } catch (Exception e) {
+            log.error("카카오 API (ISBN) 호출 실패: {}", e.getMessage());
+            throw new BookExceptions.ExternalApiException("카카오 API (ISBN) 호출 실패: " + e.getMessage());
+        }
     }
 }
