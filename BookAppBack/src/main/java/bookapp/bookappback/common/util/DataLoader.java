@@ -5,6 +5,8 @@ import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.book.service.KakaoBookService;
+import bookapp.bookappback.user.entity.User;
+import bookapp.bookappback.user.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -15,14 +17,23 @@ public class DataLoader implements CommandLineRunner {
 
     private final KakaoBookService kakaoBookService;
     private final BookRepository bookRepository;
+    private final UserRepository userRepository;
 
-    public DataLoader(KakaoBookService kakaoBookService, BookRepository bookRepository) {
+    public DataLoader(KakaoBookService kakaoBookService, BookRepository bookRepository, UserRepository userRepository) {
         this.kakaoBookService = kakaoBookService;
         this.bookRepository = bookRepository;
+        this.userRepository = userRepository;
     }
 
     @Override
     public void run(String... args) throws Exception {
+
+        User testuser = new User();
+        testuser.setEmail("test@test.com");
+        testuser.setPassword("1111");
+        testuser.setNickname("tester");
+        userRepository.save(testuser);
+
         List<String> initialTitles = List.of(
                 "미움받을 용기",
                 "해리포터와 마법사의 돌",

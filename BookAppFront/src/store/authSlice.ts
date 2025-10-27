@@ -15,7 +15,7 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  error: string | null;
+  error: any | null;
 }
 
 const initialState: AuthState = {
@@ -56,7 +56,7 @@ export const signIn = createAsyncThunk(
     } catch (error: any) {
       console.error('로그인 실패:', error.response?.data);
       return rejectWithValue(
-        error.response?.data?.message || '로그인 중 오류가 발생했습니다.'
+        error.response?.data || { message: '로그인 중 오류가 발생했습니다.' }
       );
     }
   }
@@ -70,10 +70,12 @@ export const signUp = createAsyncThunk(
       if (response.data.success) {
         return response.data.data;
       } else {
-        return rejectWithValue(response.data.message);
+        // This case might not be hit if backend always throws error for failure
+        return rejectWithValue(response.data);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || '회원가입 실패');
+      console.error('회원가입 실패:', error.response?.data);
+      return rejectWithValue(error.response?.data);
     }
   }
 );
@@ -86,10 +88,11 @@ export const getProfile = createAsyncThunk(
       if (response.data.success) {
         return response.data.data;
       } else {
-        return rejectWithValue(response.data.message);
+        return rejectWithValue(response.data);
       }
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || '프로필 조회 실패');
+      console.error('프로필 조회 실패:', error.response?.data);
+      return rejectWithValue(error.response?.data);
     }
   }
 );

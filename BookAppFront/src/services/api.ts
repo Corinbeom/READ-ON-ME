@@ -92,28 +92,15 @@ export const bookApi = {
 
 // 🔹 리뷰 관련 API
 export const reviewApi = {
-  createReview: (
-    bookId: number,
-    data: { comment: string; rating: number },
-    token: string
-  ) =>
-    api.post(`/api/books/${bookId}/review`, data, {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
+  createReview: (bookId: number, data: { comment: string; rating: number }) =>
+    api.post(`/api/books/${bookId}/review`, data),
 
   getReviewsByBook: (bookId: number) => api.get(`/api/books/${bookId}/reviews`),
 
-  updateReview: (
-    reviewId: number,
-    data: { comment: string; rating: number },
-    token: string
-  ) =>
-    api.put(`/api/books/review/${reviewId}`, data, {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
+  updateReview: (reviewId: number, data: { comment: string; rating: number }) =>
+    api.put(`/api/books/review/${reviewId}`, data),
 
-  deleteReview: (reviewId: number, token: string) =>
-    api.delete(`/api/books/review/${reviewId}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }),
+  deleteReview: (reviewId: number) => api.delete(`/api/books/review/${reviewId}`),
+
+  toggleReviewLike: (reviewId: number) => api.post(`/api/books/review/${reviewId}/like`)
 };

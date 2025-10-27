@@ -21,4 +21,10 @@ public class ReviewExceptions {
             super(HttpStatus.BAD_REQUEST, "INVALID_REVIEW_CONTENT", "리뷰 내용이 비어 있습니다.");
         }
     }
+
+    public static class ReviewAlreadyExistsException extends AppException {
+        public ReviewAlreadyExistsException(String isbn) {
+            super(HttpStatus.CONFLICT, "REVIEW_ALREADY_EXISTS", "이미 이 책에 대한 리뷰를 작성했습니다. ISBN=" + isbn);
+        }
+    }
 }

@@ -26,9 +26,8 @@ public class BookReviewController {
     public ResponseEntity<ApiResponse<Long>> createReview(
             @PathVariable Long bookId,
             @RequestBody ReviewRequest reviewRequest,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) { // User -> UserDetailsImpl
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
-        // userDetails에서 User 객체를 꺼내서 ID를 사용합니다.
         Long reviewId = bookReviewService.createReview(bookId, reviewRequest, userDetails.getUser().getId());
 
         URI location = URI.create(String.format("/api/book/%d/review", reviewId));
@@ -38,28 +37,41 @@ public class BookReviewController {
 
     @GetMapping("/{bookId}/reviews")
     public ResponseEntity<ApiResponse<List<ReviewResponse>>> getReviewByBook(
-            @PathVariable Long bookId) {
-        List<ReviewResponse> reviews = bookReviewService.getReviewsByBook(bookId);
+            @PathVariable Long bookId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        // 비로그인 사용자도 조회 가능하도록 userDetails가 null일 수 있음을 처리
+        List<ReviewResponse> reviews = bookReviewService.getReviewsByBook(bookId, userDetails != null ? userDetails.getUser() : null);
         ApiResponse<List<ReviewResponse>> responseBody = new ApiResponse<>(true, "리뷰 조회 성공", reviews);
         return ResponseEntity.ok(responseBody);
     }
 
-    @PutMapping("/review/{reviewId}") // 경로 수정: /api/book/review/{reviewId}
+    @PutMapping("/review/{reviewId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> updateReview(
             @PathVariable Long reviewId,
             @RequestBody ReviewRequest reviewRequest,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) { // User -> UserDetailsImpl
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
         bookReviewService.updateReview(reviewId, reviewRequest, userDetails.getUser().getId());
         return ResponseEntity.ok(new ApiResponse<>(true, "리뷰가 성공적으로 수정되었습니다"));
     }
 
-    @DeleteMapping("/review/{reviewId}") // 경로 수정: /api/book/review/{reviewId}
+    @DeleteMapping("/review/{reviewId}")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Void>> deleteReview(
             @PathVariable Long reviewId,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) { // User -> UserDetailsImpl
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
 
         bookReviewService.deleteReview(reviewId, userDetails.getUser().getId());
         return ResponseEntity.ok(new ApiResponse<>(true, "리뷰가 성공적으로 삭제되었습니다."));
+    }
+
+    @PostMapping("/review/{reviewId}/like")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> toggleReviewLike(
+            @PathVariable Long reviewId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        bookReviewService.toggleReviewLike(reviewId, userDetails.getUser().getId());
+        return ResponseEntity.ok(new ApiResponse<>(true, "요청이 처리되었습니다."));
     }
 }

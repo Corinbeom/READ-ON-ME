@@ -3,6 +3,7 @@ package bookapp.bookappback.security.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,7 +17,11 @@ public class SignUpRequest {
     private String email;
     
     @NotBlank(message = "비밀번호는 필수입니다")
-    @Size(min = 6, max = 20, message = "비밀번호는 6-20자 사이여야 합니다")
+    @Pattern(
+            regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*])[A-Za-z\\d!@#$%^&*]{8,20}$",
+            message = "비밀번호는 8~20자, 영문자/숫자/특수문자를 포함해야 합니다."
+    )
+    @Size(min = 6, max = 20)
     private String password;
     
     @NotBlank(message = "닉네임은 필수입니다")
