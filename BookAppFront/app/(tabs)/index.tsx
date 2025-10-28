@@ -15,6 +15,7 @@ import { bookApi } from '../../src/services/api';
 import { Book } from '../../src/types/book';
 import customAlert from '../../src/utils/alert'; // Import customAlert
 import { getIsbn13 } from '../../src/utils/bookUtils';
+import styles from '../../src/styles/HomeScreen.styles';
 
 export default function HomeScreen() {
   const [popularBooks, setPopularBooks] = useState<Book[]>([]);
@@ -42,11 +43,21 @@ export default function HomeScreen() {
   const renderPopularBookItem = ({ item }: { item: Book }) => {
     const isbn13 = getIsbn13(item);
 
+    const BookContent = () => (
+      <>
+        <View>
+          <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
+          <View style={styles.thumbnailOverlay} />
+        </View>
+        <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.popularAuthor} numberOfLines={1}>{item.authors || item.publisher}</Text>
+      </>
+    );
+
     if (!isbn13) {
       return (
         <View style={styles.popularBookItem}>
-          <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
-          <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
+          <BookContent />
         </View>
       );
     }
@@ -54,8 +65,7 @@ export default function HomeScreen() {
     return (
       <Link href={`/book/${isbn13}`} asChild>
         <TouchableOpacity style={styles.popularBookItem} activeOpacity={0.8}>
-          <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
-          <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
+          <BookContent />
         </TouchableOpacity>
       </Link>
     );
@@ -87,7 +97,9 @@ export default function HomeScreen() {
       {/* AI 추천 검색 (구현 예정) */}
       <View style={styles.recommendationSection}>
         <Text style={styles.recommendationTitle}>AI 추천 검색</Text>
-        <Text style={styles.recommendationText}>이곳에 AI 추천 검색 기능이 들어갈 예정입니다.</Text>
+        <Text style={styles.recommendationText}>
+          🤖 곧 AI가 당신의 취향을 분석해 맞춤 도서를 추천해드릴 예정이에요!
+        </Text>
       </View>
 
       {/* 인기 책 섹션 */}
@@ -96,81 +108,26 @@ export default function HomeScreen() {
           <Text style={styles.popularHeaderTitle}>인기 책</Text>
         </View>
         <FlatList
-          data={popularBooks}
           horizontal
           showsHorizontalScrollIndicator={false}
+          data={popularBooks}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ paddingHorizontal: 16 }}
           renderItem={renderPopularBookItem}
+          contentContainerStyle={{
+            paddingHorizontal: 16,
+            paddingBottom: 8,
+            gap: 10,
+          }}
         />
       </View>
 
       {/* 사용자 기반 추천 (구현 예정) */}
-      <View style={styles.recommendationSection}>
-        <Text style={styles.recommendationTitle}>사용자 기반 추천</Text>
-        <Text style={styles.recommendationText}>이곳에 사용자 기반 추천 기능이 들어갈 예정입니다.</Text>
+      <View style={styles.userRecommendationSection}>
+        <Text style={styles.userRecommendationTitle}>사용자 기반 추천</Text>
+        <Text style={styles.userRecommendationText}>📖 사용자님의 관심사와 비슷한 책을 추천드릴게요!</Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8f9fa' },
 
-  headerContainer: {
-    backgroundColor: '#fff',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-  },
-  headerContentWrapper: { // New style
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  logo: {
-    width: 120, // Adjust as needed
-    height: 40, // Adjust as needed
-    resizeMode: 'contain',
-  },
-  authContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 }, // Adjusted authContainer
-  welcomeText: { fontSize: 16, color: '#007AFF', fontWeight: '500' },
-  authButtons: { flexDirection: 'row', gap: 10 },
-  loginButton: { backgroundColor: '#007AFF', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
-  loginButtonText: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  registerButton: { backgroundColor: '#28a745', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 },
-  registerButtonText: { color: '#fff', fontSize: 14, fontWeight: '500' },
-
-  popularSection: { backgroundColor: '#fff', marginTop: 24, marginHorizontal: 16, borderRadius: 12, paddingVertical: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 3, elevation: 3 },
-  popularHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 12 },
-  popularHeaderTitle: { fontSize: 18, fontWeight: 'bold', color: '#212529' },
-  popularBookItem: { width: 180, marginRight: 12, alignItems: 'center' },
-  popularThumbnail: { width: 100, height: 150, borderRadius: 8, backgroundColor: '#f0f0f0', marginBottom: 8, resizeMode: 'contain' },
-  popularTitle: { fontSize: 14, fontWeight: '600', color: '#212529', textAlign: 'center', lineHeight: 16 },
-
-  recommendationSection: {
-    backgroundColor: '#fff',
-    marginTop: 16,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  recommendationTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#212529',
-    marginBottom: 8,
-  },
-  recommendationText: {
-    fontSize: 14,
-    color: '#6c757d',
-    textAlign: 'center',
-  },
-});

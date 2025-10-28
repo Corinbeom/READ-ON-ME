@@ -8,6 +8,7 @@ import bookapp.bookappback.book.service.KakaoBookService;
 import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -19,11 +20,13 @@ public class DataLoader implements CommandLineRunner {
     private final KakaoBookService kakaoBookService;
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public DataLoader(KakaoBookService kakaoBookService, BookRepository bookRepository, UserRepository userRepository) {
+    public DataLoader(KakaoBookService kakaoBookService, BookRepository bookRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.kakaoBookService = kakaoBookService;
         this.bookRepository = bookRepository;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -31,7 +34,7 @@ public class DataLoader implements CommandLineRunner {
 
         User testuser = new User();
         testuser.setEmail("test@test.com");
-        testuser.setPassword("1111");
+        testuser.setPassword(passwordEncoder.encode("1111"));
         testuser.setNickname("tester");
         testuser.setCreatedAt(LocalDateTime.now());
         userRepository.save(testuser);

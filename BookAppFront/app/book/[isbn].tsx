@@ -20,6 +20,7 @@ import {
   toggleLikeForReview,
 } from '@/src/store/reviewSlice';
 import { Review } from '@/src/types/review';
+import styles from '../../src/styles/BookDetailScreen.styles';
 
 // Type definition for book details from API
 type BookDetail = {
@@ -153,172 +154,100 @@ export default function BookDetailScreen() {
     <>
       <Stack.Screen options={{ title: book?.title || '책 상세' }} />
       <FlatList
-        ListHeaderComponent={
-          <>
-            <View style={styles.coverWrap}>
-              {book?.thumbnail ? (
-                <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" />
-              ) : (
-                <View style={[styles.cover, styles.coverPlaceholder]} />
-              )}
-            </View>
-            <View style={styles.card}>
-              <Text style={styles.title}>{book?.title}</Text>
-              <Text style={styles.meta}>{book?.authors}</Text>
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>소개</Text>
-                <Text style={styles.description}>{book?.contents || '소개 정보가 없습니다.'}</Text>
-              </View>
-            </View>
-            {otherEditions.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>다른 판본 보기</Text>
-                {otherEditions.map((edition) => (
-                  <TouchableOpacity
-                  key={edition.isbn13} // Use isbn13 for key
-                  style={styles.editionsItem}
-                  onPress={() => {
-                    router.push(`/book/${edition.isbn13}`); // Navigate using isbn13
-                  }}
-                  >
-                    <Text style={styles.editionTitle}>{edition.title}</Text>
-                    <Text style={styles.editionMeta}>{edition.publisher} | {edition.authors}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            <View style={styles.reviewSection}>
-              <Text style={styles.reviewSectionTitle}>리뷰</Text>
-
-              {/* Sort Buttons */}
-              <View style={styles.sortContainer}>
-                <TouchableOpacity onPress={() => setSort('latest')} style={[styles.sortButton, sort === 'latest' && styles.sortButtonActive]}>
-                  <Text style={[styles.sortButtonText, sort === 'latest' && styles.sortButtonTextActive]}>최신순</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setSort('likes')} style={[styles.sortButton, sort === 'likes' && styles.sortButtonActive]}>
-                  <Text style={[styles.sortButtonText, sort === 'likes' && styles.sortButtonTextActive]}>좋아요순</Text>
-                </TouchableOpacity>
-              </View>
-
-              {isAuthenticated && !userHasReviewed && (
-                <View style={styles.reviewInputContainer}>
-                  <TextInput
-                    style={styles.reviewInput}
-                    placeholder="리뷰를 남겨주세요..."
-                    value={newReviewComment}
-                    onChangeText={setNewReviewComment}
-                    multiline
-                  />
-                  {renderStar(setNewReviewRating, newReviewRating)}
-                  <TouchableOpacity style={styles.submitButton} onPress={handleReviewSubmit}>
-                    <Text style={styles.submitButtonText}>등록</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {isAuthenticated && userHasReviewed && (
-                <Text style={styles.loginPrompt}>이미 이 책에 대한 리뷰를 작성하셨습니다.</Text>
-              )}
-              {!isAuthenticated && (
-                 <Text style={styles.loginPrompt}>리뷰를 작성하려면 로그인이 필요합니다.</Text>
-              )}
-            </View>
-          </>
-        }
-        data={reviews}
-        keyExtractor={(item) => item.id.toString()}
-        renderItem={({ item }: { item: Review }) => (
-          <View style={styles.reviewItem}>
-            <View style={styles.reviewHeader}>
-              <Text style={styles.reviewAuthor}>{item.author}</Text>
-              <Text style={styles.reviewRating}>{'★'.repeat(item.rating)}</Text>
-            </View>
-            <Text style={styles.reviewCommentText}>{item.comment}</Text>
-            <View style={styles.reviewFooter}>
-                <Text style={styles.reviewDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-                <TouchableOpacity style={styles.likeButton} onPress={() => handleLikePress(item.id)}>
-                    <Text style={[styles.likeText, item.isLikedByCurrentUser && styles.likeTextLiked]}>
-                        👍 도움이 돼요 {item.likeCount > 0 && item.likeCount}
-                    </Text>
-                </TouchableOpacity>
-            </View>
-            {/* TODO: Add Edit/Delete buttons if authorId matches user.id */}
-          </View>
+  ListHeaderComponent={
+    <>
+      {/* 책 정보 섹션 */}
+      <View style={styles.coverWrap}>
+        {book?.thumbnail ? (
+          <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" />
+        ) : (
+          <View style={[styles.cover, styles.coverPlaceholder]} />
         )}
-        ListEmptyComponent={!reviewsLoading ? <Text style={styles.noReviews}>아직 작성된 리뷰가 없습니다.</Text> : null}
-        contentContainerStyle={styles.container}
-      />
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.title}>{book?.title}</Text>
+        <Text style={styles.meta}>{book?.authors}</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>소개</Text>
+          <Text style={styles.description}>{book?.contents || '소개 정보가 없습니다.'}</Text>
+        </View>
+      </View>
+
+      {/* 리뷰 타이틀 + 정렬 버튼 같은 줄 배치 */}
+      <View style={styles.reviewHeaderRow}>
+        <Text style={styles.reviewSectionTitle}>리뷰</Text>
+        <View style={styles.sortContainer}>
+          <TouchableOpacity
+            onPress={() => setSort('latest')}
+            style={[styles.sortButton, sort === 'latest' && styles.sortButtonActive]}
+          >
+            <Text style={[styles.sortButtonText, sort === 'latest' && styles.sortButtonTextActive]}>
+              최신순
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setSort('likes')}
+            style={[styles.sortButton, sort === 'likes' && styles.sortButtonActive]}
+          >
+            <Text style={[styles.sortButtonText, sort === 'likes' && styles.sortButtonTextActive]}>
+              좋아요순
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* 리뷰가 없을 때 표시 */}
+      {!reviewsLoading && reviews.length === 0 && (
+        <Text style={styles.noReviews}>아직 작성된 리뷰가 없어요 😢{'\n'}첫 번째 리뷰의 주인공이 되어보시는건 어떨까요?</Text>
+      )}
+    </>
+  }
+  data={reviews}
+  keyExtractor={(item) => item.id.toString()}
+  renderItem={({ item }: { item: Review }) => (
+    <View style={styles.reviewItem}>
+      <View style={styles.reviewHeader}>
+        <Text style={styles.reviewAuthor}>{item.author}</Text>
+        <Text style={styles.reviewRating}>{'★'.repeat(item.rating)}</Text>
+      </View>
+      <Text style={styles.reviewCommentText}>{item.comment}</Text>
+      <View style={styles.reviewFooter}>
+        <Text style={styles.reviewDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+        <TouchableOpacity style={styles.likeButton} onPress={() => handleLikePress(item.id)}>
+          <Text style={[styles.likeText, item.isLikedByCurrentUser && styles.likeTextLiked]}>
+            👍 도움이 돼요 {item.likeCount > 0 && item.likeCount}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  )}
+  ListFooterComponent={
+    <View style={styles.reviewInputContainer}>
+      {isAuthenticated && !userHasReviewed ? (
+        <>
+          <TextInput
+            style={styles.reviewInput}
+            placeholder="리뷰를 남겨주세요..."
+            value={newReviewComment}
+            onChangeText={setNewReviewComment}
+            multiline
+          />
+          {renderStar(setNewReviewRating, newReviewRating)}
+          <TouchableOpacity style={styles.submitButton} onPress={handleReviewSubmit}>
+            <Text style={styles.submitButtonText}>등록</Text>
+          </TouchableOpacity>
+        </>
+      ) : !isAuthenticated ? (
+        <Text style={styles.loginPrompt}>리뷰를 작성하려면 로그인이 필요합니다.</Text>
+      ) : (
+        <Text style={styles.loginPrompt}>이미 이 책에 대한 리뷰를 작성하셨습니다.</Text>
+      )}
+    </View>
+  }
+/>
+
     </>
   );
 }
 
-const styles = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { backgroundColor: '#FAF8F3', paddingBottom: 24 },
-  coverWrap: { alignItems: 'center', paddingVertical: 24 },
-  cover: { width: 180, height: 260, borderRadius: 8 },
-  coverPlaceholder: { backgroundColor: '#e9ecef' },
-  card: { marginHorizontal: 16, backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 5, elevation: 3, marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: '700', marginBottom: 4 },
-  meta: { color: '#666', marginBottom: 12 },
-  section: { marginTop: 8 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', marginBottom: 6 },
-  description: { lineHeight: 20 },
-  reviewSection: { paddingHorizontal: 16, marginTop: 8 },
-  reviewSectionTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 10 },
-  reviewInputContainer: { marginBottom: 20, backgroundColor: '#fff', borderRadius: 12, padding: 12 },
-  reviewInput: { borderWidth: 1, borderColor: '#ccc', borderRadius: 5, padding: 10, minHeight: 80, textAlignVertical: 'top' },
-  ratingContainer: { flexDirection: 'row', marginVertical: 10, justifyContent: 'center' },
-  starEmpty: { fontSize: 30, color: '#ccc', marginHorizontal: 5 },
-  starFilled: { fontSize: 30, color: '#FFD700', marginHorizontal: 5 },
-  submitButton: { backgroundColor: '#007AFF', padding: 12, borderRadius: 5, alignItems: 'center' },
-  submitButtonText: { color: '#fff', fontWeight: 'bold' },
-  loginPrompt: { color: '#888', textAlign: 'center', marginVertical: 20 },
-  reviewItem: { borderBottomWidth: 1, borderColor: '#eee', padding: 16, backgroundColor: '#fff' },
-  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  reviewAuthor: { fontWeight: 'bold' },
-  reviewRating: { color: '#FFD700' },
-  reviewCommentText: { marginTop: 8, lineHeight: 20 },
-  reviewFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
-  reviewDate: { color: '#888', fontSize: 12 },
-  likeButton: {},
-  likeText: { color: '#888' },
-  likeTextLiked: { color: '#007AFF', fontWeight: 'bold' },
-  noReviews: { textAlign: 'center', color: '#888', marginTop: 20, paddingBottom: 40 },
-  editionsItem: {
-    backgroundColor: '#f0f0f0',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 8,
-  },
-  editionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  editionMeta: {
-    fontSize: 12,
-    color: '#666',
-  },
-  sortContainer: {
-    flexDirection: 'row',
-    marginBottom: 10,
-  },
-  sortButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    marginRight: 10,
-  },
-  sortButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
-  },
-  sortButtonText: {
-    color: '#555',
-  },
-  sortButtonTextActive: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-});
