@@ -17,10 +17,10 @@ const initialState: ReviewState = {
 // 책에 대한 리뷰들 가져오기
 export const fetchReviewsForBook = createAsyncThunk(
   'reviews/fetchForBook',
-  async (bookId: number, { rejectWithValue }) => {
+  async ({ bookId, sort }: { bookId: number; sort: string }, { rejectWithValue }) => {
     try {
-      const response = await reviewApi.getReviewsByBook(bookId);
-      return response.data.data; // ApiResponse<List<ReviewResponse>>
+      const response = await reviewApi.getReviewsByBook(bookId, sort);
+      return response.data.data.content; // ApiResponse<Slice<ReviewResponse>> -> content
     } catch (error: any) {
       return rejectWithValue(error.response?.data);
     }

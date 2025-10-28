@@ -1,6 +1,7 @@
 package bookapp.bookappback.review.dto;
 
 import bookapp.bookappback.review.entity.BookReview;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,8 @@ public class ReviewResponse {
     private double rating;
     private String author;
     private Long authorId;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
     private long likeCount;
     private boolean isLikedByCurrentUser;

@@ -6,6 +6,8 @@ import bookapp.bookappback.review.dto.ReviewResponse;
 import bookapp.bookappback.review.service.BookReviewService;
 import bookapp.bookappback.security.UserDetailsImpl; // UserDetailsImpl import
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -36,12 +38,19 @@ public class BookReviewController {
     }
 
     @GetMapping("/{bookId}/reviews")
-    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getReviewByBook(
+    public ResponseEntity<ApiResponse<Slice<ReviewResponse>>> getReviewsByBook(
             @PathVariable Long bookId,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestParam(defaultValue = "latest") String sort,
+            Pageable pageable) {
         // 비로그인 사용자도 조회 가능하도록 userDetails가 null일 수 있음을 처리
-        List<ReviewResponse> reviews = bookReviewService.getReviewsByBook(bookId, userDetails != null ? userDetails.getUser() : null);
-        ApiResponse<List<ReviewResponse>> responseBody = new ApiResponse<>(true, "리뷰 조회 성공", reviews);
+        Slice<ReviewResponse> reviews = bookReviewService.getReviewsByBook(
+                bookId,
+                userDetails != null ? userDetails.getUser() : null,
+                sort,
+                pageable
+        );
+        ApiResponse<Slice<ReviewResponse>> responseBody = new ApiResponse<>(true, "리뷰 조회 성공", reviews);
         return ResponseEntity.ok(responseBody);
     }
 

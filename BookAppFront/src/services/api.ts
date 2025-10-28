@@ -97,7 +97,7 @@ export const reviewApi = {
   createReview: (bookId: number, data: { comment: string; rating: number }) =>
     api.post(`/api/books/${bookId}/review`, data),
 
-  getReviewsByBook: (bookId: number) => api.get(`/api/books/${bookId}/reviews`),
+  getReviewsByBook: (bookId: number, sort: string) => api.get(`/api/books/${bookId}/reviews`, { params: { sort } }),
 
   updateReview: (reviewId: number, data: { comment: string; rating: number }) =>
     api.put(`/api/books/review/${reviewId}`, data),

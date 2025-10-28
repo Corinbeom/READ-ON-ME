@@ -15,8 +15,13 @@ import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,26 +58,32 @@ public class BookReviewService {
         bookReview.setBook(book);
         bookReview.setComment(reviewRequest.getComment());
         bookReview.setRating(reviewRequest.getRating());
+        bookReview.setCreatedAt(LocalDateTime.now());
 
         bookReviewRepository.save(bookReview);
         return bookReview.getId();
     }
 
     // ✅ 책별 리뷰 조회
-    public List<ReviewResponse> getReviewsByBook(Long bookId, User currentUser) {
+    public Slice<ReviewResponse> getReviewsByBook(Long bookId, User currentUser, String sort, Pageable pageable) {
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookExceptions.BookNotFoundException(String.valueOf(bookId)));
 
-        List<BookReview> reviews = bookReviewRepository.findByBook(book);
+        Sort sortOrder;
+        if ("likes".equalsIgnoreCase(sort)) {
+            sortOrder = Sort.by(Sort.Direction.DESC, "likeCount");
+        } else {
+            sortOrder = Sort.by(Sort.Direction.DESC, "createdAt");
+        }
 
-        return reviews.stream()
-                .map(review -> {
-                    long likeCount = review.getLikes().size();
-                    boolean isLiked = currentUser != null && review.getLikes().stream()
-                            .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
-                    return new ReviewResponse(review, likeCount, isLiked);
-                })
-                .toList();
+        pageable = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sortOrder);
+        Slice<BookReview> reviews = bookReviewRepository.findByBook(book, pageable);
+
+        return reviews.map(review -> {
+            boolean isLiked = currentUser != null && review.getLikes().stream()
+                    .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
+            return new ReviewResponse(review, review.getLikeCount(), isLiked);
+        });
     }
 
     // ✅ 리뷰 수정
@@ -117,10 +128,12 @@ public class BookReviewService {
         if (existingLike.isPresent()) {
             review.getLikes().remove(existingLike.get());
             reviewLikeRepository.delete(existingLike.get());
+            review.setLikeCount(review.getLikeCount() - 1); // 좋아요 카운트 감소
         } else {
             ReviewLike newLike = new ReviewLike(user, review);
             review.getLikes().add(newLike);
             reviewLikeRepository.save(newLike);
+            review.setLikeCount(review.getLikeCount() + 1); // 좋아요 카운트 증가
         }
     }
 }

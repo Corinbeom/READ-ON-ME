@@ -49,6 +49,7 @@ export default function BookDetailScreen() {
   const [otherEditions, setOtherEditions] = useState<BookDetail[]>([]);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
+  const [sort, setSort] = useState('latest'); // 'latest' or 'likes'
 
   const normalizedIsbn = useMemo(() => {
     const raw = String(isbn ?? '');
@@ -66,9 +67,9 @@ export default function BookDetailScreen() {
 
   useEffect(() => {
     if (book?.id) {
-      dispatch(fetchReviewsForBook(book.id));
+      dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
     }
-  }, [book, dispatch]);
+  }, [book, dispatch, sort]);
 
   const fetchBookDetailsAndEditions = async (currentIsbn: string) => {
     setLoading(true);
@@ -107,7 +108,7 @@ export default function BookDetailScreen() {
       customAlert('성공', '리뷰가 등록되었습니다.');
       setNewReviewComment('');
       setNewReviewRating(0);
-      dispatch(fetchReviewsForBook(book.id)); // Refetch reviews
+      dispatch(fetchReviewsForBook({ bookId: book.id, sort })); // Refetch reviews
     } else {
       const errorPayload = result.payload as any;
       if (errorPayload?.code === 'REVIEW_ALREADY_EXISTS') {
@@ -188,6 +189,17 @@ export default function BookDetailScreen() {
             )}
             <View style={styles.reviewSection}>
               <Text style={styles.reviewSectionTitle}>리뷰</Text>
+
+              {/* Sort Buttons */}
+              <View style={styles.sortContainer}>
+                <TouchableOpacity onPress={() => setSort('latest')} style={[styles.sortButton, sort === 'latest' && styles.sortButtonActive]}>
+                  <Text style={[styles.sortButtonText, sort === 'latest' && styles.sortButtonTextActive]}>최신순</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setSort('likes')} style={[styles.sortButton, sort === 'likes' && styles.sortButtonActive]}>
+                  <Text style={[styles.sortButtonText, sort === 'likes' && styles.sortButtonTextActive]}>좋아요순</Text>
+                </TouchableOpacity>
+              </View>
+
               {isAuthenticated && !userHasReviewed && (
                 <View style={styles.reviewInputContainer}>
                   <TextInput
@@ -285,5 +297,28 @@ const styles = StyleSheet.create({
   editionMeta: {
     fontSize: 12,
     color: '#666',
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  sortButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginRight: 10,
+  },
+  sortButtonActive: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  sortButtonText: {
+    color: '#555',
+  },
+  sortButtonTextActive: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
 });

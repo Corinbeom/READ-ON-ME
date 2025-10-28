@@ -39,28 +39,33 @@ export default function HomeScreen() {
     fetchPopularBooks();
   }, []);
 
-  
-
   const renderPopularBookItem = ({ item }: { item: Book }) => {
     const isbn13 = getIsbn13(item);
-    const bookContent = (
-      <TouchableOpacity
-        style={styles.popularBookItem}
-        activeOpacity={0.8}
-        disabled={!isbn13}
-      >
-        <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
-        <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
-      </TouchableOpacity>
+
+    if (!isbn13) {
+      return (
+        <View style={styles.popularBookItem}>
+          <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
+          <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
+        </View>
+      );
+    }
+
+    return (
+      <Link href={`/book/${isbn13}`} asChild>
+        <TouchableOpacity style={styles.popularBookItem} activeOpacity={0.8}>
+          <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
+          <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
+        </TouchableOpacity>
+      </Link>
     );
-    return isbn13 ? <Link href={`/book/${isbn13}`} asChild>{bookContent}</Link> : bookContent;
   };
 
   return (
     <View style={styles.container}>
       {/* 상단 헤더 */}
       <View style={styles.headerContainer}>
-        <View style={styles.headerContentWrapper}> {/* New wrapper View */}
+        <View style={styles.headerContentWrapper}> 
           <Image source={require('@/assets/images/main_logo2.png')} style={styles.logo} />
           <View style={styles.authContainer}>
             {isAuthenticated ? (

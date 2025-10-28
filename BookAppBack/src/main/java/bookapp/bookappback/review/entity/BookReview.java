@@ -39,6 +39,9 @@ public class BookReview {
     @OneToMany(mappedBy = "review", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ReviewLike> likes = new HashSet<>();
 
+    @Column(name = "like_count")
+    private int likeCount = 0;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
