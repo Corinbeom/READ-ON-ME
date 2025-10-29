@@ -1,3 +1,5 @@
+import { BookDto } from './BookDto'; // Import BookDto
+
 export interface Review {
   id: number;
   comment: string;
@@ -7,4 +9,5 @@ export interface Review {
   createdAt: string;
   likeCount: number;
   isLikedByCurrentUser: boolean;
+  book: BookDto; // Added book information
 }

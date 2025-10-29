@@ -24,8 +24,20 @@ export default StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.lightGray,
   },
-  cover: { width: 180, height: 260, borderRadius: 8 },
+  cover: {
+    width: 180,
+    height: 260,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d9d9d9', // 밝은 회색 (배경색과 부드럽게 대비)
+  },
+  
   coverPlaceholder: { backgroundColor: colors.lightGray },
+  coverOverlay: { // Overlay for book cover image
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 250, 240, 0.05)',
+    borderRadius: 8, // Assuming cover has borderRadius 8
+  },
 
   // ✅ Card Section
   card: {
@@ -33,28 +45,25 @@ export default StyleSheet.create({
     margin: 16,
     borderRadius: 12,
     padding: 16,
-    marginTop: -40,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    marginTop: -10,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: 4,
     color: colors.text,
   },
-  meta: { color: colors.darkGray, marginBottom: 16 },
+  meta: { color: colors.darkGray, marginBottom: 16, fontFamily: 'NotoSerifKR-Regular' },
   section: { marginTop: 16 },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: 8,
     color: colors.text,
   },
-  description: { lineHeight: 22, color: colors.text },
+  description: { lineHeight: 22, color: colors.text, fontFamily: 'NotoSerifKR-Regular' },
 
   // ✅ Editions Section
   editionsItem: {
@@ -67,13 +76,80 @@ export default StyleSheet.create({
   },
   editionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     color: colors.primary,
   },
   editionMeta: {
     fontSize: 12,
     color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
     marginTop: 4,
+  },
+
+  // ✅ Add to Library Section
+  addToLibraryContainer: {
+    marginTop: 20,
+    marginHorizontal: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  addToLibraryButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    width: '80%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  addToLibraryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'Pretendard-SemiBold',
+  },
+  statusPickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingHorizontal: 16,
+    marginTop: 10,
+    flexWrap: 'wrap',
+  },
+  statusOptionButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
+    margin: 5,
+    backgroundColor: colors.card,
+  },
+  statusOptionButtonActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  statusOptionButtonText: {
+    color: colors.text,
+    fontFamily: 'NotoSerifKR-Regular',
+    fontSize: 14,
+  },
+  statusOptionButtonTextActive: {
+    color: '#fff',
+  },
+  cancelButton: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.darkGray,
+    backgroundColor: colors.background,
+  },
+  cancelButtonText: {
+    color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
+    fontSize: 14,
   },
 
   // ✅ Review Section
@@ -84,7 +160,7 @@ export default StyleSheet.create({
   },
   reviewSectionTitle: {
     fontSize: 17,
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     marginBottom: 8,
     color: colors.text,
   },
@@ -109,10 +185,11 @@ export default StyleSheet.create({
   },
   sortButtonText: {
     color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
   },
   sortButtonTextActive: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
   },
 
   // ✅ Review Input
@@ -122,11 +199,8 @@ export default StyleSheet.create({
     padding: 16,
     marginTop: 16,
     marginBottom: 40,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
   },
   reviewInput: {
     borderWidth: 1,
@@ -136,6 +210,7 @@ export default StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
     backgroundColor: colors.background,
+    fontFamily: 'NotoSerifKR-Regular',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -161,13 +236,14 @@ export default StyleSheet.create({
   },
   submitButtonText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: 16,
   },
 
   // ✅ 로그인 안내문
   loginPrompt: {
     color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
     textAlign: 'center',
     marginVertical: 20,
     padding: 16,
@@ -177,16 +253,13 @@ export default StyleSheet.create({
 
   // ✅ Review Card (리뷰 아이템)
   reviewItem: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     paddingVertical: 16,
     paddingHorizontal: 14,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.lightGray,
   },
   reviewHeader: {
     flexDirection: 'row',
@@ -204,19 +277,20 @@ export default StyleSheet.create({
     marginBottom: 8,
   },
   reviewAuthor: {
-    fontWeight: 'bold',
+    fontFamily: 'Pretendard-SemiBold',
     fontSize: 16,
     color: colors.text,
   },
   reviewRating: {
     color: colors.accent,
+    fontFamily: 'NotoSerifKR-Regular',
     fontSize: 14,
   },
   reviewCommentText: {
     lineHeight: 22,
     color: colors.text,
+    fontFamily: 'NotoSerifKR-Regular',
     fontSize: 14,
-    marginBottom: 8,
   },
 
   // ✅ Footer with "도움이 돼요" 버튼
@@ -231,6 +305,7 @@ export default StyleSheet.create({
   },
   reviewDate: {
     color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
     fontSize: 12,
   },
   likeButton: {
@@ -239,14 +314,16 @@ export default StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: colors.background,
   },
   likeText: {
     color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
     fontSize: 13,
   },
   likeTextLiked: {
     color: colors.primary,
+    fontFamily: 'Pretendard-SemiBold',
     fontWeight: '600',
   },
 
@@ -254,6 +331,7 @@ export default StyleSheet.create({
   noReviews: {
     textAlign: 'center',
     color: colors.darkGray,
+    fontFamily: 'NotoSerifKR-Regular',
     marginTop: 10,
     marginBottom: 20,
     fontSize: 14,

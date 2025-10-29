@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -86,6 +87,19 @@ public class BookReviewService {
         });
     }
 
+    // ✅ 사용자별 리뷰 조회 (새로 추가)
+    public List<ReviewResponse> getReviewsByUser(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
+
+        List<BookReview> reviews = bookReviewRepository.findByUserWithBook(user); // Changed to use findByUserWithBook
+
+        return reviews.stream()
+                .map(review -> new ReviewResponse(review, review.getLikeCount(), false)) // isLikedByCurrentUser is false as we are just listing reviews
+                .collect(Collectors.toList());
+    }
+
+
     // ✅ 리뷰 수정
     public void updateReview(Long reviewId, ReviewRequest reviewRequest, Long userId) {
         BookReview review = bookReviewRepository.findById(reviewId)
@@ -132,7 +146,6 @@ public class BookReviewService {
         } else {
             ReviewLike newLike = new ReviewLike(user, review);
             review.getLikes().add(newLike);
-            reviewLikeRepository.save(newLike);
             review.setLikeCount(review.getLikeCount() + 1); // 좋아요 카운트 증가
         }
     }

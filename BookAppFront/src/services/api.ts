@@ -90,6 +90,11 @@ export const bookApi = {
   test: () => api.get('/api/books/test'),
 
   getBookEditions: (isbn: string) => api.get(`api/books/${isbn}/editions`),
+
+  updateBookStatus: (bookId: number, status: ReadingStatus) =>
+    api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() } }),
+
+  getUserLibrary: () => api.get('/api/library'),
 };
 
 // 🔹 리뷰 관련 API
@@ -104,5 +109,7 @@ export const reviewApi = {
 
   deleteReview: (reviewId: number) => api.delete(`/api/books/review/${reviewId}`),
 
-  toggleReviewLike: (reviewId: number) => api.post(`/api/books/review/${reviewId}/like`)
+  toggleReviewLike: (reviewId: number) => api.post(`/api/books/review/${reviewId}/like`),
+
+  getMyReviews: () => api.get('/api/reviews/my'), // New method to fetch user's reviews
 };

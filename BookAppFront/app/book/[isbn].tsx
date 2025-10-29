@@ -20,19 +20,10 @@ import {
   toggleLikeForReview,
 } from '@/src/store/reviewSlice';
 import { Review } from '@/src/types/review';
+import { ReadingStatus } from '@/src/types/readingStatus';
 import styles from '../../src/styles/BookDetailScreen.styles';
-
-// Type definition for book details from API
-type BookDetail = {
-  id: number;
-  title?: string;
-  authors?: string;
-  publisher?: string;
-  thumbnail?: string;
-  contents?: string;
-  isbn13: string; // Change from 'isbn' to 'isbn13'
-  groupTitle?: string;
-};
+import { Colors } from '@/constants/Colors';
+import { BookDto } from '../../src/types/BookDto'; // Corrected import for BookDto
 
 export default function BookDetailScreen() {
   const { isbn } = useLocalSearchParams<{ isbn?: string }>();
@@ -46,11 +37,15 @@ export default function BookDetailScreen() {
   // Local state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [book, setBook] = useState<BookDetail | null>(null);
-  const [otherEditions, setOtherEditions] = useState<BookDetail[]>([]);
+  const [book, setBook] = useState<BookDto | null>(null); // Use BookDto
+  const [otherEditions, setOtherEditions] = useState<BookDto[]>([]); // Use BookDto
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [sort, setSort] = useState('latest'); // 'latest' or 'likes'
+
+  const [userBookStatus, setUserBookStatus] = useState<ReadingStatus | null>(null);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+
 
   const normalizedIsbn = useMemo(() => {
     const raw = String(isbn ?? '');
@@ -63,7 +58,7 @@ export default function BookDetailScreen() {
       setLoading(false);
       return;
     }
-    fetchBookDetailsAndEditions(normalizedIsbn); // Pass normalizedIsbn to the fetch function
+    fetchBookDetailsAndEditions(normalizedIsbn);
   }, [normalizedIsbn]);
 
   useEffect(() => {
@@ -71,6 +66,29 @@ export default function BookDetailScreen() {
       dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
     }
   }, [book, dispatch, sort]);
+
+  // New useEffect to fetch user book status
+  useEffect(() => {
+    const fetchUserBookStatus = async () => {
+      if (!isAuthenticated || !book?.id) return;
+      try {
+        const response = await bookApi.getUserLibrary();
+        const foundStatus =
+          response.data.toReadBooks.find((b: BookDto) => b.id === book.id)
+            ? ReadingStatus.TO_READ
+            : response.data.readingBooks.find((b: BookDto) => b.id === book.id)
+            ? ReadingStatus.READING
+            : response.data.completedBooks.find((b: BookDto) => b.id === book.id)
+            ? ReadingStatus.COMPLETED
+            : null;
+        setUserBookStatus(foundStatus);
+      } catch (error) {
+        console.error('Failed to fetch user book status:', error);
+      }
+    };
+    fetchUserBookStatus();
+  }, [isAuthenticated, book]);
+
 
   const fetchBookDetailsAndEditions = async (currentIsbn: string) => {
     setLoading(true);
@@ -128,6 +146,22 @@ export default function BookDetailScreen() {
     dispatch(toggleLikeForReview(reviewId));
   };
 
+  const handleUpdateBookStatus = async (status: ReadingStatus) => {
+    if (!isAuthenticated || !book?.id) {
+      customAlert('알림', '로그인이 필요합니다.');
+      return;
+    }
+    try {
+      await bookApi.updateBookStatus(book.id, status);
+      setUserBookStatus(status);
+      customAlert('성공', `책 상태가 \'${status}\'로 변경되었습니다.`);
+      setShowStatusPicker(false);
+    } catch (error) {
+      console.error('Failed to update book status:', error);
+      customAlert('오류', '책 상태 변경에 실패했습니다.');
+    }
+  };
+
   const userHasReviewed = useMemo(() => {
     if (!isAuthenticated || !user) return false;
     return reviews.some((review) => review.authorId === user.id);
@@ -156,13 +190,13 @@ export default function BookDetailScreen() {
       <FlatList
   ListHeaderComponent={
     <>
-      {/* 책 정보 섹션 */}
       <View style={styles.coverWrap}>
         {book?.thumbnail ? (
           <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" />
         ) : (
           <View style={[styles.cover, styles.coverPlaceholder]} />
         )}
+        <View style={styles.coverOverlay} />
       </View>
 
       <View style={styles.card}>
@@ -173,6 +207,49 @@ export default function BookDetailScreen() {
           <Text style={styles.description}>{book?.contents || '소개 정보가 없습니다.'}</Text>
         </View>
       </View>
+
+      {/* Add to My Library Button */}
+      {isAuthenticated && (
+        <View style={styles.addToLibraryContainer}>
+          <TouchableOpacity
+            style={styles.addToLibraryButton}
+            onPress={() => setShowStatusPicker(true)}
+          >
+            <Text style={styles.addToLibraryButtonText}>
+              {userBookStatus ? `상태 변경: ${userBookStatus === ReadingStatus.TO_READ ? '읽고 싶은 책' : userBookStatus === ReadingStatus.READING ? '읽는 중인 책' : '완독한 책'}` : '내 서재에 추가'}
+            </Text>
+          </TouchableOpacity>
+
+          {showStatusPicker && (
+            <View style={styles.statusPickerContainer}>
+              {Object.values(ReadingStatus).map((statusOption) => (
+                <TouchableOpacity
+                  key={statusOption}
+                  style={[
+                    styles.statusOptionButton,
+                    userBookStatus === statusOption && styles.statusOptionButtonActive,
+                  ]}
+                  onPress={() => handleUpdateBookStatus(statusOption)}
+                >
+                  <Text
+                    style={[
+                      styles.statusOptionButtonText,
+                      userBookStatus === statusOption && styles.statusOptionButtonTextActive,
+                    ]}
+                  >
+                    {statusOption === ReadingStatus.TO_READ ? '읽고 싶은 책' :
+                     statusOption === ReadingStatus.READING ? '읽는 중인 책' :
+                     '완독한 책'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowStatusPicker(false)}>
+                <Text style={styles.cancelButtonText}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* 리뷰 타이틀 + 정렬 버튼 같은 줄 배치 */}
       <View style={styles.reviewHeaderRow}>
@@ -250,4 +327,3 @@ export default function BookDetailScreen() {
     </>
   );
 }
-

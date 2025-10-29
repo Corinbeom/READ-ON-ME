@@ -10,9 +10,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface BookReviewRepository extends JpaRepository<BookReview, Long > {
     Slice<BookReview> findByBook(Book book, Pageable pageable);
+
+    @Query("SELECT br FROM BookReview br JOIN FETCH br.book WHERE br.user = :user")
+    List<BookReview> findByUserWithBook(@Param("user") User user); // New method to eagerly fetch book
 
     boolean existsByUserAndBook(User user, Book book);
 }

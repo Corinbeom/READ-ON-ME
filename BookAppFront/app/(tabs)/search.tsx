@@ -106,7 +106,7 @@ export default function SearchScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyEmoji}>📖</Text>
+            <Image source={require('@/assets/images/main_logo2.png')} style={styles.emptyEmoji} />
             <Text style={styles.emptyText}>
               {searchQuery ? '검색 결과가 없습니다.' : '책을 검색해보세요!'}
             </Text>
