@@ -8,7 +8,8 @@ import { bookApi, reviewApi } from '../../src/services/api'; // Import reviewApi
 import { ReadingStatus } from '../../src/types/readingStatus';
 import { BookDto } from '../../src/types/BookDto'; // Corrected import for BookDto
 import { Review } from '../../src/types/review'; // Import Review type
-import { Colors } from '@/constants/Colors';
+import { Book, BookOpen, CheckCircle, Pencil } from 'lucide-react-native'; // Import Lucide icons
+import styles from '../../src/styles/MyLibraryScreen.styles';
 
 interface UserLibraryResponse {
   toReadBooks: BookDto[];
@@ -96,7 +97,7 @@ export default function MyLibraryScreen() {
 
   const renderBookItem = ({ item }: { item: BookDto }) => (
     <Link href={`/book/${item.isbn13}`} asChild>
-      <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}> {/* Close modal on book click */}
+      <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}> 
         <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} />
         <View style={styles.bookThumbnailOverlay} />
         <View style={styles.bookInfoContainer}>
@@ -149,14 +150,17 @@ export default function MyLibraryScreen() {
         <>
           <View style={styles.summaryContainer}>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽고 싶은 책', userLibrary.toReadBooks)}>
+              <Book size={22} color={styles.summaryIcon.color} />
               <Text style={styles.summaryCount}>{userLibrary.toReadBooks.length}</Text>
               <Text style={styles.summaryLabel}>읽고 싶은 책</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽는 중인 책', userLibrary.readingBooks)}>
+              <BookOpen size={22} color={styles.summaryIcon.color} />
               <Text style={styles.summaryCount}>{userLibrary.readingBooks.length}</Text>
               <Text style={styles.summaryLabel}>읽는 중인 책</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('완독한 책', userLibrary.completedBooks)}>
+              <CheckCircle size={22} color={styles.summaryIcon.color} />
               <Text style={styles.summaryCount}>{userLibrary.completedBooks.length}</Text>
               <Text style={styles.summaryLabel}>완독한 책</Text>
             </TouchableOpacity>
@@ -164,9 +168,26 @@ export default function MyLibraryScreen() {
 
           {/* New summary card for My Reviews */}
           <TouchableOpacity style={styles.myReviewsSummaryCard} onPress={() => openReviewListModal('내가 쓴 리뷰', myReviews)}>
+            <Pencil size={22} color={styles.myReviewsSummaryIcon.color} />
             <Text style={styles.myReviewsSummaryCount}>{myReviews.length}</Text>
             <Text style={styles.myReviewsSummaryLabel}>내가 쓴 리뷰</Text>
           </TouchableOpacity>
+
+          {/* 나의 최근 리뷰 섹션 */}
+          <View style={styles.recentReviewsSection}>
+            <Text style={styles.recentReviewsTitle}>나의 최근 리뷰</Text>
+            {myReviews.length === 0 ? (
+              <Text style={styles.emptySectionText}>아직 작성한 리뷰가 없습니다.</Text>
+            ) : (
+              <FlatList
+                data={myReviews.slice(0, 3)} // 최신 3개 리뷰만 표시
+                renderItem={renderReviewItem}
+                keyExtractor={(item) => item.id.toString()}
+                scrollEnabled={false} // 이 섹션에서는 스크롤 비활성화
+                contentContainerStyle={styles.recentReviewsListContent}
+              />
+            )}
+          </View>
         </>
       )}
 
@@ -216,266 +237,3 @@ export default function MyLibraryScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.light.background,
-    padding: 20,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    marginBottom: 30,
-    marginTop: 40,
-  },
-  profileSection: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-  },
-  greeting: {
-    fontSize: 22,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-  },
-  email: {
-    fontSize: 16,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  logoutButton: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
-  },
-  loginPrompt: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loginPromptText: {
-    fontSize: 18,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    marginBottom: 20,
-  },
-  loginButton: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 8,
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
-  },
-  // New styles for summary view
-  summaryContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: Colors.light.card,
-    borderRadius: 12,
-    paddingVertical: 15,
-    marginHorizontal: 5,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-  },
-  summaryItem: {
-    alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  summaryCount: {
-    fontSize: 24,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.primary,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    marginTop: 5,
-  },
-  // New styles for My Reviews summary card
-  myReviewsSummaryCard: {
-    backgroundColor: Colors.light.card,
-    borderRadius: 12,
-    paddingVertical: 15,
-    marginHorizontal: 5,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  myReviewsSummaryCount: {
-    fontSize: 24,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.primary,
-  },
-  myReviewsSummaryLabel: {
-    fontSize: 14,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    marginTop: 5,
-  },
-  // Styles for modal
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    backgroundColor: Colors.light.background,
-    borderRadius: 12,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-  },
-  modalTitle: {
-    fontSize: 22,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  modalBookListContent: {
-    paddingVertical: 10,
-    // gap: 10, // FlatList gap prop is not directly supported in older RN versions, use margin
-  },
-  modalReviewListContent: { // New style for review list in modal
-    paddingVertical: 10,
-  },
-  modalCloseButton: {
-    backgroundColor: Colors.light.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  modalCloseButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
-  },
-  // Existing book item styles (used in modal as well)
-  bookItemContainer: {
-    width: '48%', // Adjust for 2 columns with some margin
-    margin: '1%', // Small margin for spacing between columns
-    alignItems: 'center',
-    backgroundColor: Colors.light.card,
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-  },
-  bookThumbnail: {
-    width: 100,
-    height: 150,
-    borderRadius: 8,
-    backgroundColor: Colors.light.lightGray,
-    marginBottom: 8,
-  },
-  bookThumbnailOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 250, 240, 0.05)',
-    borderRadius: 8,
-  },
-  bookInfoContainer: {
-    alignItems: 'center',
-  },
-  bookTitle: {
-    fontSize: 13,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-  bookAuthor: {
-    fontSize: 11,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    textAlign: 'center',
-  },
-  // New styles for review item in modal
-  reviewItemContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.light.card,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-    alignItems: 'center',
-  },
-  reviewBookThumbnail: {
-    width: 60,
-    height: 90,
-    borderRadius: 5,
-    backgroundColor: Colors.light.lightGray,
-    marginRight: 10,
-  },
-  reviewBookThumbnailOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 250, 240, 0.05)',
-    borderRadius: 5,
-  },
-  reviewInfoContainer: {
-    flex: 1,
-  },
-  reviewItemTitle: {
-    fontSize: 15,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    marginBottom: 2,
-  },
-  reviewItemRating: {
-    fontSize: 12,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.accent,
-    marginBottom: 5,
-  },
-  reviewItemComment: {
-    fontSize: 12,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    lineHeight: 16,
-  },
-  loadingText: {
-    textAlign: 'center',
-    color: Colors.light.darkGray,
-    fontFamily: 'NotoSerifKR-Regular',
-    marginTop: 10,
-  },
-  errorText: {
-    textAlign: 'center',
-    color: 'red',
-    fontFamily: 'NotoSerifKR-Regular',
-    marginTop: 10,
-  },
-  emptySectionText: {
-    textAlign: 'center',
-    color: Colors.light.darkGray,
-    fontFamily: 'NotoSerifKR-Regular',
-    marginTop: 10,
-  },
-});

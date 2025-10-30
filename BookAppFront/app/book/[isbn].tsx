@@ -5,7 +5,7 @@ import {
   Image,
   Text,
   View,
-  StyleSheet,
+  
   TouchableOpacity,
   TextInput,
   FlatList,

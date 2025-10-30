@@ -66,4 +66,10 @@ public class BookController {
         response.put("endpoints", "/api/books/search?query=미움받을용기");
         return response;
     }
+
+    @PostMapping("/details")
+    public ResponseEntity<List<Book>> getBookDetailsByIds(@RequestBody List<Long> ids) {
+        List<Book> books = bookService.getBooksByIds(ids);
+        return ResponseEntity.ok(books);
+    }
 }

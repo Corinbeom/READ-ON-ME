@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,5 +79,16 @@ public class UserBookStatusService {
                 book.getThumbnail(),
                 book.getIsbn13()
         );
+    }
+
+    public Map<Long, List<Long>> getAllUserLibraries() {
+        List<UserBookStatus> allStatuses = userBookStatusRepository.findAll();
+
+        return allStatuses.stream()
+                .filter(status -> status.getStatus() == ReadingStatus.READING || status.getStatus() == ReadingStatus.COMPLETED)
+                .collect(Collectors.groupingBy(
+                        status -> status.getUser().getId(),
+                        Collectors.mapping(status -> status.getBook().getId(), Collectors.toList())
+                ));
     }
 }

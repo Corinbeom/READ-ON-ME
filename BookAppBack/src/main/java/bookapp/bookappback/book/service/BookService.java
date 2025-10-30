@@ -143,4 +143,8 @@ public class BookService {
             throw new BookExceptions.ExternalApiException("카카오 API (ISBN) 호출 실패: " + e.getMessage());
         }
     }
+
+    public List<Book> getBooksByIds(List<Long> ids) {
+        return bookRepository.findAllById(ids);
+    }
 }

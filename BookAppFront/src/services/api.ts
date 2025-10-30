@@ -2,6 +2,7 @@
 import axios, { AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import { ReadingStatus } from '../types/readingStatus'
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
@@ -11,9 +12,22 @@ const API_BASE_URL = (() => {
   return 'http://localhost:8080';
 })();
 
+// 📍 FastAPI 서버를 위한 Base URL 설정
+const RECOMMENDATION_API_BASE_URL = (() => {
+  if (Platform.OS === 'android') return 'http://10.0.2.2:8000';
+  return 'http://localhost:8000';
+})();
+
 // 📍 공통 Axios 인스턴스
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 10000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// 📍 추천 API를 위한 별도 Axios 인스턴스
+export const recommendationApiInstance = axios.create({
+  baseURL: RECOMMENDATION_API_BASE_URL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -95,6 +109,8 @@ export const bookApi = {
     api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() } }),
 
   getUserLibrary: () => api.get('/api/library'),
+
+  getBooksByIds: (ids: number[]) => api.post('/api/books/details', ids),
 };
 
 // 🔹 리뷰 관련 API
@@ -112,4 +128,10 @@ export const reviewApi = {
   toggleReviewLike: (reviewId: number) => api.post(`/api/books/review/${reviewId}/like`),
 
   getMyReviews: () => api.get('/api/reviews/my'), // New method to fetch user's reviews
+}; 
+
+// 🔮 추천 관련 API
+export const recommendationApi = {
+  getRecommendations: (userId: number) =>
+    recommendationApiInstance.get<number[]>(`/recommendations/${userId}`),
 };

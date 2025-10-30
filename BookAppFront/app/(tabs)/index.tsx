@@ -1,25 +1,29 @@
-// BookAppFront/app/(tabs)/index.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  FlatList,
   StyleSheet,
   Image,
+  ScrollView,
+  Modal,
+  Pressable,
 } from 'react-native';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
+import { FontAwesome } from '@expo/vector-icons';
 import { RootState } from '../../src/store';
-import { bookApi } from '../../src/services/api';
+import { bookApi, recommendationApi } from '../../src/services/api';
 import { Book } from '../../src/types/book';
-import customAlert from '../../src/utils/alert'; // Import customAlert
-import { getIsbn13 } from '../../src/utils/bookUtils';
 import styles from '../../src/styles/HomeScreen.styles';
+import BookCarousel from '../../components/BookCarousel'; // Import the new component
 
 export default function HomeScreen() {
   const [popularBooks, setPopularBooks] = useState<Book[]>([]);
   const [popularLoading, setPopularLoading] = useState(false);
+  const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   // 인기 책 가져오기
@@ -35,47 +39,45 @@ export default function HomeScreen() {
     }
   };
 
-  // 컴포넌트 마운트 시 인기 책 가져오기
+  // 사용자 기반 추천 책 가져오기
+  const fetchRecommendations = async () => {
+    if (!isAuthenticated || !user?.id) {
+      // 비로그인 시, 이전 추천 목록을 지웁니다.
+      if (recommendedBooks.length > 0) setRecommendedBooks([]);
+      return;
+    }
+
+    setRecommendationsLoading(true);
+    try {
+      const response = await recommendationApi.getRecommendations(user.id);
+      const recommendedIds = response.data;
+
+      if (recommendedIds && recommendedIds.length > 0) {
+        const booksResponse = await bookApi.getBooksByIds(recommendedIds);
+        setRecommendedBooks(booksResponse.data);
+      } else {
+        setRecommendedBooks([]);
+      }
+    } catch (error) {
+      console.error('[추천 로직] 추천 책 조회 실패:', error);
+    } finally {
+      setRecommendationsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchPopularBooks();
   }, []);
 
-  const renderPopularBookItem = ({ item }: { item: Book }) => {
-    const isbn13 = getIsbn13(item);
-
-    const BookContent = () => (
-      <>
-        <View>
-          <Image source={{ uri: item.thumbnail }} style={styles.popularThumbnail} />
-          <View style={styles.thumbnailOverlay} />
-        </View>
-        <Text style={styles.popularTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.popularAuthor} numberOfLines={1}>{item.authors || item.publisher}</Text>
-      </>
-    );
-
-    if (!isbn13) {
-      return (
-        <View style={styles.popularBookItem}>
-          <BookContent />
-        </View>
-      );
-    }
-
-    return (
-      <Link href={`/book/${isbn13}`} asChild>
-        <TouchableOpacity style={styles.popularBookItem} activeOpacity={0.8}>
-          <BookContent />
-        </TouchableOpacity>
-      </Link>
-    );
-  };
+  useEffect(() => {
+    fetchRecommendations();
+  }, [isAuthenticated, user]); // 로그인 상태 변경 시 추천 다시 로드
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       {/* 상단 헤더 */}
       <View style={styles.headerContainer}>
-        <View style={styles.headerContentWrapper}> 
+        <View style={styles.headerContentWrapper}>
           <Image source={require('@/assets/images/main_logo2.png')} style={styles.logo} />
           <View style={styles.authContainer}>
             {isAuthenticated ? (
@@ -103,31 +105,51 @@ export default function HomeScreen() {
       </View>
 
       {/* 인기 책 섹션 */}
-      <View style={styles.popularSection}>
-        <View style={styles.popularHeader}>
-          <Text style={styles.popularHeaderTitle}>인기 책</Text>
-        </View>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={popularBooks}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderPopularBookItem}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingBottom: 8,
-            gap: 10,
-          }}
-        />
-      </View>
+      <BookCarousel 
+        title="인기 책"
+        books={popularBooks}
+        loading={popularLoading}
+      />
 
-      {/* 사용자 기반 추천 (구현 예정) */}
-      <View style={styles.userRecommendationSection}>
-        <Text style={styles.userRecommendationTitle}>사용자 기반 추천</Text>
-        <Text style={styles.userRecommendationText}>📖 사용자님의 관심사와 비슷한 책을 추천드릴게요!</Text>
-      </View>
-    </View>
+      {/* 사용자 기반 추천 */}
+      {isAuthenticated && (
+        <BookCarousel 
+          title={
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.recommendationHeaderTitle}>{user?.nickname}님을 위한 추천</Text>
+              <Pressable onPress={() => setModalVisible(true)}>
+                <FontAwesome name="question-circle-o" size={20} color="gray" />
+              </Pressable>
+            </View>
+          }
+          books={recommendedBooks}
+          loading={recommendationsLoading}
+          emptyMessage="🤔 아직 추천할 도서가 없어요. 독서 활동을 시작해보세요!"
+        />
+      )}
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(!modalVisible)}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+            <Text style={styles.modalTitle}>사용자 기반 추천이란?</Text>
+            <Text style={styles.modalText}>
+              회원님의 독서 기록(읽는 중, 다 읽음)을 바탕으로, 비슷한 독서 취향을 가진 다른 사용자들이 재미있게 읽었지만 회원님은 아직 읽지 않은 책을 찾아 추천해 드리는 기능입니다.
+            </Text>
+            <Pressable
+              style={[styles.button, styles.buttonClose]}
+              onPress={() => setModalVisible(!modalVisible)}
+            >
+              <Text style={styles.textStyle}>닫기</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+    </ScrollView>
   );
 }
-
-

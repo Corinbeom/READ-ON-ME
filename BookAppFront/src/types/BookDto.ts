@@ -6,5 +6,6 @@ export interface BookDto {
     publisher: string;
     thumbnail: string;
     isbn13: string;
+    contents: string;
     // Add other fields if necessary for display in the frontend
 }

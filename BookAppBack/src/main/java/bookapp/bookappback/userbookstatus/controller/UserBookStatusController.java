@@ -10,6 +10,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/library")
 @RequiredArgsConstructor
@@ -33,5 +36,11 @@ public class UserBookStatusController {
         String userEmail = userDetails.getUsername(); // Get email from UserDetails
         UserLibraryResponse userLibrary = userBookStatusService.getUserLibrary(userEmail);
         return ResponseEntity.ok(userLibrary);
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<Map<Long, List<Long>>> getAllUserLibraries() {
+        Map<Long, List<Long>> allUserLibraries = userBookStatusService.getAllUserLibraries();
+        return ResponseEntity.ok(allUserLibraries);
     }
 }
