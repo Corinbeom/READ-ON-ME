@@ -1,10 +1,21 @@
 import httpx
 from fastapi import FastAPI
 from typing import List
+from contextlib import asynccontextmanager
 
+from app.routers import data_builder
+from app.database import engine, Base
 from .recommendation_service import get_recommendations
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
+app.include_router(data_builder.router)
 
 SPRING_BOOT_SERVER_URL = "http://localhost:8080"
 

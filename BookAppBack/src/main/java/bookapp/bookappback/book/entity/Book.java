@@ -50,6 +50,7 @@ public class Book {
     @Column(name = "sale_price")
     private Integer salePrice;
 
+    @Column(columnDefinition = "TEXT")
     private String thumbnail;
 
     @Column(name = "publish_date")

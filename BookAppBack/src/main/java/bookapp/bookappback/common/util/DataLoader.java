@@ -7,27 +7,30 @@ import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.book.service.KakaoBookService;
 import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.springframework.web.reactive.function.client.WebClient;
+import java.util.Map;
 
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public class DataLoader implements CommandLineRunner {
 
     private final KakaoBookService kakaoBookService;
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final WebClient.Builder webClientBuilder;
 
-    public DataLoader(KakaoBookService kakaoBookService, BookRepository bookRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
-        this.kakaoBookService = kakaoBookService;
-        this.bookRepository = bookRepository;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
+
 
     @Override
     public void run(String... args) throws Exception {
@@ -39,44 +42,55 @@ public class DataLoader implements CommandLineRunner {
         testuser.setCreatedAt(LocalDateTime.now());
         userRepository.save(testuser);
 
+        log.info("===== 📚 초기 인기 도서 데이터 로드 시작 =====");
+
         List<String> initialTitles = List.of(
-                "미움받을 용기",
-                "해리포터와 마법사의 돌",
-                "나의 라임 오렌지나무",
-                "1984",
-                "어린 왕자",
-                "사피엔스",
-                "총, 균, 쇠",
-                "노르웨이의 숲",
-                "인간 실격",
-                "달러구트 꿈 백화점",
-                "불편한 편의점",
-                "그릿",
-                "죽고 싶지만 떡볶이는 먹고 싶어",
-                "보통의 존재",
-                "미생",
-                "죽음에 관하여",
-                "이기적 유전자",
-                "지금, 이 순간을 살아라",
-                "연금술사",
-                "어둠의 왼손"
+                "미움받을 용기", "해리포터와 마법사의 돌", "나의 라임 오렌지나무", "1984", "어린 왕자",
+                "사피엔스", "총, 균, 쇠", "노르웨이의 숲", "인간 실격", "달러구트 꿈 백화점",
+                "불편한 편의점", "그릿", "죽고 싶지만 떡볶이는 먹고 싶어", "보통의 존재", "미생",
+                "죽음에 관하여", "이기적 유전자", "지금, 이 순간을 살아라", "연금술사", "어둠의 왼손"
         );
 
         for (String title : initialTitles) {
-            KakaoBookSearchResponse response = kakaoBookService.searchBooks(title).block();
-            if (response == null || response.getDocuments().isEmpty()) continue;
+            try {
+                KakaoBookSearchResponse response = kakaoBookService.searchBooks(title).block();
+                if (response == null || response.getDocuments().isEmpty()) continue;
 
-            KakaoBookDto dto = response.getDocuments().get(0);
+                KakaoBookDto dto = response.getDocuments().get(0);
+                String[] isbns = dto.getIsbn().split(" ");
+                String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
 
-            // ISBN13 추출
-            String[] isbns = dto.getIsbn().split(" ");
-            String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
-
-            // 이미 DB에 존재하는지 확인
-            boolean exists = bookRepository.findByIsbn13(isbn13).stream().findFirst().isPresent();
-            if (!exists) {
-                bookRepository.save(Book.fromKakaoApiResponse(dto));
+                boolean exists = bookRepository.findByIsbn13(isbn13).stream().findFirst().isPresent();
+                if (!exists) {
+                    bookRepository.save(Book.fromKakaoApiResponse(dto));
+                }
+            } catch (Exception e) {
+                log.error("❌ [{}] 도서 저장 중 오류 발생: {}", title, e.getMessage());
             }
         }
+
+        log.info("===== ✅ 초기 인기 도서 데이터 로드 완료 =====");
+
+        // =====================================
+        // 🚀 AI 도서 데이터 구축 요청 (FastAPI)
+        // =====================================
+        log.info("===== 🚀 AI 기반 도서 데이터 구축 요청 시작 =====");
+
+        List<String> keywords = List.of(
+                "소설", "문학", "철학", "심리", "SF", "판타지", "경제", "역사", "시집"
+        );
+
+        WebClient webClient = webClientBuilder.baseUrl("http://localhost:8000").build();
+
+        webClient.post()
+                .uri("/api/books/fetch-and-filter")
+                .bodyValue(Map.of("keywords", keywords))
+                .retrieve()
+                .bodyToMono(String.class)
+                .doOnSuccess(response -> log.info("✅ FastAPI 응답: {}", response))
+                .doOnError(error -> log.error("❌ FastAPI 요청 실패: {}", error.getMessage()))
+                .subscribe();
+
+        log.info("===== ✉️ FastAPI에 데이터 구축 요청을 비동기적으로 전송했습니다. =====");
     }
 }
