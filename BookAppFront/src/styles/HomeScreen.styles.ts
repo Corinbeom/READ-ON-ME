@@ -65,6 +65,82 @@ export default StyleSheet.create({
     fontSize: 14, 
     fontFamily: 'Pretendard-SemiBold',
   },
+
+  aiCard: {
+    backgroundColor: '#fffaf3',
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  aiHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aiTitle: {
+    fontSize: 18,
+    fontFamily: 'Pretendard-SemiBold',
+    color: colors.text,
+    marginLeft: 8,
+  },
+  aiDescription: {
+    fontSize: 14,
+    fontFamily: 'NotoSerifKR-Regular',
+    color: colors.darkGray,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  aiButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  aiButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: 'Pretendard-Medium',
+  },
+
+  chatBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f2e8',
+    marginHorizontal: 16,
+    marginTop: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  chatEmoji: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  chatTextWrapper: { flex: 1 },
+  chatTitle: {
+    fontSize: 16,
+    fontFamily: 'Pretendard-SemiBold',
+    color: '#3e2723',
+    marginBottom: 4,
+  },
+  chatDesc: {
+    fontSize: 13,
+    fontFamily: 'NotoSerifKR-Regular',
+    color: '#6b4e34',
+    lineHeight: 20,
+  },
+  
   
   // Sections
   recommendationSection: {

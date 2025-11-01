@@ -99,7 +99,7 @@ export default function HomeScreen() {
       </View>
 
       {/* AI 추천 검색 트리거 */}
-      <TouchableOpacity 
+      {/* <TouchableOpacity 
         style={styles.recommendationSection} 
         onPress={() => setIsAiChatModalVisible(true)}
       >
@@ -107,7 +107,22 @@ export default function HomeScreen() {
         <Text style={styles.recommendationText}>
           🤖 AI와 대화하며 당신의 취향에 맞는 도서를 추천받으세요!
         </Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
+      {/* AI 추천 검색 챗버블형 */}
+<TouchableOpacity 
+  style={styles.chatBubble}
+  onPress={() => setIsAiChatModalVisible(true)}
+>
+  <Text style={styles.chatEmoji}>🤖</Text>
+  <View style={styles.chatTextWrapper}>
+    <Text style={styles.chatTitle}>AI 추천 검색</Text>
+    <Text style={styles.chatDesc}>
+      “스릴러 소설 추천해줘” 라고 말해보세요!{'\n'}
+      해당 섹션을 클릭하면 채팅창이 나와요!
+    </Text>
+  </View>
+</TouchableOpacity>
+
 
       {/* 인기 책 섹션 */}
       <BookCarousel 

@@ -24,27 +24,11 @@ interface SearchResponse {
 }
 
 // AI Search result type (based on BookCorpus)
-interface AiBookResult {
-  id: number;
-  title: string;
-  contents: string;
-  isbn: string;
-  authors: string; // Note: this is a string, not string[]
-  publisher: string;
-  thumbnail: string;
-  similarity: number;
-}
-
 export default function SearchScreen() {
   // State for Keyword Search
   const [searchQuery, setSearchQuery] = useState('');
   const [books, setBooks] = useState<KakaoBook[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // State for AI Search
-  const [aiSearchQuery, setAiSearchQuery] = useState('');
-  const [aiBooks, setAiBooks] = useState<AiBookResult[]>([]);
-  const [aiLoading, setAiLoading] = useState(false);
 
   const searchBooks = async () => {
     if (!searchQuery.trim()) {
@@ -66,24 +50,6 @@ export default function SearchScreen() {
     }
   };
 
-  const handleAiSearch = async () => {
-    if (!aiSearchQuery.trim()) {
-      customAlert('알림', 'AI 검색어를 입력해주세요.');
-      return;
-    }
-    setAiLoading(true);
-    try {
-      const response = await axios.get('http://localhost:8080/api/ai/search', {
-        params: { query: aiSearchQuery },
-      });
-      setAiBooks(response.data);
-    } catch (error) {
-      console.error('AI 검색 실패:', error);
-      customAlert('오류', 'AI 검색 중 오류가 발생했습니다.');
-    } finally {
-      setAiLoading(false);
-    }
-  };
 
   const renderKeywordBookItem = ({ item }: { item: KakaoBook }) => {
     const isbn13 = getIsbn13(item);
@@ -100,58 +66,11 @@ export default function SearchScreen() {
     return isbn13 ? <Link href={`/book/${isbn13}`} asChild>{bookContent}</Link> : bookContent;
   };
 
-  const renderAiBookItem = ({ item }: { item: AiBookResult }) => {
-    const bookContent = (
-      <TouchableOpacity style={styles.bookItem} activeOpacity={0.8}>
-        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
-        <View style={styles.bookInfo}>
-          <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.authors} numberOfLines={1}>{item.authors}</Text>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={Colors.light.darkGray} />
-      </TouchableOpacity>
-    );
-    return <Link href={`/book/${item.isbn}`} asChild>{bookContent}</Link>;
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      {/* AI Search */}
-      <View style={styles.searchSectionContainer}>
-        <Text style={styles.sectionTitle}>AI 자연어 검색</Text>
-        <View style={styles.searchContainer}>
-          <Ionicons name="sparkles-outline" size={20} color={Colors.light.darkGray} style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder='"외로운 주인공이 나오는 책" 처럼 검색'
-            placeholderTextColor={Colors.light.darkGray}
-            value={aiSearchQuery}
-            onChangeText={setAiSearchQuery}
-            onSubmitEditing={handleAiSearch}
-            returnKeyType="search"
-          />
-        </View>
-      </View>
-      <FlatList
-        data={aiBooks}
-        renderItem={renderAiBookItem}
-        keyExtractor={(item) => item.isbn}
-        style={styles.bookList}
-        ListHeaderComponent={aiLoading ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
-        ListEmptyComponent={
-          !aiLoading && aiSearchQuery ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>AI 검색 결과가 없습니다.</Text>
-            </View>
-          ) : null
-        }
-      />
-
-      <View style={styles.divider} />
-
       {/* Keyword Search */}
       <View style={styles.searchSectionContainer}>
-        <Text style={styles.sectionTitle}>키워드 검색</Text>
+        <Text style={styles.sectionTitle}>책 검색</Text>
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={Colors.light.darkGray} style={styles.searchIcon} />
           <TextInput

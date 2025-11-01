@@ -135,11 +135,6 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
         />
       )}
 
-      {item.type === 'ai' && item.results && item.results.length > 0 && (
-        <TouchableOpacity style={styles.recommendAgainButton} onPress={handleRecommendAgain}>
-          <Text style={styles.recommendAgainButtonText}>다시 추천받기</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 
@@ -279,19 +274,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     fontFamily: 'NotoSerifKR-Regular',
     color: Colors.light.text,
-  },
-  recommendAgainButton: {
-    marginTop: 10,
-    backgroundColor: Colors.light.secondary,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    alignSelf: 'flex-end',
-  },
-  recommendAgainButtonText: {
-    color: Colors.light.background,
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 13,
   },
   inputContainer: {
     flexDirection: 'row',

@@ -159,36 +159,82 @@ async def embed_single_book(book_data: SingleBookRequest, db: AsyncSession):
 async def search_by_natural_language(query: str, db: AsyncSession):
     """Performs vector similarity search on the book_corpus table."""
     print(f"Performing AI search for query: {query}")
-    author_keywords = ["작가", "저자", "쓴"]
-    is_author_query = any(keyword in query for keyword in author_keywords)
 
-    if is_author_query:
+    # --- 1️⃣ 의도 분류 ---
+    author_keywords = ["작가", "저자", "쓴"]
+    similar_keywords = ["같은", "비슷한"]
+    mood_keywords = ["분위기", "느낌", "감성", "무드"]
+
+    if any(k in query for k in author_keywords):
+        intent = "author"
+    elif any(k in query for k in similar_keywords):
+        intent = "similar"
+    elif any(k in query for k in mood_keywords):
+        intent = "mood"
+    else:
+        intent = "general"
+
+    # --- 2️⃣ 프롬프트 리라이트 ---
+    if intent == "author":
         query_text_for_embedding = f"이 작가의 책을 찾아줘: {query}. 이 작가의 작품을 추천해줘."
         current_threshold = AI_SEARCH_THRESHOLD
-    else:
-        query_text_for_embedding = f"{query}와(과) 비슷한 책을 찾아줘."
+
+    elif intent == "similar":
+        cleaned_query = (
+            query.replace("같은 책", "")
+                .replace("비슷한 책", "")
+                .replace("추천해줘", "")
+                .strip()
+        )
+        query_text_for_embedding = f"'{cleaned_query}'와 비슷한 주제와 분위기의 책을 찾아줘."
         current_threshold = AI_SIMILARITY_THRESHOLD
 
+
+    elif intent == "mood":
+        cleaned_query = (
+            query.replace("추천해줘", "")
+                .replace("책을", "")
+                .replace("책", "")
+                .strip()
+        )
+        query_text_for_embedding = f"'{cleaned_query}'와 같은 감정과 분위기의 책을 추천해줘."
+        current_threshold = AI_SIMILARITY_THRESHOLD
+
+
+    else:  # general
+        query_text_for_embedding = f"{query.strip()}와 관련된 책을 찾아줘."
+        current_threshold = AI_SIMILARITY_THRESHOLD
+
+    print(f"[Intent: {intent}] Rewritten query: {query_text_for_embedding}")
+
+    # --- 3️⃣ 쿼리 임베딩 생성 ---
     query_embedding = await get_embedding(query_text_for_embedding)
     if not query_embedding:
         raise HTTPException(status_code=500, detail="Could not generate embedding for the search query.")
+
+    # --- 4️⃣ 벡터 유사도 검색 ---
     stmt = text("""
-        SELECT id, title, contents, isbn, authors, publisher, thumbnail, 1 - (embedding <=> :query_embedding) AS similarity
+        SELECT id, title, contents, isbn, authors, publisher, thumbnail,
+               1 - (embedding <=> :query_embedding) AS similarity
         FROM book_corpus
         WHERE 1 - (embedding <=> :query_embedding) > :threshold
         ORDER BY similarity DESC
         LIMIT :limit
     """)
     result = await db.execute(
-        stmt, 
+        stmt,
         {
-            "query_embedding": str(list(query_embedding)), 
-            "threshold": current_threshold, 
+            "query_embedding": str(list(query_embedding)),
+            "threshold": current_threshold,
             "limit": AI_SEARCH_LIMIT
         }
     )
+
+    # --- 5️⃣ 결과 반환 ---
     search_results = [dict(row) for row in result.mappings()]
-    for i in range(len(search_results)):
-        print(search_results[i])
-    print(f"Found {len(search_results)} results for query: '{query}'")
+    print(f"[{intent.upper()}] Found {len(search_results)} results for query: '{query}'")
+    for i, r in enumerate(search_results[:3], 1):
+        print(f"{i}. {r.get('title')} (sim: {r.get('similarity'):.3f})")
+
     return search_results
+
