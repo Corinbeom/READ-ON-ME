@@ -35,12 +35,15 @@ public class DataLoader implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
-        User testuser = new User();
-        testuser.setEmail("test@test.com");
-        testuser.setPassword(passwordEncoder.encode("1111"));
-        testuser.setNickname("tester");
-        testuser.setCreatedAt(LocalDateTime.now());
-        userRepository.save(testuser);
+        if (userRepository.findByEmail("test@test.com").isEmpty()) {
+            User testuser = new User();
+            testuser.setEmail("test@test.com");
+            testuser.setPassword(passwordEncoder.encode("1111"));
+            testuser.setNickname("tester");
+            testuser.setCreatedAt(LocalDateTime.now());
+            userRepository.save(testuser);
+            log.info("테스트 유저 'test@test.com 생성 완료");
+        }
 
         log.info("===== 📚 초기 인기 도서 데이터 로드 시작 =====");
 

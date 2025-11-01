@@ -11,3 +11,6 @@ class SingleBookRequest(BaseModel):
     authors: Optional[List[str]] = []
     publisher: Optional[str] = ""
     thumbnail: Optional[str] = ""
+
+class AiSearchRequest(BaseModel):
+    query: str

@@ -1,4 +1,3 @@
-// BookAppFront/app/(tabs)/search.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -8,37 +7,50 @@ import {
   FlatList,
   StyleSheet,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
 import { Link } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Book } from '../../src/types/book';
-import { KakaoBook } from '../../src/types/kakaoBook'; // Import KakaoBook
-import customAlert from '../../src/utils/alert'; // Use customAlert
+import { KakaoBook } from '../../src/types/kakaoBook';
+import customAlert from '../../src/utils/alert';
 import { getIsbn13 } from '../../src/utils/bookUtils';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-
 interface SearchResponse {
-  documents: KakaoBook[]; // Use KakaoBook here
-  meta: {
-    total_count: number;
-    is_end: boolean;
-  };
+  documents: KakaoBook[];
+  meta: { total_count: number; is_end: boolean; };
+}
+
+// AI Search result type (based on BookCorpus)
+interface AiBookResult {
+  id: number;
+  title: string;
+  contents: string;
+  isbn: string;
+  authors: string; // Note: this is a string, not string[]
+  publisher: string;
+  thumbnail: string;
+  similarity: number;
 }
 
 export default function SearchScreen() {
+  // State for Keyword Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [books, setBooks] = useState<KakaoBook[]>([]); // Use KakaoBook here
+  const [books, setBooks] = useState<KakaoBook[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // State for AI Search
+  const [aiSearchQuery, setAiSearchQuery] = useState('');
+  const [aiBooks, setAiBooks] = useState<AiBookResult[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
 
   const searchBooks = async () => {
     if (!searchQuery.trim()) {
       customAlert('알림', '검색어를 입력해주세요.');
       return;
     }
-
     setLoading(true);
     try {
       const response = await axios.get<SearchResponse>(
@@ -54,24 +66,33 @@ export default function SearchScreen() {
     }
   };
 
-  
+  const handleAiSearch = async () => {
+    if (!aiSearchQuery.trim()) {
+      customAlert('알림', 'AI 검색어를 입력해주세요.');
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const response = await axios.get('http://localhost:8080/api/ai/search', {
+        params: { query: aiSearchQuery },
+      });
+      setAiBooks(response.data);
+    } catch (error) {
+      console.error('AI 검색 실패:', error);
+      customAlert('오류', 'AI 검색 중 오류가 발생했습니다.');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
-  const renderBookItem = ({ item }: { item: KakaoBook }) => {
-    const isbn13 = getIsbn13(item); // getIsbn13 needs to be updated to handle KakaoBook
+  const renderKeywordBookItem = ({ item }: { item: KakaoBook }) => {
+    const isbn13 = getIsbn13(item);
     const bookContent = (
       <TouchableOpacity style={styles.bookItem} activeOpacity={0.8} disabled={!isbn13}>
-        <View> 
-          <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
-          <View style={styles.thumbnailOverlay} />
-        </View>
+        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
         <View style={styles.bookInfo}>
           <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.authors} numberOfLines={1}>{item.authors.join(', ')}</Text>
-          <View style={styles.metaRow}>
-            <Text style={styles.publisher} numberOfLines={1}>{item.publisher}</Text>
-            <View style={styles.dot} />
-            <Text style={styles.price}>{item.price.toLocaleString()}원</Text>
-          </View>
         </View>
         <Ionicons name="chevron-forward" size={20} color={isbn13 ? Colors.light.darkGray : Colors.light.lightGray} />
       </TouchableOpacity>
@@ -79,12 +100,60 @@ export default function SearchScreen() {
     return isbn13 ? <Link href={`/book/${isbn13}`} asChild>{bookContent}</Link> : bookContent;
   };
 
+  const renderAiBookItem = ({ item }: { item: AiBookResult }) => {
+    const bookContent = (
+      <TouchableOpacity style={styles.bookItem} activeOpacity={0.8}>
+        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} />
+        <View style={styles.bookInfo}>
+          <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.authors} numberOfLines={1}>{item.authors}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={Colors.light.darkGray} />
+      </TouchableOpacity>
+    );
+    return <Link href={`/book/${item.isbn}`} asChild>{bookContent}</Link>;
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-    <View style={styles.container}>
-      {/* 검색창 */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color={Colors.light.darkGray} style={styles.searchIcon} />
+      {/* AI Search */}
+      <View style={styles.searchSectionContainer}>
+        <Text style={styles.sectionTitle}>AI 자연어 검색</Text>
+        <View style={styles.searchContainer}>
+          <Ionicons name="sparkles-outline" size={20} color={Colors.light.darkGray} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder='"외로운 주인공이 나오는 책" 처럼 검색'
+            placeholderTextColor={Colors.light.darkGray}
+            value={aiSearchQuery}
+            onChangeText={setAiSearchQuery}
+            onSubmitEditing={handleAiSearch}
+            returnKeyType="search"
+          />
+        </View>
+      </View>
+      <FlatList
+        data={aiBooks}
+        renderItem={renderAiBookItem}
+        keyExtractor={(item) => item.isbn}
+        style={styles.bookList}
+        ListHeaderComponent={aiLoading ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
+        ListEmptyComponent={
+          !aiLoading && aiSearchQuery ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>AI 검색 결과가 없습니다.</Text>
+            </View>
+          ) : null
+        }
+      />
+
+      <View style={styles.divider} />
+
+      {/* Keyword Search */}
+      <View style={styles.searchSectionContainer}>
+        <Text style={styles.sectionTitle}>키워드 검색</Text>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={20} color={Colors.light.darkGray} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="책 제목이나 저자를 검색해보세요"
@@ -95,51 +164,41 @@ export default function SearchScreen() {
             returnKeyType="search"
           />
         </View>
-
-
-      {/* 검색 결과 */}
+      </View>
       <FlatList
         data={books}
-        renderItem={renderBookItem}
-        keyExtractor={(item) => item.isbn || item.title} // Revert keyExtractor
+        renderItem={renderKeywordBookItem}
+        keyExtractor={(item) => item.isbn || item.title}
         style={styles.bookList}
-        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={loading ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Image source={require('@/assets/images/main_logo2.png')} style={styles.emptyEmoji} />
-            <Text style={styles.emptyText}>
-              {searchQuery ? '검색 결과가 없습니다.' : '책을 검색해보세요!'}
-            </Text>
-            <Text style={styles.emptySubText}>
-              {searchQuery ? '다른 검색어로 시도해보세요' : '제목, 저자명으로 검색할 수 있어요'}
-            </Text>
-          </View>
+          !loading && searchQuery ? (
+            <View style={styles.emptyContainer}>
+               <Text style={styles.emptyText}>검색 결과가 없습니다.</Text>
+            </View>
+          ) : null
         }
       />
-    </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
+  searchSectionContainer: { paddingHorizontal: 16, paddingTop: 12 },
+  sectionTitle: { fontSize: 22, fontFamily: 'Pretendard-SemiBold', marginBottom: 12, color: Colors.light.text },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F4F2', // 살짝 따뜻한 톤 유지
+    backgroundColor: '#F5F4F2',
     borderRadius: 20,
     paddingHorizontal: 14,
     height: 44,
-    marginHorizontal: 16,
-    marginTop: 12,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 4,
-  },  
-  searchIcon: {
-    marginRight: 8,
-    color: Colors.light.darkGray,
   },
+  searchIcon: { marginRight: 8, color: Colors.light.darkGray },
   searchInput: {
     flex: 1,
     fontSize: 16,
@@ -148,22 +207,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: 'transparent',
     borderWidth: 0,
-  },  
-  searchButton: {
-    marginLeft: 12,
-    backgroundColor: Colors.light.primary,
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 60,
   },
-  searchButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
-  },
-
   bookList: { flex: 1, paddingHorizontal: 16, paddingTop: 8 },
   bookItem: {
     flexDirection: 'row',
@@ -175,58 +219,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.light.lightGray,
   },
-  thumbnail: {
-    width: 64,
-    height: 88,
-    borderRadius: 8,
-    backgroundColor: Colors.light.lightGray,
-  },
-  thumbnailOverlay: { // New style for image overlay
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 250, 240, 0.05)',
-    borderRadius: 8, // Should match the thumbnail borderRadius
-  },
+  thumbnail: { width: 64, height: 88, borderRadius: 8, backgroundColor: Colors.light.lightGray },
   bookInfo: { flex: 1, marginLeft: 12, marginRight: 8 },
-  title: {
-    fontSize: 16,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    marginBottom: 4,
-    lineHeight: 22,
-  },
-  authors: {
-    fontSize: 13,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    marginBottom: 6,
-  },
-  publisher: {
-    fontSize: 12,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-  },
-  price: {
-    fontSize: 14,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.primary,
-  },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 4, height: 4, borderRadius: 2, backgroundColor: Colors.light.lightGray },
-
-  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60, paddingHorizontal: 40 },
-  emptyEmoji: { fontSize: 64, marginBottom: 16 },
-  emptyText: {
-    fontSize: 18,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubText: {
-    fontSize: 14,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.darkGray,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  title: { fontSize: 16, fontFamily: 'Pretendard-SemiBold', color: Colors.light.text, marginBottom: 4, lineHeight: 22 },
+  authors: { fontSize: 13, fontFamily: 'NotoSerifKR-Regular', color: Colors.light.darkGray, marginBottom: 6 },
+  emptyContainer: { alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  emptyText: { fontSize: 16, fontFamily: 'NotoSerifKR-Regular', color: Colors.light.darkGray },
+  divider: { height: 1, backgroundColor: '#e1e1e1', marginVertical: 24, marginHorizontal: 16 },
 });

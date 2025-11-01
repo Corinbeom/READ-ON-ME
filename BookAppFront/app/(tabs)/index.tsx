@@ -16,7 +16,8 @@ import { RootState } from '../../src/store';
 import { bookApi, recommendationApi } from '../../src/services/api';
 import { Book } from '../../src/types/book';
 import styles from '../../src/styles/HomeScreen.styles';
-import BookCarousel from '../../components/BookCarousel'; // Import the new component
+import BookCarousel from '../../components/BookCarousel';
+import AiChatModal from '../../components/AiChatModal'; // New import
 
 export default function HomeScreen() {
   const [popularBooks, setPopularBooks] = useState<Book[]>([]);
@@ -24,6 +25,7 @@ export default function HomeScreen() {
   const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false); // New state
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   // 인기 책 가져오기
@@ -96,13 +98,16 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* AI 추천 검색 (구현 예정) */}
-      <View style={styles.recommendationSection}>
+      {/* AI 추천 검색 트리거 */}
+      <TouchableOpacity 
+        style={styles.recommendationSection} 
+        onPress={() => setIsAiChatModalVisible(true)}
+      >
         <Text style={styles.recommendationTitle}>AI 추천 검색</Text>
         <Text style={styles.recommendationText}>
-          🤖 곧 AI가 당신의 취향을 분석해 맞춤 도서를 추천해드릴 예정이에요!
+          🤖 AI와 대화하며 당신의 취향에 맞는 도서를 추천받으세요!
         </Text>
-      </View>
+      </TouchableOpacity>
 
       {/* 인기 책 섹션 */}
       <BookCarousel 
@@ -128,6 +133,7 @@ export default function HomeScreen() {
         />
       )}
 
+      {/* 기존 모달 */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -149,6 +155,12 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* AI Chat Modal */}
+      <AiChatModal 
+        isVisible={isAiChatModalVisible} 
+        onClose={() => setIsAiChatModalVisible(false)} 
+      />
 
     </ScrollView>
   );

@@ -2,39 +2,50 @@
 import os
 import httpx
 import numpy as np
-import google.generativeai as genai
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.sql import text
 from app.models.book_corpus import BookCorpus
 from app.schemas import SingleBookRequest
 
+from sentence_transformers import SentenceTransformer
+import torch
+
 # --- Configuration ---
 KAKAO_API_KEY = os.getenv("KAKAO_API_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if not KAKAO_API_KEY or not GEMINI_API_KEY:
-    raise ValueError("API keys for Kakao and Gemini must be set in .env file")
+if not KAKAO_API_KEY:
+    raise ValueError("KAKAO_API_KEY must be set in .env file")
 
 KAKAO_API_URL = "https://dapi.kakao.com/v3/search/book"
 SIMILARITY_THRESHOLD = 0.65
+AI_SEARCH_THRESHOLD = 0.65
+AI_SIMILARITY_THRESHOLD = 0.55 # New threshold for general similarity queries
+AI_SEARCH_LIMIT = 20
 
-genai.configure(api_key=GEMINI_API_KEY)
+# --- Hugging Face Model Loading ---
+# Check if GPU is available and use it, otherwise use CPU
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print(f"Using device: {device}")
+embedding_model = SentenceTransformer('jhgan/ko-sroberta-multitask', device=device)
 
 # --- Service Functions ---
 
 async def get_embedding(text: str):
-    """Generates embedding for a given text using Gemini API."""
+    """Generates embedding for a given text using Hugging Face SentenceTransformer."""
     try:
-        result = await genai.embed_content_async(model="models/text-embedding-004", content=text)
-        return result['embedding']
+        # SentenceTransformer's encode method returns numpy array by default
+        embedding = embedding_model.encode(text, convert_to_numpy=True)
+        return embedding.tolist() # Convert to list for pgvector compatibility
     except Exception as e:
-        print(f"Error getting embedding: {e}")
+        print(f"Error getting embedding for text: '{text}' - {e}")
         return None
 
 async def search_kakao_books(keyword: str, page: int):
     """Searches for books using Kakao API."""
     headers = {"Authorization": f"KakaoAK {KAKAO_API_KEY}"}
-    params = {"query": keyword, "page": page, "size": 10} # size is 1-50
+    params = {"query": keyword, "page": page, "size": 10}
     async with httpx.AsyncClient() as client:
         try:
             response = await client.get(KAKAO_API_URL, headers=headers, params=params)
@@ -50,14 +61,11 @@ def cosine_similarity(vec1, vec2):
         vec1 = np.array(vec1)
     if not isinstance(vec2, np.ndarray):
         vec2 = np.array(vec2)
-    
     dot_product = np.dot(vec1, vec2)
     norm_vec1 = np.linalg.norm(vec1)
     norm_vec2 = np.linalg.norm(vec2)
-    
     if norm_vec1 == 0 or norm_vec2 == 0:
         return 0.0
-        
     return dot_product / (norm_vec1 * norm_vec2)
 
 async def check_if_isbn_exists(db: AsyncSession, isbn: str):
@@ -65,47 +73,40 @@ async def check_if_isbn_exists(db: AsyncSession, isbn: str):
     result = await db.execute(select(BookCorpus).filter(BookCorpus.isbn == isbn))
     return result.scalars().first() is not None
 
-# --- Main Orchestrators ---
+# --- Main Orchestrators & Search ---
 
 async def process_keywords(keywords: list[str], db: AsyncSession):
     """The main function to orchestrate the data building process."""
     total_saved_count = 0
     total_similarity = 0
     processed_books_count = 0
-
     for keyword in keywords:
         print(f"Processing keyword: {keyword}")
         keyword_embedding = await get_embedding(f"This book is a {keyword} genre book.")
         if not keyword_embedding:
             print(f"Could not generate embedding for keyword: {keyword}. Skipping.")
             continue
-
-        for page in range(1, 6): # 1 to 5 pages as per requirements
+        for page in range(1, 6):
             books = await search_kakao_books(keyword, page)
             if not books:
                 break
-
             for book in books:
                 isbn = book.get('isbn')
-                # Kakao API returns 2 ISBNs (isbn10 isbn13), we take the second one (isbn13)
                 if isbn and len(isbn.split()) > 1:
                     isbn = isbn.split()[1]
                 else:
-                    continue # Skip if no valid ISBN
-
+                    continue
                 if await check_if_isbn_exists(db, isbn):
-                    print(f"Book with ISBN {isbn} already exists. Skipping.")
                     continue
 
-                book_text = f"{book.get('title', '')} {book.get('contents', '')}"
+                book_text = f"이 책은 {book.get('authors', '')} 작가가 쓴 책입니다. 제목: {book.get('title', '')}. 내용: {book.get('contents', '')}"
+                book_embedding = await get_embedding(book_text)
                 book_embedding = await get_embedding(book_text)
                 if not book_embedding:
                     continue
-
                 similarity = cosine_similarity(keyword_embedding, book_embedding)
                 processed_books_count += 1
                 total_similarity += similarity
-
                 if similarity >= SIMILARITY_THRESHOLD:
                     new_book = BookCorpus(
                         title=book.get('title'),
@@ -121,11 +122,8 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
                     db.add(new_book)
                     total_saved_count += 1
                     print(f"Saved book: {book.get('title')} (Similarity: {similarity:.4f})")
-
     await db.commit()
-
     average_similarity = (total_similarity / processed_books_count) if processed_books_count > 0 else 0
-    
     return {
         "processed_keywords": len(keywords),
         "total_books_saved": total_saved_count,
@@ -135,18 +133,14 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
 async def embed_single_book(book_data: SingleBookRequest, db: AsyncSession):
     """Embeds a single book and saves it to the corpus if it doesn't exist."""
     print(f"Processing single book with ISBN: {book_data.isbn}")
-
+    book_text = f"이 책은 {book_data.authors} 작가가 쓴 책입니다. 제목: {book_data.title}. 내용: {book_data.contents}"
     if await check_if_isbn_exists(db, book_data.isbn):
         print(f"Book with ISBN {book_data.isbn} already exists in corpus. Skipping.")
         return
-
-    book_text = f"{book_data.title} {book_data.contents}"
     book_embedding = await get_embedding(book_text)
-
     if not book_embedding:
         print(f"Could not generate embedding for book: {book_data.title}. Skipping.")
         return
-
     new_corpus_entry = BookCorpus(
         title=book_data.title,
         contents=book_data.contents,
@@ -158,7 +152,43 @@ async def embed_single_book(book_data: SingleBookRequest, db: AsyncSession):
         similarity_score=0.0,
         embedding=book_embedding
     )
-    
     db.add(new_corpus_entry)
     await db.commit()
     print(f"Successfully saved single book to corpus: {book_data.title}")
+
+async def search_by_natural_language(query: str, db: AsyncSession):
+    """Performs vector similarity search on the book_corpus table."""
+    print(f"Performing AI search for query: {query}")
+    author_keywords = ["작가", "저자", "쓴"]
+    is_author_query = any(keyword in query for keyword in author_keywords)
+
+    if is_author_query:
+        query_text_for_embedding = f"이 작가의 책을 찾아줘: {query}. 이 작가의 작품을 추천해줘."
+        current_threshold = AI_SEARCH_THRESHOLD
+    else:
+        query_text_for_embedding = f"{query}와(과) 비슷한 책을 찾아줘."
+        current_threshold = AI_SIMILARITY_THRESHOLD
+
+    query_embedding = await get_embedding(query_text_for_embedding)
+    if not query_embedding:
+        raise HTTPException(status_code=500, detail="Could not generate embedding for the search query.")
+    stmt = text("""
+        SELECT id, title, contents, isbn, authors, publisher, thumbnail, 1 - (embedding <=> :query_embedding) AS similarity
+        FROM book_corpus
+        WHERE 1 - (embedding <=> :query_embedding) > :threshold
+        ORDER BY similarity DESC
+        LIMIT :limit
+    """)
+    result = await db.execute(
+        stmt, 
+        {
+            "query_embedding": str(list(query_embedding)), 
+            "threshold": current_threshold, 
+            "limit": AI_SEARCH_LIMIT
+        }
+    )
+    search_results = [dict(row) for row in result.mappings()]
+    for i in range(len(search_results)):
+        print(search_results[i])
+    print(f"Found {len(search_results)} results for query: '{query}'")
+    return search_results

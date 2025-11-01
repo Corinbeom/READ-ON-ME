@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.services import book_ai_service
-from app.schemas import KeywordRequest, SingleBookRequest
+from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest
 
 router = APIRouter()
 
@@ -28,3 +28,15 @@ async def embed_single_book(request: SingleBookRequest, background_tasks: Backgr
     """
     background_tasks.add_task(book_ai_service.embed_single_book, request, db)
     return {"message": "Single book embedding process started in the background."}
+
+
+@router.post("/api/ai/search")
+async def ai_search(request: AiSearchRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Performs a natural language search for books using vector similarity.
+    """
+    if not request.query:
+        raise HTTPException(status_code=400, detail="Search query cannot be empty.")
+    
+    results = await book_ai_service.search_by_natural_language(request.query, db)
+    return results

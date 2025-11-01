@@ -45,7 +45,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight OPTIONS requests
                         .requestMatchers("/api/users/signup", "/api/users/signin").permitAll()
-                                                .requestMatchers("/api/books/search", "/api/books/detail/**", "/api/books/popular", "/api/books/*/editions", "/api/books/test", "/api/books/details").permitAll() // 책 조회는 인증 없이 허용
+                        .requestMatchers("/api/ai/search").permitAll() // AI 검색 허용
+                        .requestMatchers("/api/books/search", "/api/books/detail/**", "/api/books/popular", "/api/books/*/editions", "/api/books/test", "/api/books/details").permitAll() // 책 조회는 인증 없이 허용
                         .requestMatchers(HttpMethod.GET, "/api/books/*/reviews").permitAll() // 리뷰 조회는 인증 없이 허용
                         .requestMatchers("/api/library/all").permitAll() // For internal recommendation API
                         .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요

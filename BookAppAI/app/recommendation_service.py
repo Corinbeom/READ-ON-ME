@@ -1,7 +1,11 @@
 import httpx
+import os
+from dotenv import load_dotenv
 from collections import Counter
 
-SPRING_BOOT_URL = "http://localhost:8080"
+load_dotenv()
+
+SPRING_BOOT_URL = os.getenv("SPRING_BOOT_URL", "http://localhost:8080")
 
 async def fetch_user_libraries() -> dict[int, list[int]]:
     """
@@ -12,8 +16,12 @@ async def fetch_user_libraries() -> dict[int, list[int]]:
         try:
             response = await client.get(f"{SPRING_BOOT_URL}/api/library/all")
             response.raise_for_status()
-            # JSON의 키가 문자열이므로, 정수형 user_id로 변환합니다.
-            return {int(k): v for k, v in response.json().items()}
+            try:
+                # JSON의 키가 문자열이므로, 정수형 user_id로 변환합니다.
+                return {int(k): v for k, v in response.json().items()}
+            except ValueError as ve:
+                print(f"Error converting user_id to int: {ve}. Response: {response.text}")
+                return {}
         except httpx.RequestError as exc:
             print(f"An error occurred while requesting {exc.request.url!r}: {exc}")
             return {}

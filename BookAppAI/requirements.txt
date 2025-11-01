@@ -6,7 +6,10 @@ python-dotenv
 SQLAlchemy
 asyncpg
 pgvector
-numpy
+numpy<2
 google-generativeai
 psycopg2-binary
 python-dotenv
+sentence-transformers
+torch==2.2.2
+transformers==4.38.2
