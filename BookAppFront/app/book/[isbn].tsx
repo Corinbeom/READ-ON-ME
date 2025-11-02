@@ -1,11 +1,11 @@
+
+
 import React, { useEffect, useMemo, useState } from 'react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Image,
-  Text,
   View,
-  
   TouchableOpacity,
   TextInput,
   FlatList,
@@ -21,14 +21,19 @@ import {
 } from '@/src/store/reviewSlice';
 import { Review } from '@/src/types/review';
 import { ReadingStatus } from '@/src/types/readingStatus';
-import styles from '../../src/styles/BookDetailScreen.styles';
-import { Colors } from '@/constants/Colors';
-import { BookDto } from '../../src/types/BookDto'; // Corrected import for BookDto
+import { getBookDetailScreenStyles } from '../../src/styles/BookDetailScreen.styles';
+import { BookDto } from '../../src/types/BookDto';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
 
 export default function BookDetailScreen() {
   const { isbn } = useLocalSearchParams<{ isbn?: string }>();
   const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getBookDetailScreenStyles(colorScheme);
 
   // Global state
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
@@ -37,15 +42,13 @@ export default function BookDetailScreen() {
   // Local state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [book, setBook] = useState<BookDto | null>(null); // Use BookDto
-  const [otherEditions, setOtherEditions] = useState<BookDto[]>([]); // Use BookDto
+  const [book, setBook] = useState<BookDto | null>(null);
+  const [otherEditions, setOtherEditions] = useState<BookDto[]>([]);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
-  const [sort, setSort] = useState('latest'); // 'latest' or 'likes'
-
+  const [sort, setSort] = useState('latest');
   const [userBookStatus, setUserBookStatus] = useState<ReadingStatus | null>(null);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
-
 
   const normalizedIsbn = useMemo(() => {
     const raw = String(isbn ?? '');
@@ -67,7 +70,6 @@ export default function BookDetailScreen() {
     }
   }, [book, dispatch, sort]);
 
-  // New useEffect to fetch user book status
   useEffect(() => {
     const fetchUserBookStatus = async () => {
       if (!isAuthenticated || !book?.id) return;
@@ -89,15 +91,13 @@ export default function BookDetailScreen() {
     fetchUserBookStatus();
   }, [isAuthenticated, book]);
 
-
   const fetchBookDetailsAndEditions = async (currentIsbn: string) => {
     setLoading(true);
     setError(null);
     try {
       const res = await bookApi.getBookDetail(currentIsbn);
       if (res.data) {
-        setBook(res.data); 
-
+        setBook(res.data);
         const editionRes = await bookApi.getBookEditions(currentIsbn);
         if (editionRes.data) {
           setOtherEditions(editionRes.data);
@@ -118,16 +118,14 @@ export default function BookDetailScreen() {
       customAlert('알림', '리뷰 내용과 별점을 모두 입력해주세요.');
       return;
     }
-
     const result = await dispatch(
       addReviewForBook({ bookId: book.id, comment: newReviewComment, rating: newReviewRating })
     );
-
     if (addReviewForBook.fulfilled.match(result)) {
       customAlert('성공', '리뷰가 등록되었습니다.');
       setNewReviewComment('');
       setNewReviewRating(0);
-      dispatch(fetchReviewsForBook({ bookId: book.id, sort })); // Refetch reviews
+      dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
     } else {
       const errorPayload = result.payload as any;
       if (errorPayload?.code === 'REVIEW_ALREADY_EXISTS') {
@@ -171,159 +169,157 @@ export default function BookDetailScreen() {
     <View style={styles.ratingContainer}>
       {[1, 2, 3, 4, 5].map((star) => (
         <TouchableOpacity key={star} onPress={() => onPress(star)}>
-          <Text style={currentRating >= star ? styles.starFilled : styles.starEmpty}>★</Text>
+          <ThemedText style={currentRating >= star ? styles.starFilled : styles.starEmpty}>★</ThemedText>
         </TouchableOpacity>
       ))}
     </View>
   );
 
   if (loading) {
-    return <View style={styles.centered}><ActivityIndicator /></View>;
+    return <ThemedView style={styles.centered}><ActivityIndicator /></ThemedView>;
   }
   if (error) {
-    return <View style={styles.centered}><Text>{error}</Text></View>;
+    return <ThemedView style={styles.centered}><ThemedText>{error}</ThemedText></ThemedView>;
   }
 
   return (
     <>
       <Stack.Screen options={{ title: book?.title || '책 상세' }} />
       <FlatList
-  ListHeaderComponent={
-    <>
-      <View style={styles.coverWrap}>
-        {book?.thumbnail ? (
-          <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" />
-        ) : (
-          <View style={[styles.cover, styles.coverPlaceholder]} />
-        )}
-        <View style={styles.coverOverlay} />
-      </View>
+        style={{ backgroundColor: styles.container.backgroundColor }}
+        ListHeaderComponent={
+          <>
+            <ThemedView style={styles.coverWrap}>
+              {book?.thumbnail ? (
+                <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" />
+              ) : (
+                <ThemedView style={[styles.cover, styles.coverPlaceholder]} />
+              )}
+              <ThemedView style={styles.coverOverlay} />
+            </ThemedView>
 
-      <View style={styles.card}>
-        <Text style={styles.title}>{book?.title}</Text>
-        <Text style={styles.meta}>{book?.authors}</Text>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>소개</Text>
-          <Text style={styles.description}>{book?.contents || '소개 정보가 없습니다.'}</Text>
-        </View>
-      </View>
+            <ThemedView style={styles.card}>
+              <ThemedText style={styles.title}>{book?.title}</ThemedText>
+              <ThemedText style={styles.meta}>{book?.authors}</ThemedText>
+              <ThemedView style={styles.section}>
+                <ThemedText style={styles.sectionTitle}>소개</ThemedText>
+                <ThemedText style={styles.description}>{book?.contents || '소개 정보가 없습니다.'}</ThemedText>
+              </ThemedView>
+            </ThemedView>
 
-      {/* Add to My Library Button */}
-      {isAuthenticated && (
-        <View style={styles.addToLibraryContainer}>
-          <TouchableOpacity
-            style={styles.addToLibraryButton}
-            onPress={() => setShowStatusPicker(true)}
-          >
-            <Text style={styles.addToLibraryButtonText}>
-              {userBookStatus ? `상태 변경: ${userBookStatus === ReadingStatus.TO_READ ? '읽고 싶은 책' : userBookStatus === ReadingStatus.READING ? '읽는 중인 책' : '완독한 책'}` : '내 서재에 추가'}
-            </Text>
-          </TouchableOpacity>
-
-          {showStatusPicker && (
-            <View style={styles.statusPickerContainer}>
-              {Object.values(ReadingStatus).map((statusOption) => (
+            {isAuthenticated && (
+              <ThemedView style={styles.addToLibraryContainer}>
                 <TouchableOpacity
-                  key={statusOption}
-                  style={[
-                    styles.statusOptionButton,
-                    userBookStatus === statusOption && styles.statusOptionButtonActive,
-                  ]}
-                  onPress={() => handleUpdateBookStatus(statusOption)}
+                  style={styles.addToLibraryButton}
+                  onPress={() => setShowStatusPicker(true)}
                 >
-                  <Text
-                    style={[
-                      styles.statusOptionButtonText,
-                      userBookStatus === statusOption && styles.statusOptionButtonTextActive,
-                    ]}
-                  >
-                    {statusOption === ReadingStatus.TO_READ ? '읽고 싶은 책' :
-                     statusOption === ReadingStatus.READING ? '읽는 중인 책' :
-                     '완독한 책'}
-                  </Text>
+                  <ThemedText style={styles.addToLibraryButtonText}>
+                    {userBookStatus ? `상태 변경: ${userBookStatus === ReadingStatus.TO_READ ? '읽고 싶은 책' : userBookStatus === ReadingStatus.READING ? '읽는 중인 책' : '완독한 책'}` : '내 서재에 추가'}
+                  </ThemedText>
                 </TouchableOpacity>
-              ))}
-              <TouchableOpacity style={styles.cancelButton} onPress={() => setShowStatusPicker(false)}>
-                <Text style={styles.cancelButtonText}>취소</Text>
+
+                {showStatusPicker && (
+                  <ThemedView style={styles.statusPickerContainer}>
+                    {Object.values(ReadingStatus).map((statusOption) => (
+                      <TouchableOpacity
+                        key={statusOption}
+                        style={[
+                          styles.statusOptionButton,
+                          userBookStatus === statusOption && styles.statusOptionButtonActive,
+                        ]}
+                        onPress={() => handleUpdateBookStatus(statusOption)}
+                      >
+                        <ThemedText
+                          style={[
+                            styles.statusOptionButtonText,
+                            userBookStatus === statusOption && styles.statusOptionButtonTextActive,
+                          ]}
+                        >
+                          {statusOption === ReadingStatus.TO_READ ? '읽고 싶은 책' :
+                           statusOption === ReadingStatus.READING ? '읽는 중인 책' :
+                           '완독한 책'}
+                        </ThemedText>
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => setShowStatusPicker(false)}>
+                      <ThemedText style={styles.cancelButtonText}>취소</ThemedText>
+                    </TouchableOpacity>
+                  </ThemedView>
+                )}
+              </ThemedView>
+            )}
+
+            <View style={styles.reviewHeaderRow}>
+              <ThemedText style={styles.reviewSectionTitle}>리뷰</ThemedText>
+              <View style={styles.sortContainer}>
+                <TouchableOpacity
+                  onPress={() => setSort('latest')}
+                  style={[styles.sortButton, sort === 'latest' && styles.sortButtonActive]}
+                >
+                  <ThemedText style={[styles.sortButtonText, sort === 'latest' && styles.sortButtonTextActive]}>
+                    최신순
+                  </ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setSort('likes')}
+                  style={[styles.sortButton, sort === 'likes' && styles.sortButtonActive]}
+                >
+                  <ThemedText style={[styles.sortButtonText, sort === 'likes' && styles.sortButtonTextActive]}>
+                    좋아요순
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {!reviewsLoading && reviews.length === 0 && (
+              <ThemedText style={styles.noReviews}>아직 작성된 리뷰가 없어요 😢{'\n'}첫 번째 리뷰의 주인공이 되어보시는건 어떨까요?</ThemedText>
+            )}
+          </>
+        }
+        data={reviews}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }: { item: Review }) => (
+          <ThemedView style={styles.reviewItem}>
+            <View style={styles.reviewHeader}>
+              <ThemedText style={styles.reviewAuthor}>{item.author}</ThemedText>
+              <ThemedText style={styles.reviewRating}>{'★'.repeat(item.rating)}</ThemedText>
+            </View>
+            <ThemedText style={styles.reviewCommentText}>{item.comment}</ThemedText>
+            <View style={styles.reviewFooter}>
+              <ThemedText style={styles.reviewDate}>{new Date(item.createdAt).toLocaleDateString()}</ThemedText>
+              <TouchableOpacity style={styles.likeButton} onPress={() => handleLikePress(item.id)}>
+                <ThemedText style={[styles.likeText, item.isLikedByCurrentUser && styles.likeTextLiked]}>
+                  👍 도움이 돼요 {item.likeCount > 0 && item.likeCount}
+                </ThemedText>
               </TouchableOpacity>
             </View>
-          )}
-        </View>
-      )}
-
-      {/* 리뷰 타이틀 + 정렬 버튼 같은 줄 배치 */}
-      <View style={styles.reviewHeaderRow}>
-        <Text style={styles.reviewSectionTitle}>리뷰</Text>
-        <View style={styles.sortContainer}>
-          <TouchableOpacity
-            onPress={() => setSort('latest')}
-            style={[styles.sortButton, sort === 'latest' && styles.sortButtonActive]}
-          >
-            <Text style={[styles.sortButtonText, sort === 'latest' && styles.sortButtonTextActive]}>
-              최신순
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setSort('likes')}
-            style={[styles.sortButton, sort === 'likes' && styles.sortButtonActive]}
-          >
-            <Text style={[styles.sortButtonText, sort === 'likes' && styles.sortButtonTextActive]}>
-              좋아요순
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* 리뷰가 없을 때 표시 */}
-      {!reviewsLoading && reviews.length === 0 && (
-        <Text style={styles.noReviews}>아직 작성된 리뷰가 없어요 😢{'\n'}첫 번째 리뷰의 주인공이 되어보시는건 어떨까요?</Text>
-      )}
-    </>
-  }
-  data={reviews}
-  keyExtractor={(item) => item.id.toString()}
-  renderItem={({ item }: { item: Review }) => (
-    <View style={styles.reviewItem}>
-      <View style={styles.reviewHeader}>
-        <Text style={styles.reviewAuthor}>{item.author}</Text>
-        <Text style={styles.reviewRating}>{'★'.repeat(item.rating)}</Text>
-      </View>
-      <Text style={styles.reviewCommentText}>{item.comment}</Text>
-      <View style={styles.reviewFooter}>
-        <Text style={styles.reviewDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-        <TouchableOpacity style={styles.likeButton} onPress={() => handleLikePress(item.id)}>
-          <Text style={[styles.likeText, item.isLikedByCurrentUser && styles.likeTextLiked]}>
-            👍 도움이 돼요 {item.likeCount > 0 && item.likeCount}
-          </Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  )}
-  ListFooterComponent={
-    <View style={styles.reviewInputContainer}>
-      {isAuthenticated && !userHasReviewed ? (
-        <>
-          <TextInput
-            style={styles.reviewInput}
-            placeholder="리뷰를 남겨주세요..."
-            value={newReviewComment}
-            onChangeText={setNewReviewComment}
-            multiline
-          />
-          {renderStar(setNewReviewRating, newReviewRating)}
-          <TouchableOpacity style={styles.submitButton} onPress={handleReviewSubmit}>
-            <Text style={styles.submitButtonText}>등록</Text>
-          </TouchableOpacity>
-        </>
-      ) : !isAuthenticated ? (
-        <Text style={styles.loginPrompt}>리뷰를 작성하려면 로그인이 필요합니다.</Text>
-      ) : (
-        <Text style={styles.loginPrompt}>이미 이 책에 대한 리뷰를 작성하셨습니다.</Text>
-      )}
-    </View>
-  }
-/>
-
+          </ThemedView>
+        )}
+        ListFooterComponent={
+          <ThemedView style={styles.reviewInputContainer}>
+            {isAuthenticated && !userHasReviewed ? (
+              <>
+                <TextInput
+                  style={styles.reviewInput}
+                  placeholder="리뷰를 남겨주세요..."
+                  placeholderTextColor={styles.meta.color} // Use themed color
+                  value={newReviewComment}
+                  onChangeText={setNewReviewComment}
+                  multiline
+                />
+                {renderStar(setNewReviewRating, newReviewRating)}
+                <TouchableOpacity style={styles.submitButton} onPress={handleReviewSubmit}>
+                  <ThemedText style={styles.submitButtonText}>등록</ThemedText>
+                </TouchableOpacity>
+              </>
+            ) : !isAuthenticated ? (
+              <ThemedText style={styles.loginPrompt}>리뷰를 작성하려면 로그인이 필요합니다.</ThemedText>
+            ) : (
+              <ThemedText style={styles.loginPrompt}>이미 이 책에 대한 리뷰를 작성하셨습니다.</ThemedText>
+            )}
+          </ThemedView>
+        }
+      />
     </>
   );
 }

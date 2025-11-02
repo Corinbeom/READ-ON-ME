@@ -1,9 +1,13 @@
 import React from 'react';
-import { View, Text, FlatList, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
+import { FlatList, ActivityIndicator, TouchableOpacity, Image, View } from 'react-native';
 import { Link } from 'expo-router';
 import { Book } from '../src/types/book';
 import { getIsbn13 } from '../src/utils/bookUtils';
-import styles from './styles/BookCarousel.styles';
+import { getBookCarouselStyles } from './styles/BookCarousel.styles';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { ThemedView } from './ThemedView';
+import { ThemedText } from './ThemedText';
+import { Colors } from '@/constants/Colors';
 
 interface BookCarouselProps {
   title: React.ReactNode;
@@ -18,6 +22,9 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
   loading,
   emptyMessage = '표시할 책이 없습니다.'
 }) => {
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getBookCarouselStyles(colorScheme);
+  const colors = Colors[colorScheme];
 
   const renderBookItem = ({ item }: { item: Book }) => {
     const isbn13 = getIsbn13(item);
@@ -28,8 +35,10 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
           <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} />
           <View style={styles.thumbnailOverlay} />
         </View>
-        <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.bookAuthor} numberOfLines={1}>{item.authors || item.publisher}</Text>
+        <ThemedText style={styles.bookTitle} numberOfLines={2}>{item.title}</ThemedText>
+        <ThemedText style={styles.bookAuthor} numberOfLines={1}>
+          {Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || item.publisher}
+        </ThemedText>
       </>
     );
 
@@ -51,12 +60,16 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <ThemedView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{title}</Text>
+        {typeof title === 'string' ? (
+          <ThemedText style={styles.headerTitle}>{title}</ThemedText>
+        ) : (
+          title // Render JSX element directly
+        )}
       </View>
       {loading ? (
-        <ActivityIndicator size="large" color={styles.loadingIndicator.color} style={styles.loadingIndicator} />
+        <ActivityIndicator size="large" color={colors.primary} style={styles.loadingIndicator} />
       ) : books.length > 0 ? (
         <FlatList
           horizontal
@@ -67,9 +80,9 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
           contentContainerStyle={styles.listContentContainer}
         />
       ) : (
-        <Text style={styles.emptyText}>{emptyMessage}</Text>
+        <ThemedText style={styles.emptyText}>{emptyMessage}</ThemedText>
       )}
-    </View>
+    </ThemedView>
   );
 };
 

@@ -1,24 +1,109 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  useColorScheme as useSystemColorScheme, // Rename to avoid conflict
+  Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch } from 'react-redux';
 import { signIn } from '@/src/store/authSlice';
 import type { AppDispatch } from '@/src/store';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
+
+
+const screenWidth = Dimensions.get('window').width;
+
+
+// Dynamic stylesheet function
+const getStyles = (colorScheme: 'light' | 'dark') => {
+  const colors = Colors[colorScheme];
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      flex: 1,
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    logo: {
+      width: screenWidth * 0.55,   // 전체 화면 폭의 55%
+      height: (screenWidth * 0.55) / 4.7, // 원본 비율 유지 (470:100)
+      resizeMode: 'contain',
+      alignSelf: 'center',
+      marginBottom: 48,
+    },
+    title: {
+      textAlign: 'center',
+      marginBottom: 8,
+      color: colors.primary,
+    },
+    subtitle: {
+      textAlign: 'center',
+      marginBottom: 40,
+      color: colors.darkGray,
+    },
+    form: {
+      gap: 16,
+    },
+    input: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      fontSize: 16,
+      color: colors.text,
+    },
+    button: {
+      backgroundColor: colors.primary,
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: 'center',
+      marginTop: 8,
+    },
+    buttonDisabled: {
+      backgroundColor: colors.darkGray,
+    },
+    buttonText: {
+      color: '#fff',
+      fontSize: 16,
+      fontWeight: '600',
+    },
+    linkContainer: {
+      alignItems: 'center',
+      paddingVertical: 12,
+    },
+    link: {
+      color: colors.primary, // Use primary color for the link
+    },
+    backButtonText: {
+      color: colors.darkGray,
+      fontSize: 14,
+    },
+  });
+};
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getStyles(colorScheme);
+  const colors = Colors[colorScheme];
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -28,7 +113,6 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      // Redux signIn 액션 사용
       const result = await dispatch(signIn({ email, password }));
       
       if (signIn.fulfilled.match(result)) {
@@ -50,11 +134,17 @@ export default function LoginScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
-        <Text style={styles.title}>로그인</Text>
-        <Text style={styles.subtitle}>도서 검색 서비스에 오신 것을 환영합니다</Text>
+      <ThemedView style={styles.content}>
+        <Image 
+          source={colorScheme === 'dark' 
+            ? require('@/assets/images/login_register_logo_dark.png') 
+            : require('@/assets/images/login_register_logo.png')} 
+          style={styles.logo} 
+        />
+        <ThemedText type="title" style={styles.title}>로그인</ThemedText>
+        <ThemedText style={styles.subtitle}>다시 찾아주셔서 감사합니다</ThemedText>
 
-        <View style={styles.form}>
+        <ThemedView style={styles.form}>
           <TextInput
             style={styles.input}
             placeholder="이메일"
@@ -63,6 +153,7 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            placeholderTextColor={colors.darkGray}
           />
           
           <TextInput
@@ -72,102 +163,34 @@ export default function LoginScreen() {
             onChangeText={setPassword}
             secureTextEntry
             autoCapitalize="none"
+            placeholderTextColor={colors.darkGray}
           />
 
           <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
           >
-            <Text style={styles.loginButtonText}>
+            <ThemedText style={styles.buttonText}>
               {loading ? '로그인 중...' : '로그인'}
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.registerLink}
+            style={styles.linkContainer}
             onPress={() => router.push('/auth/register')}
           >
-            <Text style={styles.registerLinkText}>계정이 없으신가요? 회원가입</Text>
+            <ThemedText type="link" style={styles.link}>계정이 없으신가요? 회원가입</ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.backButton}
+            style={styles.linkContainer}
             onPress={() => router.back()}
           >
-            <Text style={styles.backButtonText}>뒤로 가기</Text>
+            <ThemedText style={styles.backButtonText}>뒤로 가기</ThemedText>
           </TouchableOpacity>
-        </View>
-      </View>
+        </ThemedView>
+      </ThemedView>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#212529',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#6c757d',
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  form: {
-    gap: 16,
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#e9ecef',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-  },
-  loginButton: {
-    backgroundColor: '#007AFF',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  loginButtonDisabled: {
-    backgroundColor: '#adb5bd',
-  },
-  loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  registerLink: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  registerLinkText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  backButton: {
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  backButtonText: {
-    color: '#6c757d',
-    fontSize: 14,
-  },
-});

@@ -8,12 +8,14 @@ import { Provider } from 'react-redux';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '../src/store';
+import { Colors } from '@/constants/Colors';
+import { ThemedView } from '@/components/ThemedView';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme() ?? 'light';
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
@@ -30,15 +32,29 @@ export default function RootLayout() {
     return null;
   }
 
+  const colors = Colors[colorScheme];
+
   return (
     <Provider store={store}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="auth/login" options={{ title: '로그인' }} />
-        <Stack.Screen name="auth/register" options={{ title: '회원가입' }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
+      <ThemedView style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: colors.card,
+            },
+            headerTintColor: colors.text,
+            headerTitleStyle: {
+              fontFamily: 'Pretendard-SemiBold',
+            },
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/login" options={{ title: '로그인' }} />
+          <Stack.Screen name="auth/register" options={{ title: '회원가입' }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+        <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
+      </ThemedView>
     </Provider>
   );
 }

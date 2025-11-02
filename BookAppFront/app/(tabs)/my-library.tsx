@@ -1,15 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal } from 'react-native';
+
+import React, { useState, useCallback } from 'react';
+import { View, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/src/store';
 import { logout } from '@/src/store/authSlice';
 import { Link, router, useFocusEffect } from 'expo-router';
-import { bookApi, reviewApi } from '../../src/services/api'; // Import reviewApi
-import { ReadingStatus } from '../../src/types/readingStatus';
-import { BookDto } from '../../src/types/BookDto'; // Corrected import for BookDto
-import { Review } from '../../src/types/review'; // Import Review type
-import { Book, BookOpen, CheckCircle, Pencil } from 'lucide-react-native'; // Import Lucide icons
-import styles from '../../src/styles/MyLibraryScreen.styles';
+import { bookApi, reviewApi } from '../../src/services/api';
+import { BookDto } from '../../src/types/BookDto';
+import { Review } from '../../src/types/review';
+import { Book, BookOpen, CheckCircle, Pencil } from 'lucide-react-native';
+import { getMyLibraryScreenStyles } from '../../src/styles/MyLibraryScreen.styles';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { Colors } from '@/constants/Colors';
 
 interface UserLibraryResponse {
   toReadBooks: BookDto[];
@@ -21,27 +25,27 @@ export default function MyLibraryScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  const [userLibrary, setUserLibrary] = useState<UserLibraryResponse>({
-    toReadBooks: [],
-    readingBooks: [],
-    completedBooks: [],
-  });
-  const [myReviews, setMyReviews] = useState<Review[]>([]); // New state for my reviews
+  const [userLibrary, setUserLibrary] = useState<UserLibraryResponse>({ toReadBooks: [], readingBooks: [], completedBooks: [] });
+  const [myReviews, setMyReviews] = useState<Review[]>([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [errorLibrary, setErrorLibrary] = useState<string | null>(null);
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalBooks, setModalBooks] = useState<BookDto[]>([]);
-  const [modalReviews, setModalReviews] = useState<Review[]>([]); // New state for modal reviews
-  const [isReviewModal, setIsReviewModal] = useState(false); // To differentiate between book and review modal
+  const [modalReviews, setModalReviews] = useState<Review[]>([]);
+  const [isReviewModal, setIsReviewModal] = useState(false);
+
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getMyLibraryScreenStyles(colorScheme);
+  const colors = Colors[colorScheme];
 
   useFocusEffect(
     useCallback(() => {
-      const fetchUserLibraryAndReviews = async () => { // Renamed function
+      const fetchUserLibraryAndReviews = async () => {
         if (!isAuthenticated) {
           setUserLibrary({ toReadBooks: [], readingBooks: [], completedBooks: [] });
-          setMyReviews([]); // Clear reviews on logout
+          setMyReviews([]);
           return;
         }
         setLoadingLibrary(true);
@@ -49,8 +53,8 @@ export default function MyLibraryScreen() {
           const libraryResponse = await bookApi.getUserLibrary();
           setUserLibrary(libraryResponse.data);
 
-          const reviewsResponse = await reviewApi.getMyReviews(); // Fetch user's reviews
-          setMyReviews(reviewsResponse.data.data || []); // Corrected to use 'data' field
+          const reviewsResponse = await reviewApi.getMyReviews();
+          setMyReviews(reviewsResponse.data.data || []);
         } catch (error: any) {
           console.error('Failed to fetch user library or reviews:', error);
           setErrorLibrary(error.message || '내 서재 및 리뷰를 불러오는데 실패했습니다.');
@@ -58,31 +62,24 @@ export default function MyLibraryScreen() {
           setLoadingLibrary(false);
         }
       };
-      fetchUserLibraryAndReviews(); // Call the new function
+      fetchUserLibraryAndReviews();
     }, [isAuthenticated])
   );
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말로 로그아웃 하시겠습니까?', [
-      {
-        text: '취소',
-        style: 'cancel',
-      },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: () => {
-          dispatch(logout());
-          router.replace('/(tabs)');
-        },
-      },
+      { text: '취소', style: 'cancel' },
+      { text: '로그아웃', style: 'destructive', onPress: () => {
+        dispatch(logout());
+        router.replace('/(tabs)');
+      }},
     ]);
   };
 
   const openBookListModal = (title: string, books: BookDto[]) => {
     setModalTitle(title);
     setModalBooks(books);
-    setModalReviews([]); // Clear reviews when opening book modal
+    setModalReviews([]);
     setIsReviewModal(false);
     setModalVisible(true);
   };
@@ -90,148 +87,124 @@ export default function MyLibraryScreen() {
   const openReviewListModal = (title: string, reviews: Review[]) => {
     setModalTitle(title);
     setModalReviews(reviews);
-    setModalBooks([]); // Clear books when opening review modal
+    setModalBooks([]);
     setIsReviewModal(true);
     setModalVisible(true);
   };
 
   const renderBookItem = ({ item }: { item: BookDto }) => (
     <Link href={`/book/${item.isbn13}`} asChild>
-      <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}> 
+      <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}>
         <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} />
         <View style={styles.bookThumbnailOverlay} />
         <View style={styles.bookInfoContainer}>
-          <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
-          <Text style={styles.bookAuthor} numberOfLines={1}>{item.authors}</Text>
+          <ThemedText style={styles.bookTitle} numberOfLines={2}>{item.title}</ThemedText>
+          <ThemedText style={styles.bookAuthor} numberOfLines={1}>{Array.isArray(item.authors) ? item.authors.join(', ') : item.authors}</ThemedText>
         </View>
       </TouchableOpacity>
     </Link>
   );
 
   const renderReviewItem = ({ item }: { item: Review }) => (
-    <TouchableOpacity
-  style={styles.reviewItemContainer}
-  onPress={() => {
-    setModalVisible(false);
-    router.push(`/book/${item.book.isbn13}`);
-  }}
->
+    <TouchableOpacity style={styles.reviewItemContainer} onPress={() => { setModalVisible(false); router.push(`/book/${item.book.isbn13}`); }}>
       <Image source={{ uri: item.book.thumbnail }} style={styles.reviewBookThumbnail} />
       <View style={styles.reviewBookThumbnailOverlay} />
       <View style={styles.reviewInfoContainer}>
-        <Text style={styles.reviewItemTitle}>{item.book.title}</Text>
-        <Text style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</Text>
-        <Text style={styles.reviewItemComment}>{item.comment}</Text>
+        <ThemedText style={styles.reviewItemTitle}>{item.book.title}</ThemedText>
+        <ThemedText style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</ThemedText>
+        <ThemedText style={styles.reviewItemComment}>{item.comment}</ThemedText>
       </View>
     </TouchableOpacity>
   );
 
   return (
     <ScrollView style={styles.container}>
-      <Text style={styles.headerTitle}>내 서재</Text>
+      <ThemedText style={styles.headerTitle}>내 서재</ThemedText>
       {isAuthenticated && user ? (
-        <View style={styles.profileSection}>
-          <Text style={styles.greeting}>안녕하세요, {user.nickname}님!</Text>
-          <Text style={styles.email}>{user.email}</Text>
+        <ThemedView style={styles.profileSection}>
+          <ThemedText style={styles.greeting}>안녕하세요, {user.nickname}님!</ThemedText>
+          <ThemedText style={styles.email}>{user.email}</ThemedText>
           <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>로그아웃</Text>
+            <ThemedText style={styles.logoutButtonText}>로그아웃</ThemedText>
           </TouchableOpacity>
-        </View>
+        </ThemedView>
       ) : (
-        <View style={styles.loginPrompt}>
-          <Text style={styles.loginPromptText}>로그인이 필요합니다.</Text>
+        <ThemedView style={styles.loginPrompt}>
+          <ThemedText style={styles.loginPromptText}>로그인이 필요합니다.</ThemedText>
           <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>
-            <Text style={styles.loginButtonText}>로그인 하러 가기</Text>
+            <ThemedText style={styles.loginButtonText}>로그인 하러 가기</ThemedText>
           </TouchableOpacity>
-        </View>
+        </ThemedView>
       )}
 
       {isAuthenticated && (
         <>
-          <View style={styles.summaryContainer}>
+          <ThemedView style={styles.summaryContainer}>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽고 싶은 책', userLibrary.toReadBooks)}>
-              <Book size={22} color={styles.summaryIcon.color} />
-              <Text style={styles.summaryCount}>{userLibrary.toReadBooks.length}</Text>
-              <Text style={styles.summaryLabel}>읽고 싶은 책</Text>
+              <Book size={22} color={colors.primary} />
+              <ThemedText style={styles.summaryCount}>{userLibrary.toReadBooks.length}</ThemedText>
+              <ThemedText style={styles.summaryLabel}>읽고 싶은 책</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽는 중인 책', userLibrary.readingBooks)}>
-              <BookOpen size={22} color={styles.summaryIcon.color} />
-              <Text style={styles.summaryCount}>{userLibrary.readingBooks.length}</Text>
-              <Text style={styles.summaryLabel}>읽는 중인 책</Text>
+              <BookOpen size={22} color={colors.primary} />
+              <ThemedText style={styles.summaryCount}>{userLibrary.readingBooks.length}</ThemedText>
+              <ThemedText style={styles.summaryLabel}>읽는 중인 책</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('완독한 책', userLibrary.completedBooks)}>
-              <CheckCircle size={22} color={styles.summaryIcon.color} />
-              <Text style={styles.summaryCount}>{userLibrary.completedBooks.length}</Text>
-              <Text style={styles.summaryLabel}>완독한 책</Text>
+              <CheckCircle size={22} color={colors.primary} />
+              <ThemedText style={styles.summaryCount}>{userLibrary.completedBooks.length}</ThemedText>
+              <ThemedText style={styles.summaryLabel}>완독한 책</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ThemedView>
 
-          {/* New summary card for My Reviews */}
           <TouchableOpacity style={styles.myReviewsSummaryCard} onPress={() => openReviewListModal('내가 쓴 리뷰', myReviews)}>
-            <Pencil size={22} color={styles.myReviewsSummaryIcon.color} />
-            <Text style={styles.myReviewsSummaryCount}>{myReviews.length}</Text>
-            <Text style={styles.myReviewsSummaryLabel}>내가 쓴 리뷰</Text>
+            <Pencil size={22} color={colors.primary} />
+            <ThemedText style={styles.myReviewsSummaryCount}>{myReviews.length}</ThemedText>
+            <ThemedText style={styles.myReviewsSummaryLabel}>내가 쓴 리뷰</ThemedText>
           </TouchableOpacity>
 
-          {/* 나의 최근 리뷰 섹션 */}
-          <View style={styles.recentReviewsSection}>
-            <Text style={styles.recentReviewsTitle}>나의 최근 리뷰</Text>
+          <ThemedView style={styles.recentReviewsSection}>
+            <ThemedText style={styles.recentReviewsTitle}>나의 최근 리뷰</ThemedText>
             {myReviews.length === 0 ? (
-              <Text style={styles.emptySectionText}>아직 작성한 리뷰가 없습니다.</Text>
+              <ThemedText style={styles.emptySectionText}>아직 작성한 리뷰가 없습니다.</ThemedText>
             ) : (
               <FlatList
-                data={myReviews.slice(0, 3)} // 최신 3개 리뷰만 표시
+                data={myReviews.slice(0, 3)}
                 renderItem={renderReviewItem}
                 keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={false} // 이 섹션에서는 스크롤 비활성화
+                scrollEnabled={false}
                 contentContainerStyle={styles.recentReviewsListContent}
               />
             )}
-          </View>
+          </ThemedView>
         </>
       )}
 
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
+      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{modalTitle}</Text>
+          <ThemedView style={styles.modalContent}>
+            <ThemedText style={styles.modalTitle}>{modalTitle}</ThemedText>
             {loadingLibrary ? (
-              <Text style={styles.loadingText}>불러오는 중...</Text>
+              <ThemedText style={styles.loadingText}>불러오는 중...</ThemedText>
             ) : errorLibrary ? (
-              <Text style={styles.errorText}>{errorLibrary}</Text>
+              <ThemedText style={styles.errorText}>{errorLibrary}</ThemedText>
             ) : isReviewModal ? (
               modalReviews.length === 0 ? (
-                <Text style={styles.emptySectionText}>작성한 리뷰가 없습니다.</Text>
+                <ThemedText style={styles.emptySectionText}>작성한 리뷰가 없습니다.</ThemedText>
               ) : (
-                <FlatList
-                  data={modalReviews}
-                  renderItem={renderReviewItem}
-                  keyExtractor={(item) => item.id.toString()}
-                  contentContainerStyle={styles.modalReviewListContent}
-                />
+                <FlatList data={modalReviews} renderItem={renderReviewItem} keyExtractor={(item) => item.id.toString()} contentContainerStyle={styles.modalReviewListContent} />
               )
             ) : (
               modalBooks.length === 0 ? (
-                <Text style={styles.emptySectionText}>등록된 책이 없습니다.</Text>
+                <ThemedText style={styles.emptySectionText}>등록된 책이 없습니다.</ThemedText>
               ) : (
-                <FlatList
-                  data={modalBooks}
-                  renderItem={renderBookItem}
-                  keyExtractor={(item) => item.id.toString()}
-                  contentContainerStyle={styles.modalBookListContent}
-                  numColumns={2}
-                />
+                <FlatList data={modalBooks} renderItem={renderBookItem} keyExtractor={(item) => item.id.toString()} contentContainerStyle={styles.modalBookListContent} numColumns={2} />
               )
             )}
             <TouchableOpacity style={styles.modalCloseButton} onPress={() => setModalVisible(false)}>
-              <Text style={styles.modalCloseButtonText}>닫기</Text>
+              <ThemedText style={styles.modalCloseButtonText}>닫기</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ThemedView>
         </View>
       </Modal>
     </ScrollView>

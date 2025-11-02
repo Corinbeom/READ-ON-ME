@@ -101,7 +101,6 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
 
                 book_text = f"이 책은 {book.get('authors', '')} 작가가 쓴 책입니다. 제목: {book.get('title', '')}. 내용: {book.get('contents', '')}"
                 book_embedding = await get_embedding(book_text)
-                book_embedding = await get_embedding(book_text)
                 if not book_embedding:
                     continue
                 similarity = cosine_similarity(keyword_embedding, book_embedding)
@@ -184,6 +183,7 @@ async def search_by_natural_language(query: str, db: AsyncSession):
             query.replace("같은 책", "")
                 .replace("비슷한 책", "")
                 .replace("추천해줘", "")
+                .replace("찾아줘", "")
                 .strip()
         )
         query_text_for_embedding = f"'{cleaned_query}'와 비슷한 주제와 분위기의 책을 찾아줘."
@@ -193,6 +193,7 @@ async def search_by_natural_language(query: str, db: AsyncSession):
     elif intent == "mood":
         cleaned_query = (
             query.replace("추천해줘", "")
+                .replace("찾아줘", "")
                 .replace("책을", "")
                 .replace("책", "")
                 .strip()

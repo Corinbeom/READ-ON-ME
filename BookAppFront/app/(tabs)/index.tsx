@@ -1,23 +1,27 @@
+
+
 import React, { useState, useEffect } from 'react';
 import {
-  View,
-  Text,
   TouchableOpacity,
-  StyleSheet,
   Image,
   ScrollView,
   Modal,
   Pressable,
+  View, // Keep for specific layout needs
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { FontAwesome } from '@expo/vector-icons';
-import { RootState } from '../../src/store';
-import { bookApi, recommendationApi } from '../../src/services/api';
-import { Book } from '../../src/types/book';
-import styles from '../../src/styles/HomeScreen.styles';
-import BookCarousel from '../../components/BookCarousel';
-import AiChatModal from '../../components/AiChatModal'; // New import
+import { RootState } from '@/src/store';
+import { bookApi, recommendationApi } from '@/src/services/api';
+import { Book } from '@/src/types/book';
+import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
+import BookCarousel from '@/components/BookCarousel';
+import AiChatModal from '@/components/AiChatModal';
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
 
 export default function HomeScreen() {
   const [popularBooks, setPopularBooks] = useState<Book[]>([]);
@@ -25,10 +29,13 @@ export default function HomeScreen() {
   const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false); // New state
+  const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false);
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
-  // 인기 책 가져오기
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getHomeScreenStyles(colorScheme);
+  const colors = Colors[colorScheme];
+
   const fetchPopularBooks = async () => {
     setPopularLoading(true);
     try {
@@ -36,15 +43,14 @@ export default function HomeScreen() {
       setPopularBooks(response.data);
     } catch (error) {
       console.error('인기 책 조회 실패:', error);
-    } finally {
+    }
+    finally {
       setPopularLoading(false);
     }
   };
 
-  // 사용자 기반 추천 책 가져오기
   const fetchRecommendations = async () => {
     if (!isAuthenticated || !user?.id) {
-      // 비로그인 시, 이전 추천 목록을 지웁니다.
       if (recommendedBooks.length > 0) setRecommendedBooks([]);
       return;
     }
@@ -60,9 +66,11 @@ export default function HomeScreen() {
       } else {
         setRecommendedBooks([]);
       }
-    } catch (error) {
+    }
+    catch (error) {
       console.error('[추천 로직] 추천 책 조회 실패:', error);
-    } finally {
+    }
+    finally {
       setRecommendationsLoading(false);
     }
   };
@@ -73,72 +81,62 @@ export default function HomeScreen() {
 
   useEffect(() => {
     fetchRecommendations();
-  }, [isAuthenticated, user]); // 로그인 상태 변경 시 추천 다시 로드
+  }, [isAuthenticated, user]);
 
   return (
     <ScrollView style={styles.container}>
-      {/* 상단 헤더 */}
-      <View style={styles.headerContainer}>
+      <ThemedView style={styles.headerContainer}>
         <View style={styles.headerContentWrapper}>
-          <Image source={require('@/assets/images/main_logo2.png')} style={styles.logo} />
+                    <Image 
+            source={colorScheme === 'dark' 
+              ? require('@/assets/images/main_logo_dark.png') 
+              : require('@/assets/images/main_logo.png')} 
+            style={styles.logo} 
+          />
           <View style={styles.authContainer}>
             {isAuthenticated ? (
-              <Text style={styles.welcomeText}>{user?.nickname}님 환영합니다!</Text>
+              <ThemedText style={styles.welcomeText}>{user?.nickname}님 환영합니다!</ThemedText>
             ) : (
               <View style={styles.authButtons}>
                 <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>
-                  <Text style={styles.loginButtonText}>로그인</Text>
+                  <ThemedText style={styles.loginButtonText}>로그인</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.registerButton} onPress={() => router.push('/auth/register')}>
-                  <Text style={styles.registerButtonText}>회원가입</Text>
+                  <ThemedText style={styles.registerButtonText}>회원가입</ThemedText>
                 </TouchableOpacity>
               </View>
             )}
           </View>
         </View>
-      </View>
+      </ThemedView>
 
-      {/* AI 추천 검색 트리거 */}
-      {/* <TouchableOpacity 
-        style={styles.recommendationSection} 
+      <TouchableOpacity 
+        style={styles.chatBubble}
         onPress={() => setIsAiChatModalVisible(true)}
       >
-        <Text style={styles.recommendationTitle}>AI 추천 검색</Text>
-        <Text style={styles.recommendationText}>
-          🤖 AI와 대화하며 당신의 취향에 맞는 도서를 추천받으세요!
-        </Text>
-      </TouchableOpacity> */}
-      {/* AI 추천 검색 챗버블형 */}
-<TouchableOpacity 
-  style={styles.chatBubble}
-  onPress={() => setIsAiChatModalVisible(true)}
->
-  <Text style={styles.chatEmoji}>🤖</Text>
-  <View style={styles.chatTextWrapper}>
-    <Text style={styles.chatTitle}>AI 추천 검색</Text>
-    <Text style={styles.chatDesc}>
-      “스릴러 소설 추천해줘” 라고 말해보세요!{'\n'}
-      해당 섹션을 클릭하면 채팅창이 나와요!
-    </Text>
-  </View>
-</TouchableOpacity>
+        <ThemedText style={styles.chatEmoji}>🤖</ThemedText>
+        <View style={styles.chatTextWrapper}>
+          <ThemedText style={styles.chatTitle}>AI 추천 검색</ThemedText>
+          <ThemedText style={styles.chatDesc}>
+            “스릴러 소설 추천해줘” 라고 말해보세요!{'\n'}
+            해당 섹션을 클릭하면 채팅창이 나와요!
+          </ThemedText>
+        </View>
+      </TouchableOpacity>
 
-
-      {/* 인기 책 섹션 */}
       <BookCarousel 
         title="인기 책"
         books={popularBooks}
         loading={popularLoading}
       />
 
-      {/* 사용자 기반 추천 */}
       {isAuthenticated && (
         <BookCarousel 
           title={
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.recommendationHeaderTitle}>{user?.nickname}님을 위한 추천</Text>
+              <ThemedText style={styles.recommendationHeaderTitle}>{user?.nickname}님을 위한 추천</ThemedText>
               <Pressable onPress={() => setModalVisible(true)}>
-                <FontAwesome name="question-circle-o" size={20} color="gray" />
+                <FontAwesome name="question-circle-o" size={20} color={colors.darkGray} />
               </Pressable>
             </View>
           }
@@ -148,7 +146,6 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* 기존 모달 */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -156,22 +153,21 @@ export default function HomeScreen() {
         onRequestClose={() => setModalVisible(!modalVisible)}
       >
         <View style={styles.centeredView}>
-          <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>사용자 기반 추천이란?</Text>
-            <Text style={styles.modalText}>
+          <ThemedView style={styles.modalView}>
+            <ThemedText style={styles.modalTitle}>사용자 기반 추천이란?</ThemedText>
+            <ThemedText style={styles.modalText}>
               회원님의 독서 기록(읽는 중, 다 읽음)을 바탕으로, 비슷한 독서 취향을 가진 다른 사용자들이 재미있게 읽었지만 회원님은 아직 읽지 않은 책을 찾아 추천해 드리는 기능입니다.
-            </Text>
+            </ThemedText>
             <Pressable
               style={[styles.button, styles.buttonClose]}
               onPress={() => setModalVisible(!modalVisible)}
             >
-              <Text style={styles.textStyle}>닫기</Text>
+              <ThemedText style={styles.textStyle}>닫기</ThemedText>
             </Pressable>
-          </View>
+          </ThemedView>
         </View>
       </Modal>
 
-      {/* AI Chat Modal */}
       <AiChatModal 
         isVisible={isAiChatModalVisible} 
         onClose={() => setIsAiChatModalVisible(false)} 
