@@ -13,8 +13,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import reactor.core.publisher.Mono;
 
-import java.util.Collections;
 import java.util.List;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -58,7 +58,7 @@ class BookServiceTest {
     @Test
     @DisplayName("카카오 API 호출 실패 - ExternalApiException 발생")
     void getBookByIsbn_externalApiError() {
-        when(bookRepository.findByIsbn13("9780000000000")).thenReturn(Collections.emptyList());
+        when(bookRepository.findByIsbn13("9780000000000")).thenReturn(Optional.empty());
         when(kakaoBookService.searchBookByIsbn("9780000000000"))
                 .thenReturn(Mono.error(new RuntimeException("카카오 API 오류"))); // ✅ Mono.error 사용
 
@@ -74,7 +74,7 @@ class BookServiceTest {
         KakaoBookSearchResponse emptyResponse = new KakaoBookSearchResponse();
         emptyResponse.setDocuments(Collections.emptyList());
 
-        when(bookRepository.findByIsbn13("9999999999")).thenReturn(Collections.emptyList());
+        when(bookRepository.findByIsbn13("9999999999")).thenReturn(Optional.empty());
         when(kakaoBookService.searchBookByIsbn("9999999999"))
                 .thenReturn(Mono.just(emptyResponse)); // ✅ Mono.just 로 감싸줌
 

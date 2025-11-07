@@ -7,7 +7,9 @@ import bookapp.bookappback.common.exception.ReviewExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
 import bookapp.bookappback.review.dto.ReviewRequest;
 import bookapp.bookappback.review.entity.BookReview;
+import bookapp.bookappback.review.entity.ReviewLike;
 import bookapp.bookappback.review.repository.BookReviewRepository;
+import bookapp.bookappback.review.repository.ReviewLikeRepository;
 import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.HashSet;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -27,6 +30,7 @@ class BookReviewServiceTest {
     @Mock private BookReviewRepository bookReviewRepository;
     @Mock private UserRepository userRepository;
     @Mock private BookRepository bookRepository;
+    @Mock private ReviewLikeRepository reviewLikeRepository;
 
     @InjectMocks
     private BookReviewService bookReviewService;
@@ -154,6 +158,51 @@ class BookReviewServiceTest {
 
         assertThrows(ReviewExceptions.ReviewAccessDeniedException.class, () ->
                 bookReviewService.deleteReview(10L, 2L));
+    }
+
+    @Test
+    @DisplayName("리뷰 좋아요 토글 - 좋아요 추가")
+    void toggleReviewLike_add() {
+        User liker = new User("liker@example.com", "encoded", "liker", null);
+        liker.setId(1L);
+        BookReview review = new BookReview();
+        review.setId(99L);
+        review.setUser(new User("owner@example.com", "encoded", "owner", null));
+        review.setLikeCount(0);
+        review.setLikes(new HashSet<>());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(liker));
+        when(bookReviewRepository.findById(99L)).thenReturn(Optional.of(review));
+        when(reviewLikeRepository.findByUserAndReview(liker, review)).thenReturn(Optional.empty());
+
+        bookReviewService.toggleReviewLike(99L, 1L);
+
+        assertEquals(1, review.getLikeCount());
+        assertEquals(1, review.getLikes().size());
+        verify(reviewLikeRepository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("리뷰 좋아요 토글 - 좋아요 제거")
+    void toggleReviewLike_remove() {
+        User liker = new User("liker@example.com", "encoded", "liker", null);
+        liker.setId(1L);
+        BookReview review = new BookReview();
+        review.setId(99L);
+        review.setUser(new User("owner@example.com", "encoded", "owner", null));
+        review.setLikeCount(1);
+        ReviewLike like = new ReviewLike(liker, review);
+        review.getLikes().add(like);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(liker));
+        when(bookReviewRepository.findById(99L)).thenReturn(Optional.of(review));
+        when(reviewLikeRepository.findByUserAndReview(liker, review)).thenReturn(Optional.of(like));
+
+        bookReviewService.toggleReviewLike(99L, 1L);
+
+        assertEquals(0, review.getLikeCount());
+        assertTrue(review.getLikes().isEmpty());
+        verify(reviewLikeRepository, times(1)).delete(like);
     }
 
 }
