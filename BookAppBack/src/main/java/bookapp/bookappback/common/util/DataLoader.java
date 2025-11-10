@@ -65,7 +65,8 @@ public class DataLoader implements CommandLineRunner {
 
                 boolean exists = bookRepository.findByIsbn13(isbn13).stream().findFirst().isPresent();
                 if (!exists) {
-                    bookRepository.save(Book.fromKakaoApiResponse(dto));
+                    Book saved = bookRepository.save(Book.fromKakaoApiResponse(dto));
+                    triggerEmbedding(saved);
                 }
             } catch (Exception e) {
                 log.error("❌ [{}] 도서 저장 중 오류 발생: {}", title, e.getMessage());
@@ -95,5 +96,30 @@ public class DataLoader implements CommandLineRunner {
                 .subscribe();
 
         log.info("===== ✉️ FastAPI에 데이터 구축 요청을 비동기적으로 전송했습니다. =====");
+    }
+
+    private void triggerEmbedding(Book book) {
+        try {
+            WebClient client = webClientBuilder.baseUrl("http://localhost:8000").build();
+            Map<String, Object> body = Map.of(
+                    "title", book.getTitle(),
+                    "contents", book.getContents() == null ? "" : book.getContents(),
+                    "isbn", book.getIsbn13(),
+                    "authors", book.getAuthors() == null ? new String[0] : book.getAuthors().split(","),
+                    "publisher", book.getPublisher() == null ? "" : book.getPublisher(),
+                    "thumbnail", book.getThumbnail() == null ? "" : book.getThumbnail()
+            );
+
+            client.post()
+                    .uri("/api/books/embed-single")
+                    .bodyValue(body)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .doOnSuccess(res -> log.info("초기 데이터 임베딩 성공: {}", book.getIsbn13()))
+                    .doOnError(err -> log.error("초기 데이터 임베딩 실패 [{}]: {}", book.getIsbn13(), err.getMessage()))
+                    .subscribe();
+        } catch (Exception e) {
+            log.error("초기 데이터 임베딩 호출 중 오류 [{}]: {}", book.getIsbn13(), e.getMessage());
+        }
     }
 }

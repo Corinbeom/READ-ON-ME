@@ -5,6 +5,8 @@ import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
+import bookapp.bookappback.userbookstatus.entity.ReadingStatus;
+import bookapp.bookappback.userbookstatus.repository.UserBookStatusRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
@@ -16,6 +18,7 @@ import reactor.util.retry.Retry;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,14 +31,19 @@ public class BookService {
     private final BookRepository bookRepository;
     private final KakaoBookService kakaoBookService;
     private final WebClient.Builder webClientBuilder;
+    private final UserBookStatusRepository userBookStatusRepository;
 
     private static final String FASTAPI_URL = "http://localhost:8000";
 
     @Autowired
-    public BookService(BookRepository bookRepository, KakaoBookService kakaoBookService, WebClient.Builder webClientBuilder) {
+    public BookService(BookRepository bookRepository,
+                       KakaoBookService kakaoBookService,
+                       WebClient.Builder webClientBuilder,
+                       UserBookStatusRepository userBookStatusRepository) {
         this.bookRepository = bookRepository;
         this.kakaoBookService = kakaoBookService;
         this.webClientBuilder = webClientBuilder;
+        this.userBookStatusRepository = userBookStatusRepository;
     }
 
 
@@ -134,11 +142,32 @@ public class BookService {
 
     // 인기 도서 조회
     public List<Book> getPopularBooks(int limit) {
-        return bookRepository.findAll()
-                .stream()
-                .sorted((b1, b2) -> b2.getCreatedAt().compareTo(b1.getCreatedAt()))
-                .limit(limit)
-                .toList();
+        List<Object[]> raw = userBookStatusRepository.findPopularBooksByStatuses(
+                List.of(ReadingStatus.READING, ReadingStatus.COMPLETED)
+        );
+        if (raw.isEmpty()) {
+            return bookRepository.findAll()
+                    .stream()
+                    .sorted((b1, b2) -> b2.getCreatedAt().compareTo(b1.getCreatedAt()))
+                    .limit(limit)
+                    .toList();
+        }
+
+        LinkedHashMap<Long, Long> orderedIds = new LinkedHashMap<>();
+        for (Object[] row : raw) {
+            Long bookId = ((Number) row[0]).longValue();
+            Long count = ((Number) row[1]).longValue();
+            orderedIds.put(bookId, count);
+            if (orderedIds.size() >= limit) break;
+        }
+
+        List<Book> books = bookRepository.findAllById(orderedIds.keySet());
+        Map<Long, Book> bookById = books.stream().collect(Collectors.toMap(Book::getId, b -> b));
+
+        return orderedIds.keySet().stream()
+                .map(bookById::get)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     // ✅ 카카오 API에서 ISBN으로 책을 가져와 캐시하는 private 메소드
