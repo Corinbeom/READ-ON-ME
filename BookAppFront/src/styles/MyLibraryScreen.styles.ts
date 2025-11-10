@@ -93,9 +93,10 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       paddingHorizontal: 10,
     },
     summaryCount: {
-      fontSize: 24,
+      fontSize: 20,
       fontFamily: 'Pretendard-SemiBold',
       color: colors.primary,
+      marginTop: 6,
     },
     summaryLabel: {
       fontSize: 14,
@@ -123,9 +124,10 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       marginBottom: 5,
     },
     myReviewsSummaryCount: {
-      fontSize: 24,
+      fontSize: 20,
       fontFamily: 'Pretendard-SemiBold',
       color: colors.primary,
+      marginTop: 4,
     },
     myReviewsSummaryLabel: {
       fontSize: 14,

@@ -49,6 +49,11 @@ export default function BookDetailScreen() {
   const [sort, setSort] = useState('latest');
   const [userBookStatus, setUserBookStatus] = useState<ReadingStatus | null>(null);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const statusLabelMap: Record<ReadingStatus, string> = {
+    [ReadingStatus.TO_READ]: '읽고 싶은 책',
+    [ReadingStatus.READING]: '읽는 중인 책',
+    [ReadingStatus.COMPLETED]: '완독한 책',
+  };
 
   const normalizedIsbn = useMemo(() => {
     const raw = String(isbn ?? '');
@@ -152,7 +157,7 @@ export default function BookDetailScreen() {
     try {
       await bookApi.updateBookStatus(book.id, status);
       setUserBookStatus(status);
-      customAlert('성공', `책 상태가 \'${status}\'로 변경되었습니다.`);
+      customAlert('성공', `책 상태가 '${statusLabelMap[status]}'로 변경되었습니다.`);
       setShowStatusPicker(false);
     } catch (error) {
       console.error('Failed to update book status:', error);

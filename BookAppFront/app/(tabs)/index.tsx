@@ -114,7 +114,7 @@ export default function HomeScreen() {
         style={styles.chatBubble}
         onPress={() => setIsAiChatModalVisible(true)}
       >
-        <ThemedText style={styles.chatEmoji}>🤖</ThemedText>
+        <ThemedText style={styles.chatEmoji}>📖</ThemedText>
         <View style={styles.chatTextWrapper}>
           <ThemedText style={styles.chatTitle}>AI 추천 검색</ThemedText>
           <ThemedText style={styles.chatDesc}>
