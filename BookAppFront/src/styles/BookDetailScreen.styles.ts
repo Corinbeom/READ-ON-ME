@@ -52,7 +52,7 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       color: colors.text,
     },
     meta: { color: colors.darkGray, marginBottom: 16, fontFamily: 'NotoSerifKR-Regular' },
-    section: { marginTop: 16 },
+    section: { marginTop: 16, backgroundColor: colors.card },
     sectionTitle: {
       fontSize: 18,
       fontFamily: 'Pretendard-SemiBold',

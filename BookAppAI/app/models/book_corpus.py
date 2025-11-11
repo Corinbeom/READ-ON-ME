@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Text, Float, DateTime, func
-from sqlalchemy.dialects.postgresql import BIGINT
+from sqlalchemy.dialects.postgresql import BIGINT, JSONB
 from pgvector.sqlalchemy import Vector
 from app.database import Base
 
@@ -17,3 +17,4 @@ class BookCorpus(Base):
     similarity_score = Column(Float, nullable=False)
     embedding = Column(Vector(768), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    tags = Column(JSONB, default=list)

@@ -156,7 +156,7 @@ export default function HomeScreen() {
           <ThemedView style={styles.modalView}>
             <ThemedText style={styles.modalTitle}>사용자 기반 추천이란?</ThemedText>
             <ThemedText style={styles.modalText}>
-              회원님의 독서 기록(읽는 중, 다 읽음)을 바탕으로, 비슷한 독서 취향을 가진 다른 사용자들이 재미있게 읽었지만 회원님은 아직 읽지 않은 책을 찾아 추천해 드리는 기능입니다.
+              회원님의 독서 기록을 바탕으로, 비슷한 독서 취향을 가진 다른 사용자들이 재미있게 읽은 책을 찾아 추천해 드리는 기능입니다.
             </ThemedText>
             <Pressable
               style={[styles.button, styles.buttonClose]}
