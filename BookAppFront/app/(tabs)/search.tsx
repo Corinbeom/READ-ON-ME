@@ -29,8 +29,8 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
   const colors = Colors[colorScheme];
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    searchSectionContainer: { paddingHorizontal: 16, paddingTop: 12 },
-    sectionTitle: { fontSize: 22, fontFamily: 'Pretendard-SemiBold', marginBottom: 12, color: colors.text },
+    searchSectionContainer: { paddingHorizontal: 20, paddingTop: 20 },
+    sectionTitle: { fontSize: 24, fontFamily: 'Pretendard-SemiBold', marginBottom: 20, color: colors.text },
     searchContainer: {
       flexDirection: 'row',
       alignItems: 'center',

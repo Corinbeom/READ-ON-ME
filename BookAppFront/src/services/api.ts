@@ -103,7 +103,7 @@ export const bookApi = {
   getPopularBooks: () => api.get('/api/books/popular'),
   test: () => api.get('/api/books/test'),
 
-  getBookEditions: (isbn: string) => api.get(`api/books/${isbn}/editions`),
+  getBookEditions: (isbn: string) => api.get(`/api/books/${isbn}/editions`),
 
   updateBookStatus: (bookId: number, status: ReadingStatus) =>
     api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() } }),

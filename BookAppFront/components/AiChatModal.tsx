@@ -20,6 +20,8 @@ import { Colors } from '@/constants/Colors';
 import { api } from '../src/services/api';
 import customAlert from '../src/utils/alert';
 import { useRouter } from 'expo-router';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/src/store';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -37,6 +39,7 @@ interface ChatMessage {
 
 export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const router = useRouter();
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     { id: '1', type: 'ai', text: "안녕하세요! 어떤 책을 추천해 드릴까요?" },
   ]);
@@ -51,6 +54,10 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   }, [chatHistory]);
 
   const handleSendMessage = async () => {
+    if (!isAuthenticated) {
+      customAlert('알림', 'AI 추천을 사용하려면 로그인이 필요합니다.');
+      return;
+    }
     if (!currentInput.trim()) return;
 
     const userMessage: ChatMessage = { id: String(Date.now()), type: 'user', text: currentInput };
@@ -80,6 +87,10 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   };
 
   const handleRecommendAgain = async () => {
+    if (!isAuthenticated) {
+      customAlert('알림', 'AI 추천을 사용하려면 로그인이 필요합니다.');
+      return;
+    }
     const lastUserQuery = chatHistory.filter(msg => msg.type === 'user').pop()?.text;
     if (!lastUserQuery) {
       customAlert('알림', '이전 검색어가 없습니다. 새로운 질문을 해주세요.');
@@ -154,32 +165,63 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                 </TouchableOpacity>
               </View>
 
-              <FlatList
-                ref={flatListRef}
-                data={chatHistory}
-                renderItem={renderMessage}
-                keyExtractor={(item) => item.id}
-                style={styles.chatList}
-                contentContainerStyle={styles.chatListContent}
-              />
+              {isAuthenticated ? (
+                <>
+                  <FlatList
+                    ref={flatListRef}
+                    data={chatHistory}
+                    renderItem={renderMessage}
+                    keyExtractor={(item) => item.id}
+                    style={styles.chatList}
+                    contentContainerStyle={styles.chatListContent}
+                  />
 
-              {isLoading && <ActivityIndicator size="small" color={Colors.light.primary} style={styles.loadingIndicator} />}
+                  {isLoading && <ActivityIndicator size="small" color={Colors.light.primary} style={styles.loadingIndicator} />}
 
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.textInput}
-                  placeholder="어떤 책을 찾으세요?"
-                  placeholderTextColor={Colors.light.darkGray}
-                  value={currentInput}
-                  onChangeText={setCurrentInput}
-                  onSubmitEditing={handleSendMessage}
-                  returnKeyType="send"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton} disabled={isLoading}>
-                  <Ionicons name="send" size={22} color={Colors.light.background} />
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="어떤 책을 찾으세요?"
+                      placeholderTextColor={Colors.light.darkGray}
+                      value={currentInput}
+                      onChangeText={setCurrentInput}
+                      onSubmitEditing={handleSendMessage}
+                      returnKeyType="send"
+                      editable={!isLoading}
+                    />
+                    <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton} disabled={isLoading}>
+                      <Ionicons name="send" size={22} color={Colors.light.background} />
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.authPromptContainer}>
+                  <Text style={styles.authPromptTitle}>로그인이 필요해요 !</Text>
+                  <Text style={styles.authPromptSubtitle}>
+                    AI 추천 검색 기능은 로그인 후 이용할 수 있어요.
+                  </Text>
+                  <View style={styles.authButtonRow}>
+                    <TouchableOpacity
+                      style={styles.authPrimaryButton}
+                      onPress={() => {
+                        onClose();
+                        router.push('/auth/login');
+                      }}
+                    >
+                      <Text style={styles.authPrimaryButtonText}>로그인</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.authSecondaryButton}
+                      onPress={() => {
+                        onClose();
+                        router.push('/auth/register');
+                      }}
+                    >
+                      <Text style={styles.authSecondaryButtonText}>회원가입</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           </KeyboardAvoidingView>
         </View>
@@ -306,5 +348,52 @@ const styles = StyleSheet.create({
   },
   loadingIndicator: {
     marginVertical: 8,
+  },
+  authPromptContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  authPromptTitle: {
+    fontSize: 20,
+    fontFamily: 'Pretendard-SemiBold',
+    color: Colors.light.text,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  authPromptSubtitle: {
+    fontSize: 15,
+    color: Colors.light.darkGray,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+    fontFamily: 'NotoSerifKR-Regular',
+  },
+  authButtonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  authPrimaryButton: {
+    backgroundColor: Colors.light.primary,
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+  },
+  authPrimaryButtonText: {
+    color: Colors.light.background,
+    fontFamily: 'Pretendard-SemiBold',
+  },
+  authSecondaryButton: {
+    borderRadius: 22,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderWidth: 1,
+    borderColor: Colors.light.lightGray,
+    backgroundColor: Colors.light.card,
+  },
+  authSecondaryButtonText: {
+    color: Colors.light.text,
+    fontFamily: 'Pretendard-SemiBold',
   },
 });

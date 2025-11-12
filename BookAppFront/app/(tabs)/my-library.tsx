@@ -118,6 +118,7 @@ export default function MyLibraryScreen() {
   );
 
   return (
+    
     <ScrollView style={styles.container}>
       <ThemedText style={styles.headerTitle}>내 서재</ThemedText>
       {isAuthenticated && user ? (

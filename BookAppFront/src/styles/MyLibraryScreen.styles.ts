@@ -12,11 +12,11 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       padding: 20,
     },
     headerTitle: {
-      fontSize: 28,
+      fontSize: 24,
       fontFamily: 'Pretendard-SemiBold',
       color: colors.text,
-      marginBottom: 30,
-      marginTop: 40,
+      marginBottom: 24,
+      marginTop: 60,
     },
     profileSection: {
       backgroundColor: colors.card,
