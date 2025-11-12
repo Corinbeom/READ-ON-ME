@@ -60,6 +60,17 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       color: colors.text,
     },
     description: { lineHeight: 22, color: colors.text, fontFamily: 'NotoSerifKR-Regular' },
+    descriptionToggle: {
+      marginTop: 8,
+      alignSelf: 'flex-end',
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+    },
+    descriptionToggleText: {
+      fontSize: 13,
+      color: colors.primary,
+      fontFamily: 'Pretendard-SemiBold',
+    },
     editionsItem: {
       backgroundColor: colors.background,
       padding: 12,
@@ -179,7 +190,7 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       color: colorScheme === 'light' ? '#fff' : colors.text,
       fontFamily: 'Pretendard-SemiBold',
     },
-    reviewInputContainer: {
+  reviewInputContainer: {
       backgroundColor: colors.card,
       borderRadius: 12,
       padding: 16,
@@ -188,31 +199,78 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       borderWidth: 1,
       borderColor: colors.lightGray,
     },
-    reviewInput: {
+    editingBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.card,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: colors.primary,
       borderRadius: 8,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      marginBottom: 12,
+    },
+    editingBannerText: {
+      color: colors.primary,
+      fontFamily: 'NotoSerifKR-Regular',
+    },
+    cancelEditButton: {
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+      borderRadius: 6,
+      backgroundColor: colorScheme === 'light' ? '#fff4ef' : '#2a1c16',
+    },
+    cancelEditButtonText: {
+      color: colors.primary,
+      fontFamily: 'Pretendard-SemiBold',
+    },
+    reviewInput: {
+      borderWidth: 0,
       padding: 12,
-      minHeight: 80,
+      minHeight: 120,
+      maxHeight: 200,
       textAlignVertical: 'top',
       backgroundColor: colors.background,
       fontFamily: 'NotoSerifKR-Regular',
       color: colors.text,
     },
+    reviewInputScrollWrapper: {
+      maxHeight: 200,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      backgroundColor: colors.background,
+      marginBottom: 8,
+    },
     ratingContainer: {
       flexDirection: 'row',
-      marginVertical: 10,
+      marginTop: 16,
+      marginBottom: 12,
       justifyContent: 'center',
+      alignItems: 'center',
+    },
+    ratingWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 4,
+    },
+    ratingTouchArea: {
+      paddingHorizontal: 6,
+      paddingVertical: 4,
     },
     starEmpty: {
-      fontSize: 30,
+      fontSize: 28,
       color: colors.lightGray,
-      marginHorizontal: 5,
+      marginHorizontal: 6,
+      lineHeight: 34,
     },
     starFilled: {
-      fontSize: 30,
+      fontSize: 28,
       color: colors.accent,
-      marginHorizontal: 5,
+      marginHorizontal: 6,
+      lineHeight: 34,
     },
     submitButton: {
       backgroundColor: colors.primary,
@@ -220,6 +278,13 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       borderRadius: 8,
       alignItems: 'center',
       marginTop: 10,
+    },
+    reviewCharCount: {
+      textAlign: 'right',
+      fontSize: 12,
+      color: colors.darkGray,
+      marginTop: 4,
+      fontFamily: 'NotoSerifKR-Regular',
     },
     submitButtonText: {
       color: colorScheme === 'light' ? '#fff' : colors.text,
@@ -243,6 +308,9 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.lightGray,
+    },
+    reviewItemOwn: {
+      borderColor: colors.primary,
     },
     reviewHeader: {
       flexDirection: 'row',

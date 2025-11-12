@@ -116,7 +116,7 @@ export default function HomeScreen() {
       >
         <ThemedText style={styles.chatEmoji}>📖</ThemedText>
         <View style={styles.chatTextWrapper}>
-          <ThemedText style={styles.chatTitle}>AI 추천 검색</ThemedText>
+          <ThemedText style={styles.chatTitle}>AI에게 추천받기</ThemedText>
           <ThemedText style={styles.chatDesc}>
             “스릴러 소설 추천해줘” 라고 말해보세요!{'\n'}
             해당 섹션을 클릭하면 채팅창이 나와요!

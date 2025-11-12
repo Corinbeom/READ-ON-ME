@@ -274,6 +274,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       fontFamily: 'NotoSerifKR-Regular',
       color: colors.darkGray,
       lineHeight: 16,
+      marginTop: 2,
     },
     loadingText: {
       textAlign: 'center',

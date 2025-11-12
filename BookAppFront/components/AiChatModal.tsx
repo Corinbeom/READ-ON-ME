@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { api } from '../src/services/api';
 import customAlert from '../src/utils/alert';
 import { useRouter } from 'expo-router';
@@ -39,6 +40,9 @@ interface ChatMessage {
 
 export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = getStyles(colorScheme);
+  const colors = Colors[colorScheme];
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     { id: '1', type: 'ai', text: "안녕하세요! 어떤 책을 추천해 드릴까요?" },
@@ -161,7 +165,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>AI 도서 추천</Text>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color={Colors.light.text} />
+                  <Ionicons name="close" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
 
@@ -176,13 +180,13 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                     contentContainerStyle={styles.chatListContent}
                   />
 
-                  {isLoading && <ActivityIndicator size="small" color={Colors.light.primary} style={styles.loadingIndicator} />}
+                  {isLoading && <ActivityIndicator size="small" color={colors.primary} style={styles.loadingIndicator} />}
 
                   <View style={styles.inputContainer}>
                     <TextInput
                       style={styles.textInput}
                       placeholder="어떤 책을 찾으세요?"
-                      placeholderTextColor={Colors.light.darkGray}
+                      placeholderTextColor={colors.darkGray}
                       value={currentInput}
                       onChangeText={setCurrentInput}
                       onSubmitEditing={handleSendMessage}
@@ -190,7 +194,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                       editable={!isLoading}
                     />
                     <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton} disabled={isLoading}>
-                      <Ionicons name="send" size={22} color={Colors.light.background} />
+                      <Ionicons name="send" size={22} color={colors.background} />
                     </TouchableOpacity>
                   </View>
                 </>
@@ -230,170 +234,181 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'flex-end',
-  },
-  modalWrapper: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: Colors.light.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    height: '90%',
-    paddingTop: 10,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.light.lightGray,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-  },
-  closeButton: { padding: 5 },
-  chatList: { paddingHorizontal: 12 },
-  chatListContent: {
-    paddingVertical: 10,
-    flexGrow: 1,
-    justifyContent: 'flex-end',
-  },
-  messageBubble: {
-    maxWidth: '85%',
-    padding: 10,
-    borderRadius: 15,
-    marginVertical: 5,
-    flexShrink: 1,
-  },
-  userBubble: {
-    alignSelf: 'flex-end',
-    backgroundColor: Colors.light.primary,
-  },
-  aiBubble: {
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.light.card,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-  },
-  userText: {
-    color: Colors.light.background,
-    fontFamily: 'NotoSerifKR-Regular',
-  },
-  aiText: {
-    color: Colors.light.text,
-    fontFamily: 'NotoSerifKR-Regular',
-  },
-  bookResultsList: {
-    marginTop: 8,
-    maxHeight: 150,
-  },
-  bookResultItem: {
-    width: 100,
-    marginRight: 10,
-    alignItems: 'center',
-  },
-  bookThumbnail: {
-    width: 80,
-    height: 120,
-    borderRadius: 8,
-    backgroundColor: Colors.light.lightGray,
-  },
-  bookTitle: {
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 4,
-    fontFamily: 'NotoSerifKR-Regular',
-    color: Colors.light.text,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.light.lightGray,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-  },
-  textInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-    borderRadius: 25,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginRight: 10,
-    fontFamily: 'NotoSerifKR-Regular',
-    fontSize: 16,
-    backgroundColor: Colors.light.card,
-    color: Colors.light.text,
-  },
-  sendButton: {
-    backgroundColor: Colors.light.primary,
-    borderRadius: 25,
-    width: 45,
-    height: 45,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingIndicator: {
-    marginVertical: 8,
-  },
-  authPromptContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  authPromptTitle: {
-    fontSize: 20,
-    fontFamily: 'Pretendard-SemiBold',
-    color: Colors.light.text,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  authPromptSubtitle: {
-    fontSize: 15,
-    color: Colors.light.darkGray,
-    textAlign: 'center',
-    marginBottom: 24,
-    lineHeight: 22,
-    fontFamily: 'NotoSerifKR-Regular',
-  },
-  authButtonRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  authPrimaryButton: {
-    backgroundColor: Colors.light.primary,
-    borderRadius: 22,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-  },
-  authPrimaryButtonText: {
-    color: Colors.light.background,
-    fontFamily: 'Pretendard-SemiBold',
-  },
-  authSecondaryButton: {
-    borderRadius: 22,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    borderWidth: 1,
-    borderColor: Colors.light.lightGray,
-    backgroundColor: Colors.light.card,
-  },
-  authSecondaryButtonText: {
-    color: Colors.light.text,
-    fontFamily: 'Pretendard-SemiBold',
-  },
-});
+const getStyles = (colorScheme: 'light' | 'dark') => {
+  const colors = Colors[colorScheme];
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'flex-end',
+    },
+    modalWrapper: {
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: 1,
+      paddingHorizontal: 12,
+    },
+    modalContent: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      borderBottomLeftRadius: 20,
+      borderBottomRightRadius: 20,
+      flex: 1,
+      maxHeight: SCREEN_HEIGHT * 0.8,
+      width: '100%',
+      paddingTop: 10,
+      overflow: 'hidden',
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 18,
+      paddingBottom: 10,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.lightGray,
+    },
+    modalTitle: {
+      fontSize: 20,
+      fontFamily: 'Pretendard-SemiBold',
+      color: colors.text,
+    },
+    closeButton: { padding: 5 },
+    chatList: {
+      flex: 1,
+      paddingHorizontal: 12,
+    },
+    chatListContent: {
+      paddingVertical: 10,
+    },
+    messageBubble: {
+      maxWidth: '85%',
+      padding: 10,
+      borderRadius: 15,
+      marginVertical: 5,
+      flexShrink: 1,
+    },
+    userBubble: {
+      alignSelf: 'flex-end',
+      backgroundColor: colors.primary,
+    },
+    aiBubble: {
+      alignSelf: 'flex-start',
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+    },
+    userText: {
+      color: colors.background,
+      fontFamily: 'NotoSerifKR-Regular',
+    },
+    aiText: {
+      color: colors.text,
+      fontFamily: 'NotoSerifKR-Regular',
+    },
+    bookResultsList: {
+      marginTop: 8,
+      maxHeight: 150,
+    },
+    bookResultItem: {
+      width: 100,
+      marginRight: 10,
+      alignItems: 'center',
+    },
+    bookThumbnail: {
+      width: 80,
+      height: 120,
+      borderRadius: 8,
+      backgroundColor: colors.lightGray,
+    },
+    bookTitle: {
+      fontSize: 13,
+      textAlign: 'center',
+      marginTop: 4,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: colors.text,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderTopWidth: 1,
+      borderTopColor: colors.lightGray,
+      paddingVertical: 10,
+      paddingHorizontal: 15,
+      backgroundColor: colors.background,
+    },
+    textInput: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      borderRadius: 25,
+      paddingHorizontal: 15,
+      paddingVertical: 10,
+      marginRight: 10,
+      fontFamily: 'NotoSerifKR-Regular',
+      fontSize: 16,
+      backgroundColor: colors.card,
+      color: colors.text,
+    },
+    sendButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 25,
+      width: 45,
+      height: 45,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingIndicator: {
+      marginVertical: 8,
+    },
+    authPromptContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    authPromptTitle: {
+      fontSize: 20,
+      fontFamily: 'Pretendard-SemiBold',
+      color: colors.text,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    authPromptSubtitle: {
+      fontSize: 15,
+      color: colors.darkGray,
+      textAlign: 'center',
+      marginBottom: 24,
+      lineHeight: 22,
+      fontFamily: 'NotoSerifKR-Regular',
+    },
+    authButtonRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    authPrimaryButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 22,
+      paddingVertical: 12,
+      paddingHorizontal: 28,
+    },
+    authPrimaryButtonText: {
+      color: colors.background,
+      fontFamily: 'Pretendard-SemiBold',
+    },
+    authSecondaryButton: {
+      borderRadius: 22,
+      paddingVertical: 12,
+      paddingHorizontal: 28,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      backgroundColor: colors.card,
+    },
+    authSecondaryButtonText: {
+      color: colors.text,
+      fontFamily: 'Pretendard-SemiBold',
+    },
+  });
+};

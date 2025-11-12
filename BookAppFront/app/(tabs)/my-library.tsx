@@ -112,7 +112,9 @@ export default function MyLibraryScreen() {
       <View style={styles.reviewInfoContainer}>
         <ThemedText style={styles.reviewItemTitle}>{item.book.title}</ThemedText>
         <ThemedText style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</ThemedText>
-        <ThemedText style={styles.reviewItemComment}>{item.comment}</ThemedText>
+        <ThemedText style={styles.reviewItemComment} numberOfLines={3} ellipsizeMode="tail">
+          {item.comment}
+        </ThemedText>
       </View>
     </TouchableOpacity>
   );
