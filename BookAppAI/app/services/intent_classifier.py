@@ -66,6 +66,8 @@ GENRE_KEYWORDS = {
     "논픽션": "논픽션",
     "소설": "소설",
     "정치 소설": "정치 소설",
+    "디스토피아": "디스토피아",
+    "dystopia": "디스토피아",
 }
 
 TONE_KEYWORDS = {
@@ -94,6 +96,13 @@ QUERY_TYPE_KEYWORDS = {
 }
 
 CONSTRAINT_KEYWORDS = ["최근", "신간", "짧은", "두꺼운", "한국", "번역", "입문", "심화"]
+
+ADDITIONAL_KEYWORD_MAP = {
+    "디스토피아": "디스토피아",
+    "디스토피아적": "디스토피아",
+    "디스토피아적인": "디스토피아",
+    "dystopia": "디스토피아",
+}
 
 
 class IntentAnalyzer:
@@ -146,6 +155,11 @@ class IntentAnalyzer:
             keywords.append(purpose)
         keywords = list(dict.fromkeys(keywords))
 
+        additional_keywords = self._extract_additional_keywords(lower)
+        for keyword in additional_keywords:
+            if keyword not in keywords:
+                keywords.append(keyword)
+
         return IntentMetadata(
             raw_query=query,
             domain=domain,
@@ -184,3 +198,10 @@ class IntentAnalyzer:
                 return None
             return candidate
         return None
+
+    def _extract_additional_keywords(self, text: str) -> List[str]:
+        matches: List[str] = []
+        for variant, canonical in ADDITIONAL_KEYWORD_MAP.items():
+            if variant in text:
+                matches.append(canonical)
+        return matches

@@ -23,6 +23,7 @@ SYNONYM_MAP = {
     "힐링": ["잔잔한", "따뜻한", "comforting"],
     "정치 소설": ["political fiction", "사회풍자 소설"],
     "소설": ["novel", "fiction"],
+    "디스토피아": ["dystopia", "디스토피아적", "디스토피아적인"],
 }
 
 

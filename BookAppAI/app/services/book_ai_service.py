@@ -458,7 +458,19 @@ async def search_by_natural_language(query: str, db: AsyncSession):
     if not query_embedding:
         raise HTTPException(status_code=500, detail="Could not generate embedding for the search query.")
 
-    keyword_clause = " OR keyword = ANY(:keyword_list)" if hybrid_keywords else ""
+    keyword_clause = ""
+    if hybrid_keywords:
+        keyword_clause = """
+            OR keyword = ANY(:keyword_list)
+            OR (
+                tags IS NOT NULL
+                AND EXISTS (
+                    SELECT 1
+                    FROM jsonb_array_elements_text(tags) AS tag(value)
+                    WHERE tag.value = ANY(:keyword_list)
+                )
+            )
+        """
     base_query = f"""
         SELECT id, title, contents, isbn, authors, publisher, thumbnail,
                1 - (embedding <=> :query_embedding) AS similarity
