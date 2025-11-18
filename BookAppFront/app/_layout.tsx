@@ -48,9 +48,24 @@ export default function RootLayout() {
             },
           }}
         >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              headerShown: false,
+              title: '',         // ★★★ 이게 있어야 '이전 화면 title = (tabs)' 가 사라짐
+              headerBackTitle: '', // 안전하게 back title도 제거
+            }}
+          />
           <Stack.Screen name="auth/login" options={{ title: '로그인' }} />
           <Stack.Screen name="auth/register" options={{ title: '회원가입' }} />
+          <Stack.Screen
+            name="book/[isbn]"
+            options={{
+              title: '',
+              headerBackTitle: '',              // ← 뒤로가기 텍스트 제거
+              headerBackButtonMenuEnabled: false, // ← iOS 메뉴도 제거(선택)
+            }}
+          />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

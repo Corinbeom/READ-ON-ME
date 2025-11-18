@@ -13,6 +13,7 @@ import {
   Image,
   TouchableWithoutFeedback,
   Keyboard,
+  Alert,
   Dimensions
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,15 +39,22 @@ interface ChatMessage {
   results?: any[];
 }
 
+const INITIAL_CHAT_MESSAGE: ChatMessage = {
+  id: '1',
+  type: 'ai',
+  text: "안녕하세요! 어떤 책을 추천해 드릴까요?",
+};
+
 export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const styles = getStyles(colorScheme);
   const colors = Colors[colorScheme];
+  const reloadIcon = colorScheme === 'light'
+    ? require('@/assets/images/reload-light.png')
+    : require('@/assets/images/reload-dark.png');
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
-    { id: '1', type: 'ai', text: "안녕하세요! 어떤 책을 추천해 드릴까요?" },
-  ]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([INITIAL_CHAT_MESSAGE]);
   const [currentInput, setCurrentInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
@@ -74,7 +82,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
       const aiResponse: ChatMessage = {
         id: String(Date.now() + 1),
         type: 'ai',
-        text: response.data.length > 0 ? "이런 책들을 추천해 드려요!" : "죄송해요, 추천할 만한 책을 찾지 못했어요.",
+        text: response.data.length > 0 ? "사용자님의 질문에 맞는 책을 찾아봤어요!" : "죄송해요, 추천할 만한 책을 찾지 못했어요.",
         results: response.data,
       };
       setChatHistory((prev) => [...prev, aiResponse]);
@@ -125,6 +133,17 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
     }
   };
 
+  const handleClearChat = () => {
+    Alert.alert('채팅 초기화', '채팅창을 초기화 하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      {
+        text: '확인',
+        style: 'destructive',
+        onPress: () => setChatHistory([INITIAL_CHAT_MESSAGE]),
+      },
+    ]);
+  };
+
   const navigateToDetail = (isbn: string) => {
     onClose();
     router.push(`/book/${isbn}`);
@@ -164,9 +183,14 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
             <View style={styles.modalContent}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>AI 도서 추천</Text>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                  <Ionicons name="close" size={24} color={colors.text} />
-                </TouchableOpacity>
+                <View style={styles.headerActions}>
+                  <TouchableOpacity onPress={handleClearChat} style={styles.clearButton}>
+                    <Image source={reloadIcon} style={styles.clearButtonIcon} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {isAuthenticated ? (
@@ -270,12 +294,32 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       borderBottomWidth: 1,
       borderBottomColor: colors.lightGray,
     },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      columnGap: 8,
+    },
     modalTitle: {
       fontSize: 20,
       fontFamily: 'Pretendard-SemiBold',
       color: colors.text,
     },
     closeButton: { padding: 5 },
+    clearButton: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    clearButtonIcon: {
+      width: 16,
+      height: 16,
+      tintColor: colorScheme === 'light' ? undefined : colors.text,
+    },
     chatList: {
       flex: 1,
       paddingHorizontal: 12,
