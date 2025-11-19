@@ -7,7 +7,7 @@ import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
 // 📍 환경별 Base URL 설정
-const API_BASE_URL = (() => {
+export const API_BASE_URL = (() => {
   if (Platform.OS === 'android') return 'http://10.0.2.2:8080';
   return 'http://localhost:8080';
 })();
@@ -134,4 +134,11 @@ export const reviewApi = {
 export const recommendationApi = {
   getRecommendations: (userId: number) =>
     recommendationApiInstance.get<number[]>(`/recommendations/${userId}`),
+};
+
+// 🔔 알림 관련 API
+export const notificationApi = {
+  getNotifications: () => api.get('/api/notifications'),
+  markAsRead: (notificationId: number) => api.post(`/api/notifications/${notificationId}/read`),
+  markAllAsRead: () => api.post('/api/notifications/read-all'),
 };

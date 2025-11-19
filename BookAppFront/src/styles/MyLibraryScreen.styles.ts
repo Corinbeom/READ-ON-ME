@@ -88,6 +88,77 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       borderWidth: 1,
       borderColor: colors.lightGray,
     },
+    notificationSection: {
+      backgroundColor: colors.card,
+      borderRadius: 12,
+      padding: 15,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+    },
+    notificationHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    notificationTitle: {
+      fontSize: 18,
+      fontFamily: 'Pretendard-SemiBold',
+      color: colors.text,
+    },
+    notificationHeaderActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    notificationBadge: {
+      fontSize: 12,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: colors.primary,
+      marginRight: 12,
+    },
+    notificationMarkAll: {
+      fontSize: 13,
+      fontFamily: 'Pretendard-SemiBold',
+      color: colors.primary,
+    },
+    notificationMarkAllDisabled: {
+      color: colors.darkGray,
+    },
+    notificationItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+      paddingHorizontal: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.lightGray,
+      marginBottom: 8,
+    },
+    notificationUnreadItem: {
+      backgroundColor: colorScheme === 'light' ? 'rgba(227, 197, 101, 0.12)' : 'rgba(227, 197, 101, 0.15)',
+    },
+    notificationUnreadDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: colors.accent,
+      marginRight: 12,
+    },
+    notificationCopy: {
+      flex: 1,
+    },
+    notificationMessage: {
+      fontSize: 14,
+      fontFamily: 'Pretendard-SemiBold',
+      color: colors.text,
+    },
+    notificationMeta: {
+      fontSize: 12,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: colors.darkGray,
+      marginTop: 4,
+    },
     summaryItem: {
       alignItems: 'center',
       paddingHorizontal: 10,

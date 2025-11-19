@@ -3,12 +3,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import bookReducer from './bookSlice';
 import authReducer from './authSlice';
 import reviewReducer from './reviewSlice';
+import notificationReducer from './notificationSlice';
 
 export const store = configureStore({
   reducer: {
     books: bookReducer,
     auth: authReducer,
     reviews: reviewReducer,
+    notifications: notificationReducer,
   },
 });
 

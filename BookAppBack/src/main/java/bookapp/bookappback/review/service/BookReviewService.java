@@ -5,6 +5,7 @@ import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.common.exception.ReviewExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
+import bookapp.bookappback.notification.service.NotificationService;
 import bookapp.bookappback.review.dto.ReviewRequest;
 import bookapp.bookappback.review.dto.ReviewResponse;
 import bookapp.bookappback.review.entity.BookReview;
@@ -35,6 +36,7 @@ public class BookReviewService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final ReviewLikeRepository reviewLikeRepository;
+    private final NotificationService notificationService;
 
     // ✅ 리뷰 작성
     public Long createReview(Long bookId, ReviewRequest reviewRequest, Long userId) {
@@ -147,6 +149,7 @@ public class BookReviewService {
             ReviewLike newLike = new ReviewLike(user, review);
             review.getLikes().add(newLike);
             review.setLikeCount(review.getLikeCount() + 1); // 좋아요 카운트 증가
+            notificationService.notifyReviewLiked(review, user);
         }
     }
 }

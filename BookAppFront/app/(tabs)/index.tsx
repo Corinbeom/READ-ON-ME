@@ -31,10 +31,12 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false);
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { unreadCount } = useSelector((state: RootState) => state.notifications);
 
   const colorScheme = useColorScheme() ?? 'light';
   const styles = getHomeScreenStyles(colorScheme);
   const colors = Colors[colorScheme];
+  const hasUnreadNotifications = unreadCount > 0;
 
   const fetchPopularBooks = async () => {
     setPopularLoading(true);
@@ -83,6 +85,10 @@ export default function HomeScreen() {
     fetchRecommendations();
   }, [isAuthenticated, user]);
 
+  const handleNotificationPress = () => {
+    router.push('/notifications');
+  };
+
   return (
     <ScrollView style={styles.container}>
       <ThemedView style={styles.headerContainer}>
@@ -95,7 +101,19 @@ export default function HomeScreen() {
           />
           <View style={styles.authContainer}>
             {isAuthenticated ? (
-              <ThemedText style={styles.welcomeText}>{user?.nickname}님 환영합니다!</ThemedText>
+              <TouchableOpacity
+                onPress={handleNotificationPress}
+                style={styles.notificationBellButton}
+                accessibilityRole="button"
+                accessibilityLabel="알림 확인"
+              >
+                <FontAwesome
+                  name={hasUnreadNotifications ? 'bell' : 'bell-o'}
+                  size={20}
+                  color={colors.primary}
+                />
+                {hasUnreadNotifications && <View style={styles.notificationDot} />}
+              </TouchableOpacity>
             ) : (
               <View style={styles.authButtons}>
                 <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>

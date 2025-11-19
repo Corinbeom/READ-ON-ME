@@ -5,6 +5,7 @@ import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.common.exception.ReviewExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
+import bookapp.bookappback.notification.service.NotificationService;
 import bookapp.bookappback.review.dto.ReviewRequest;
 import bookapp.bookappback.review.entity.BookReview;
 import bookapp.bookappback.review.entity.ReviewLike;
@@ -31,6 +32,7 @@ class BookReviewServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private BookRepository bookRepository;
     @Mock private ReviewLikeRepository reviewLikeRepository;
+    @Mock private NotificationService notificationService;
 
     @InjectMocks
     private BookReviewService bookReviewService;
@@ -165,9 +167,11 @@ class BookReviewServiceTest {
     void toggleReviewLike_add() {
         User liker = new User("liker@example.com", "encoded", "liker", null);
         liker.setId(1L);
+        User owner = new User("owner@example.com", "encoded", "owner", null);
+        owner.setId(2L);
         BookReview review = new BookReview();
         review.setId(99L);
-        review.setUser(new User("owner@example.com", "encoded", "owner", null));
+        review.setUser(owner);
         review.setLikeCount(0);
         review.setLikes(new HashSet<>());
 
@@ -180,6 +184,7 @@ class BookReviewServiceTest {
         assertEquals(1, review.getLikeCount());
         assertEquals(1, review.getLikes().size());
         verify(reviewLikeRepository, never()).delete(any());
+        verify(notificationService, times(1)).notifyReviewLiked(review, liker);
     }
 
     @Test
@@ -187,9 +192,11 @@ class BookReviewServiceTest {
     void toggleReviewLike_remove() {
         User liker = new User("liker@example.com", "encoded", "liker", null);
         liker.setId(1L);
+        User owner = new User("owner@example.com", "encoded", "owner", null);
+        owner.setId(2L);
         BookReview review = new BookReview();
         review.setId(99L);
-        review.setUser(new User("owner@example.com", "encoded", "owner", null));
+        review.setUser(owner);
         review.setLikeCount(1);
         ReviewLike like = new ReviewLike(liker, review);
         review.getLikes().add(like);
@@ -203,6 +210,7 @@ class BookReviewServiceTest {
         assertEquals(0, review.getLikeCount());
         assertTrue(review.getLikes().isEmpty());
         verify(reviewLikeRepository, times(1)).delete(like);
+        verify(notificationService, never()).notifyReviewLiked(any(), any());
     }
 
 }

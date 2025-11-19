@@ -24,21 +24,14 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       alignItems: 'center',
     },
     logo: {
-      width: 140,          // 살짝 더 키움 (140 → 160)
-      height: 40,          // 비율 유지하면서 높이도 약간 증가
-      
-      
-      marginTop: 6,        // 상단 여백
+      width: 140,
+      height: 40,
+      marginTop: 0,
     },
     authContainer: { 
       flexDirection: 'row', 
       alignItems: 'center', 
-      gap: 10 
-    },
-    welcomeText: { 
-      fontSize: 16, 
-      color: colors.primary, 
-      fontFamily: 'Pretendard-SemiBold',
+      gap: 10,
     },
     authButtons: { 
       flexDirection: 'row', 
@@ -67,6 +60,24 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       color: colors.primary, 
       fontSize: 14, 
       fontFamily: 'Pretendard-SemiBold',
+    },
+    notificationBellButton: {
+      position: 'relative',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      backgroundColor: 'transparent',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    notificationDot: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: '#ff4d4f',
     },
 
     chatBubble: {

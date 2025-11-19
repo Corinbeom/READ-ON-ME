@@ -14,6 +14,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
+import { markAllNotificationsAsRead, markNotificationAsRead } from '@/src/store/notificationSlice';
 
 interface UserLibraryResponse {
   toReadBooks: BookDto[];
@@ -24,6 +25,7 @@ interface UserLibraryResponse {
 export default function MyLibraryScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { items: notifications, unreadCount } = useSelector((state: RootState) => state.notifications);
 
   const [userLibrary, setUserLibrary] = useState<UserLibraryResponse>({ toReadBooks: [], readingBooks: [], completedBooks: [] });
   const [myReviews, setMyReviews] = useState<Review[]>([]);
@@ -39,6 +41,8 @@ export default function MyLibraryScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const styles = getMyLibraryScreenStyles(colorScheme);
   const colors = Colors[colorScheme];
+  const limitedNotifications = notifications.slice(0, 3);
+  const hasUnreadNotifications = unreadCount > 0;
 
   useFocusEffect(
     useCallback(() => {
@@ -92,6 +96,17 @@ export default function MyLibraryScreen() {
     setModalVisible(true);
   };
 
+  const handleNotificationPress = (notificationId: number) => {
+    dispatch(markNotificationAsRead(notificationId));
+  };
+
+  const handleMarkAllNotifications = () => {
+    if (!hasUnreadNotifications) {
+      return;
+    }
+    dispatch(markAllNotificationsAsRead());
+  };
+
   const renderBookItem = ({ item }: { item: BookDto }) => (
     <Link href={`/book/${item.isbn13}`} asChild>
       <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}>
@@ -142,6 +157,35 @@ export default function MyLibraryScreen() {
 
       {isAuthenticated && (
         <>
+          <ThemedView style={styles.notificationSection}>
+            <View style={styles.notificationHeaderRow}>
+              <ThemedText style={styles.notificationTitle}>최근 알림</ThemedText>
+              <View style={styles.notificationHeaderActions}>
+                <ThemedText style={styles.notificationBadge}>{unreadCount}개의 새 알림</ThemedText>
+                <TouchableOpacity onPress={handleMarkAllNotifications} disabled={!hasUnreadNotifications}>
+                  <ThemedText style={[styles.notificationMarkAll, !hasUnreadNotifications && styles.notificationMarkAllDisabled]}>모두 읽음</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </View>
+            {notifications.length === 0 ? (
+              <ThemedText style={styles.emptySectionText}>아직 받은 알림이 없습니다.</ThemedText>
+            ) : (
+              limitedNotifications.map((notification) => (
+                <TouchableOpacity
+                  key={notification.id}
+                  style={[styles.notificationItem, !notification.read && styles.notificationUnreadItem]}
+                  onPress={() => handleNotificationPress(notification.id)}
+                >
+                  {!notification.read && <View style={styles.notificationUnreadDot} />}
+                  <View style={styles.notificationCopy}>
+                    <ThemedText style={styles.notificationMessage}>{notification.message}</ThemedText>
+                    <ThemedText style={styles.notificationMeta}>{new Date(notification.createdAt).toLocaleString()}</ThemedText>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </ThemedView>
+
           <ThemedView style={styles.summaryContainer}>
             <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽고 싶은 책', userLibrary.toReadBooks)}>
               <Book size={22} color={colors.primary} />

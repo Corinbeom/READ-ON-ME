@@ -10,6 +10,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { store } from '../src/store';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '@/components/ThemedView';
+import NotificationListener from '@/components/NotificationListener';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -37,6 +38,7 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <ThemedView style={{ flex: 1 }}>
+        <NotificationListener />
         <Stack
           screenOptions={{
             headerStyle: {
