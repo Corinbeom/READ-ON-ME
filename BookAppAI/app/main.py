@@ -47,3 +47,7 @@ async def recommend_books(user_id: int):
     """
     recommendations = await get_recommendations(user_id)
     return recommendations
+
+@app.get("/health")
+def health():
+    return {"ok": True}
