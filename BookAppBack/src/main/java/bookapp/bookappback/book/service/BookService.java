@@ -33,17 +33,19 @@ public class BookService {
     private final WebClient.Builder webClientBuilder;
     private final UserBookStatusRepository userBookStatusRepository;
 
-    private static final String FASTAPI_URL = "http://localhost:8000";
+    private final String aiBaseUrl;
 
     @Autowired
     public BookService(BookRepository bookRepository,
                        KakaoBookService kakaoBookService,
                        WebClient.Builder webClientBuilder,
-                       UserBookStatusRepository userBookStatusRepository) {
+                       UserBookStatusRepository userBookStatusRepository,
+                       @org.springframework.beans.factory.annotation.Value("${ai.base-url}") String aiBaseUrl) {
         this.bookRepository = bookRepository;
         this.kakaoBookService = kakaoBookService;
         this.webClientBuilder = webClientBuilder;
         this.userBookStatusRepository = userBookStatusRepository;
+        this.aiBaseUrl = aiBaseUrl;
     }
 
 
@@ -188,7 +190,7 @@ public class BookService {
     }
 
     private void triggerSingleBookEmbedding(Book book) {
-        WebClient webClient = webClientBuilder.baseUrl(FASTAPI_URL).build();
+        WebClient webClient = webClientBuilder.baseUrl(aiBaseUrl).build();
 
         Map<String, Object> bookData = Map.of(
                 "title", book.getTitle(),

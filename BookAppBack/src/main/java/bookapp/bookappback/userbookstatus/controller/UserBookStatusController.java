@@ -5,9 +5,11 @@ import bookapp.bookappback.userbookstatus.entity.UserBookStatus;
 import bookapp.bookappback.userbookstatus.service.UserBookStatusService;
 import bookapp.bookappback.userbookstatus.dto.UserLibraryResponse; // Import the new DTO
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +21,9 @@ import java.util.Map;
 public class UserBookStatusController {
 
     private final UserBookStatusService userBookStatusService;
+
+    @Value("${internal.api.token:}")
+    private String internalApiToken;
 
     @PostMapping("/{bookId}")
     public ResponseEntity<UserBookStatus> updateBookStatus(
@@ -39,7 +44,14 @@ public class UserBookStatusController {
     }
 
     @GetMapping("/all")
-    public ResponseEntity<Map<Long, List<Long>>> getAllUserLibraries() {
+    public ResponseEntity<Map<Long, List<Long>>> getAllUserLibraries(
+            @RequestHeader(value = "X-Internal-Token", required = false) String token
+    ) {
+        // 운영 환경에서 추천용 전체 라이브러리는 내부 통신만 허용
+        if (!StringUtils.hasText(internalApiToken) || !internalApiToken.equals(token)) {
+            return ResponseEntity.status(401).build();
+        }
+
         Map<Long, List<Long>> allUserLibraries = userBookStatusService.getAllUserLibraries();
         return ResponseEntity.ok(allUserLibraries);
     }

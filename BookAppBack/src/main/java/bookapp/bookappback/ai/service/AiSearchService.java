@@ -2,6 +2,7 @@ package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.ai.dto.AiSearchRequestDto;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -15,8 +16,11 @@ public class AiSearchService {
 
     private final WebClient webClient;
 
-    public AiSearchService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.baseUrl("http://localhost:8000").build();
+    public AiSearchService(
+            WebClient.Builder webClientBuilder,
+            @Value("${ai.base-url}") String aiBaseUrl
+    ) {
+        this.webClient = webClientBuilder.baseUrl(aiBaseUrl).build();
     }
 
     public List<?> search(AiSearchRequestDto requestDto) {

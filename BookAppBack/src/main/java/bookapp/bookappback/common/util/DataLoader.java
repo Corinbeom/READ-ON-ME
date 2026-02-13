@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +21,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.util.Map;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public class DataLoader implements CommandLineRunner {
 
@@ -29,8 +29,23 @@ public class DataLoader implements CommandLineRunner {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final WebClient.Builder webClientBuilder;
+    private final String aiBaseUrl;
 
-
+    public DataLoader(
+            KakaoBookService kakaoBookService,
+            BookRepository bookRepository,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            WebClient.Builder webClientBuilder,
+            @Value("${ai.base-url}") String aiBaseUrl
+    ) {
+        this.kakaoBookService = kakaoBookService;
+        this.bookRepository = bookRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.webClientBuilder = webClientBuilder;
+        this.aiBaseUrl = aiBaseUrl;
+    }
 
     @Override
     public void run(String... args) throws Exception {
@@ -84,7 +99,7 @@ public class DataLoader implements CommandLineRunner {
                 "소설", "문학", "철학", "심리", "SF", "판타지", "경제", "역사", "시집"
         );
 
-        WebClient webClient = webClientBuilder.baseUrl("http://localhost:8000").build();
+        WebClient webClient = webClientBuilder.baseUrl(aiBaseUrl).build();
 
         webClient.post()
                 .uri("/api/books/fetch-and-filter")
@@ -100,7 +115,7 @@ public class DataLoader implements CommandLineRunner {
 
     private void triggerEmbedding(Book book) {
         try {
-            WebClient client = webClientBuilder.baseUrl("http://localhost:8000").build();
+            WebClient client = webClientBuilder.baseUrl(aiBaseUrl).build();
             Map<String, Object> body = Map.of(
                     "title", book.getTitle(),
                     "contents", book.getContents() == null ? "" : book.getContents(),
