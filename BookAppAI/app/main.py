@@ -1,4 +1,7 @@
 import httpx
+import os
+import time
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -15,9 +18,33 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
+
+# 기본 요청 타이밍 로깅
+logger = logging.getLogger("app.metrics")
+
+@app.middleware("http")
+async def request_timing_middleware(request, call_next):
+    start = time.perf_counter()
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "request_completed method=%s path=%s status=%s latency_ms=%.2f",
+            request.method,
+            request.url.path,
+            getattr(locals().get("response", None), "status_code", "unknown"),
+            elapsed_ms,
+        )
+
 app.add_middleware(
       CORSMiddleware,
-      allow_origins=["http://localhost:8081"],  # 필요 시 * 또는 다른 도메인 추가
+      allow_origins=[
+          origin.strip()
+          for origin in os.getenv("AI_CORS_ORIGINS", "http://localhost:8081").split(",")
+          if origin.strip()
+      ],
       allow_credentials=True,
       allow_methods=["*"],
       allow_headers=["*"],
@@ -25,7 +52,10 @@ app.add_middleware(
 
 app.include_router(data_builder.router)
 
-SPRING_BOOT_SERVER_URL = "http://localhost:8080"
+# Docker 환경에서는 컨테이너 간 통신을 위해 서비스명(backend)을 사용해야 합니다.
+# - 로컬 실행: http://localhost:8080
+# - docker-compose: http://backend:8080
+SPRING_BOOT_SERVER_URL = os.getenv("SPRING_BOOT_URL", "http://localhost:8080")
 
 @app.get("/test-spring-connection")
 async def test_spring_connection():

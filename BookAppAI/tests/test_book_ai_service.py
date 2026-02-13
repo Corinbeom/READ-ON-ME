@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.book_ai_service import (
+from app.services.text_utils import (
     build_book_text,
     build_keyword_prompt,
     contains_exclusion_terms,

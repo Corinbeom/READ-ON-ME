@@ -1,6 +1,7 @@
 import pytest
 
 from app.services.book_classifier import BookClassifier
+from app.services.gemini_tagger import GeminiTagger
 from app.services.intent_classifier import IntentAnalyzer, IntentMetadata
 from app.services.keyword_expander import KeywordExpander
 from app.services.prompt_templates import PromptTemplateBuilder
@@ -73,7 +74,8 @@ def test_prompt_builder_domain_template_includes_constraints():
 
 @pytest.mark.asyncio
 async def test_book_classifier_returns_primary_keyword_and_tags():
-    classifier = BookClassifier()
+    # 테스트에서는 외부 LLM(Gemini) 호출을 막아 재현성을 확보합니다.
+    classifier = BookClassifier(llm_tagger=GeminiTagger(api_key=""))
 
     result = await classifier.classify(
         title="유난한 도전",

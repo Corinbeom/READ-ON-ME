@@ -8,7 +8,8 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-engine = create_async_engine(DATABASE_URL, echo=True)
+SQL_ECHO = os.getenv("SQL_ECHO", "false").lower() == "true"
+engine = create_async_engine(DATABASE_URL, echo=SQL_ECHO)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()

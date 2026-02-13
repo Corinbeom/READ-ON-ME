@@ -6,6 +6,7 @@ from collections import Counter
 load_dotenv()
 
 SPRING_BOOT_URL = os.getenv("SPRING_BOOT_URL", "http://localhost:8080")
+INTERNAL_API_TOKEN = os.getenv("INTERNAL_API_TOKEN", "")
 
 async def fetch_user_libraries() -> dict[int, list[int]]:
     """
@@ -14,7 +15,10 @@ async def fetch_user_libraries() -> dict[int, list[int]]:
     """
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(f"{SPRING_BOOT_URL}/api/library/all")
+            headers = {}
+            if INTERNAL_API_TOKEN:
+                headers["X-Internal-Token"] = INTERNAL_API_TOKEN
+            response = await client.get(f"{SPRING_BOOT_URL}/api/library/all", headers=headers)
             response.raise_for_status()
             try:
                 # JSON의 키가 문자열이므로, 정수형 user_id로 변환합니다.
