@@ -2,20 +2,41 @@
 import axios, { AxiosError } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
+const resolveDevHost = (): string => {
+  // 1) 명시적 오버라이드 (실기기 테스트 시 유용)
+  const envHost = process.env.EXPO_PUBLIC_API_HOST?.trim();
+  if (envHost) return envHost;
+
+  // 2) Expo 개발 서버(hostUri)에서 호스트(IP) 추출
+  // 예: "192.168.0.5:8081" -> "192.168.0.5"
+  const hostUri = Constants.expoConfig?.hostUri ?? Constants.manifest2?.extra?.expoClient?.hostUri;
+  if (typeof hostUri === 'string' && hostUri.length > 0) {
+    const host = hostUri.split(':')[0];
+    if (host) return host;
+  }
+
+  // 3) Android 에뮬레이터는 10.0.2.2로 호스트 머신 접근
+  if (Platform.OS === 'android') return '10.0.2.2';
+
+  // 4) 그 외(웹/iOS 시뮬레이터 등)
+  return 'localhost';
+};
+
 // 📍 환경별 Base URL 설정
 export const API_BASE_URL = (() => {
-  if (Platform.OS === 'android') return 'http://10.0.2.2:8080';
-  return 'http://localhost:8080';
+  const host = resolveDevHost();
+  return `http://${host}:8080`;
 })();
 
 // 📍 FastAPI 서버를 위한 Base URL 설정
 const RECOMMENDATION_API_BASE_URL = (() => {
-  if (Platform.OS === 'android') return 'http://10.0.2.2:8000';
-  return 'http://localhost:8000';
+  const host = resolveDevHost();
+  return `http://${host}:8000`;
 })();
 
 // 📍 공통 Axios 인스턴스

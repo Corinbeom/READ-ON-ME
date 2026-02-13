@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
-import axios from 'axios';
 import { Link } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { KakaoBook } from '../../src/types/kakaoBook';
@@ -19,6 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
+import { bookApi } from '@/src/services/api';
 
 interface SearchResponse {
   documents: KakaoBook[];
@@ -85,11 +85,8 @@ export default function SearchScreen() {
     }
     setLoading(true);
     try {
-      const response = await axios.get<SearchResponse>(
-        'http://localhost:8080/api/books/search',
-        { params: { query: searchQuery, size: 20 } }
-      );
-      setBooks(response.data.documents);
+      const response = await bookApi.searchBooks({ query: searchQuery, size: 20 });
+      setBooks((response.data as SearchResponse).documents);
     } catch (error) {
       console.error('검색 실패:', error);
       customAlert('오류', '책 검색 중 오류가 발생했습니다.');
