@@ -1,0 +1,84 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: readonme-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-readonme}
+      POSTGRES_USER: ${POSTGRES_USER:-readonme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-readonme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - readonme_pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: readonme-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  backend:
+    build: ./BookAppBack
+    container_name: readonme-backend
+    environment:
+      # Spring이 참조하는 환경변수들(너 프로젝트에 맞게 이름만 맞추면 됨)
+      SPRING_PROFILES_ACTIVE: prod
+
+      # Spring JDBC
+      DB_URL: ${SPRING_DB_URL:-jdbc:postgresql://postgres:5432/readonme}
+      DB_USERNAME: ${POSTGRES_USER:-readonme}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-readonme}
+
+      # Spring Redis
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+
+      # Spring -> FastAPI
+      AI_BASE_URL: ${AI_BASE_URL:-http://ai:8000}
+
+      # 내부 통신 토큰(Spring <-> AI)
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+
+      # 외부 API / 보안
+      KAKAO_API_KEY: ${KAKAO_API_KEY}
+      KAKAO_API_URL: ${KAKAO_API_URL:-https://dapi.kakao.com/v3/search/book}
+      CORS_URL: ${CORS_URL:-http://localhost:8081}
+      JWT_SECRET: ${JWT_SECRET:-change-me}
+      JWT_EXPIRED: ${JWT_EXPIRED:-3600000}
+
+      # JVM 메모리 튜닝(중요)
+      JAVA_OPTS: "-XX:MaxRAMPercentage=60 -XX:InitialRAMPercentage=20 -Dfile.encoding=UTF-8"
+    depends_on:
+      - postgres
+      - redis
+      - ai
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+  ai:
+    build: ./BookAppAI
+    container_name: readonme-ai
+    environment:
+      # 예: Gemini key, DB 접근 필요하면 Supabase 연결 등
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # AI worker는 async SQLAlchemy DSN 사용
+      DATABASE_URL: ${AI_DATABASE_URL:-postgresql+asyncpg://readonme:readonme@postgres:5432/readonme}
+      # AI 빌더는 카카오 API도 직접 호출함
+      KAKAO_API_KEY: ${KAKAO_API_KEY}
+      # AI -> Spring (협업필터링 입력)
+      SPRING_BOOT_URL: ${SPRING_BOOT_URL:-http://backend:8080}
+      # Spring 내부 API 호출 토큰
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+      # 운영에서 SQL 로깅이 필요하면 true로
+      SQL_ECHO: ${AI_SQL_ECHO:-false}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  readonme_pgdata:
