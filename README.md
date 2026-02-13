@@ -52,6 +52,8 @@
 
 ※ 환경 변수(.env)는 각 서비스 디렉터리에 별도 구성해야 합니다. (요청에 따라 본 문서에서는 상세 내용을 생략했습니다.)
 
+- Docker로 재현 가능한 실행 환경을 구성하려면 `docs/environment-variables.md`를 참고하세요.
+
 ---
 
 ## 실행 방법
@@ -102,6 +104,16 @@ docker build -t readonme-ai BookAppAI
 ```
 
 환경 변수는 컨테이너 실행 시 주입해야 합니다.
+
+### 5. (권장) docker-compose로 전체 스택 실행
+
+Postgres(pgvector) + Redis + Spring Boot + FastAPI를 한 번에 띄울 수 있습니다.
+
+```bash
+docker compose up --build
+```
+
+필수 환경변수/기본값은 `docs/environment-variables.md`에 정리되어 있습니다.
 
 ---
 
