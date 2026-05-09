@@ -32,7 +32,7 @@ public class UserService implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다"));
         return new UserDetailsImpl(user);
     }
 
@@ -106,7 +106,7 @@ public class UserService implements UserDetailsService {
         if (request.getNickname() != null) {
             userRepository.findByNickname(request.getNickname()).ifPresent(existingUser -> {
                 if (!existingUser.getId().equals(userId)) {
-                    throw new UserExceptions.EmailDuplicateException(request.getNickname());
+                    throw new UserExceptions.NickNameDuplicateException(request.getNickname());
                 }
             });
             user.setNickname(request.getNickname());
@@ -124,7 +124,7 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
 
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new UserExceptions.InvalidLoginException(); // 재사용 가능 (혹은 별도 PasswordMismatchException)
+            throw new UserExceptions.PasswordMismatchException();
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));

@@ -65,8 +65,77 @@ book_classifier_detailed = BookClassifier(
     llm_tagger=gemini_tagger_detailed,
 )
 
-FAILED_TAGGING_REGISTRY: set[str] = set()
-RETAG_IN_PROGRESS = False
+class TaggingRetryManager:
+    """
+    LLM 태깅 실패 목록을 관리하고 재시도를 조율하는 클래스.
+
+    기존 전역 변수(FAILED_TAGGING_REGISTRY, RETAG_IN_PROGRESS) 방식은
+    FastAPI의 비동기 동시 처리 환경에서 Race Condition이 발생할 수 있다.
+    asyncio.Lock()으로 공유 상태 접근을 직렬화하여 이를 해결한다.
+    """
+
+    def __init__(self):
+        self._registry: set[str] = set()
+        self._in_progress: bool = False
+        self._lock = asyncio.Lock()
+
+    async def record_fallback(self, identifier: Optional[str], source: str) -> None:
+        if not identifier:
+            return
+        async with self._lock:
+            if identifier in self._registry:
+                return
+            self._registry.add(identifier)
+            print(f"[TAGGING FALLBACK] {identifier} tagged via {source}. Added to retry registry.")
+            should_trigger = len(self._registry) >= RETAG_TRIGGER_SIZE and not self._in_progress
+
+        if should_trigger:
+            print(f"[TAGGING RETRY] Trigger size reached. Scheduling re-tag task.")
+            asyncio.create_task(self._retry())
+
+    async def _retry(self) -> None:
+        async with self._lock:
+            if self._in_progress or not self._registry:
+                return
+            self._in_progress = True
+            retry_targets = list(self._registry)
+            self._registry.clear()
+
+        try:
+            print(f"[TAGGING RETRY] Retagging {len(retry_targets)} books with detailed model.")
+            from app.database import async_session
+            from sqlalchemy import select as sa_select
+
+            async with async_session() as session:
+                for isbn in retry_targets:
+                    try:
+                        result = await session.execute(sa_select(BookCorpus).where(BookCorpus.isbn == isbn))
+                        book = result.scalars().first()
+                        if not book:
+                            continue
+                        classification = await book_classifier_detailed.classify(
+                            book.title or "",
+                            book.contents or "",
+                            book.authors or "",
+                        )
+                        keyword_value, tags = _merge_tags(classification.primary_keyword, classification.tags)
+                        book.keyword = keyword_value
+                        book.tags = tags
+                        session.add(book)
+                        print(f"[TAGGING RETRY] Updated {isbn} -> {keyword_value}")
+                    except Exception as exc:
+                        print(f"[TAGGING RETRY] Failed to retag ISBN {isbn}: {exc}")
+                await session.commit()
+        except Exception as exc:
+            print(f"[TAGGING RETRY] Session error: {exc}")
+        finally:
+            async with self._lock:
+                self._in_progress = False
+
+
+import asyncio
+
+tagging_retry_manager = TaggingRetryManager()
 
 
 def _resolve_similarity_threshold(intent: IntentMetadata) -> float:
@@ -93,64 +162,6 @@ def _merge_tags(primary_label: Optional[str], classification_tags: List[str], fa
     return keyword_value, tags
 
 
-def record_tagging_fallback(identifier: Optional[str], source: str) -> None:
-    if not identifier:
-        return
-    if identifier in FAILED_TAGGING_REGISTRY:
-        return
-    FAILED_TAGGING_REGISTRY.add(identifier)
-    print(f"[TAGGING FALLBACK] {identifier} tagged via {source}. Added to retry registry.")
-    if len(FAILED_TAGGING_REGISTRY) >= RETAG_TRIGGER_SIZE:
-        print(f"[TAGGING RETRY] Trigger size reached ({len(FAILED_TAGGING_REGISTRY)}). Kicking off re-tag.")
-        try:
-            import anyio
-
-            anyio.from_thread.run(retry_failed_taggings)
-        except RuntimeError:
-            # Already in async context; schedule directly.
-            import asyncio
-
-            asyncio.create_task(retry_failed_taggings())
-        except Exception as exc:
-            print(f"[TAGGING RETRY] Failed to launch re-tag job: {exc}")
-
-
-async def retry_failed_taggings():
-    """Attempt to reprocess books that fell back to rule-based tagging."""
-    global RETAG_IN_PROGRESS
-    if RETAG_IN_PROGRESS or not FAILED_TAGGING_REGISTRY:
-        return
-
-    RETAG_IN_PROGRESS = True
-    retry_targets = list(FAILED_TAGGING_REGISTRY)
-    FAILED_TAGGING_REGISTRY.clear()
-    print(f"[TAGGING RETRY] Retagging {len(retry_targets)} books with detailed model.")
-
-    from app.database import async_session
-    from sqlalchemy import select
-
-    async with async_session() as session:
-        for isbn in retry_targets:
-            try:
-                result = await session.execute(select(BookCorpus).where(BookCorpus.isbn == isbn))
-                book = result.scalars().first()
-                if not book:
-                    continue
-                classification = await book_classifier_detailed.classify(
-                    book.title or "",
-                    book.contents or "",
-                    book.authors or "",
-                )
-                keyword_value, tags = _merge_tags(classification.primary_keyword, classification.tags)
-                book.keyword = keyword_value
-                book.tags = tags
-                session.add(book)
-                print(f"[TAGGING RETRY] Updated {isbn} -> {keyword_value}")
-            except Exception as exc:
-                print(f"[TAGGING RETRY] Failed to retag ISBN {isbn}: {exc}")
-        await session.commit()
-
-    RETAG_IN_PROGRESS = False
 
 
 # --- Service Functions ---
@@ -167,15 +178,21 @@ async def get_embedding(text: str):
         return None
 
 
+KAKAO_TIMEOUT = httpx.Timeout(connect=3.0, read=8.0, write=3.0, pool=3.0)
+
+
 async def search_kakao_books(keyword: str, page: int):
     """Searches for books using Kakao API."""
     headers = {"Authorization": f"KakaoAK {KAKAO_API_KEY}"}
     params = {"query": keyword, "page": page, "size": 10}
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=KAKAO_TIMEOUT) as client:
         try:
             response = await client.get(KAKAO_API_URL, headers=headers, params=params)
             response.raise_for_status()
             return response.json()["documents"]
+        except httpx.TimeoutException as e:
+            print(f"Kakao API timeout [keyword={keyword}, page={page}]: {e}")
+            return []
         except httpx.RequestError as e:
             print(f"Error fetching from Kakao API: {e}")
             return []
@@ -248,7 +265,7 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
                     format_authors(book.get("authors")),
                 )
                 if not classification.used_llm:
-                    record_tagging_fallback(isbn, "fast_tagger_fallback")
+                    await tagging_retry_manager.record_fallback(isbn, "fast_tagger_fallback")
                 resolved_keyword, tags = _merge_tags(
                     classification.primary_keyword,
                     classification.tags,
@@ -311,7 +328,7 @@ async def embed_single_book(book_data: SingleBookRequest, db: AsyncSession):
         format_authors(book_data.authors),
     )
     if not classification.used_llm:
-        record_tagging_fallback(book_data.isbn, "detailed_tagger_fallback")
+        await tagging_retry_manager.record_fallback(book_data.isbn, "detailed_tagger_fallback")
     keyword_value, tags = _merge_tags(classification.primary_keyword, classification.tags)
     new_corpus_entry = BookCorpus(
         title=book_data.title,

@@ -51,6 +51,13 @@ dependencies {
 	// Redis
 	implementation ("org.springframework.boot:spring-boot-starter-data-redis")
 
+	// Flyway (DB 마이그레이션)
+	implementation("org.flywaydb:flyway-core")
+	implementation("org.flywaydb:flyway-database-postgresql")
+
+	// Rate Limiting (Bucket4j) — 현재 in-memory, 추후 Redis 전환 시 bucket4j-redis 추가
+	implementation("com.bucket4j:bucket4j-core:8.10.1")
+
 	// 테스트
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.security:spring-security-test")

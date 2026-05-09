@@ -4,15 +4,20 @@ import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Validated
 @RestController
 @RequestMapping("/api/books")
 public class BookController {
@@ -24,12 +29,11 @@ public class BookController {
         this.bookService = bookService;
     }
 
-    // ✅ 카카오 API를 통한 책 검색
     @GetMapping("/search")
     public ResponseEntity<KakaoBookSearchResponse> searchBooks(
-            @RequestParam String query,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
+            @RequestParam @NotBlank(message = "검색어를 입력해주세요") @Size(max = 100, message = "검색어는 100자를 초과할 수 없습니다") String query,
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "10") @Min(1) @Max(50) int size,
             @RequestParam(defaultValue = "accuracy") String sort,
             @RequestParam(required = false) String target
     ) {

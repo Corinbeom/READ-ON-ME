@@ -1,5 +1,6 @@
 package bookapp.bookappback.config;
 
+import bookapp.bookappback.common.filter.RateLimitFilter;
 import bookapp.bookappback.common.util.JwtUtil;
 import bookapp.bookappback.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
-    private final UserDetailsService userDetailsService; // UserService 대신 UserDetailsService 주입
+    private final UserDetailsService userDetailsService;
+    private final RateLimitFilter rateLimitFilter;
 
     
 
@@ -52,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .anyRequest().authenticated() // 그 외 모든 요청은 인증 필요
                 )
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .build();

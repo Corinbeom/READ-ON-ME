@@ -14,6 +14,7 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 import java.time.Duration;
+import java.util.Map;
 
 @Configuration
 public class RedisConfig {
@@ -22,20 +23,29 @@ public class RedisConfig {
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory cf) {
-        RedisCacheConfiguration redisCacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+        RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()))
-                .entryTtl(Duration.ofHours(6)); // 캐시 만료 시간 6시간 설정
+                .entryTtl(Duration.ofHours(6));
 
-        log.info("Redis CacheManager bean created successfully with TTL 6 hours.");
-        return RedisCacheManager.RedisCacheManagerBuilder.fromConnectionFactory(cf).cacheDefaults(redisCacheConfiguration).build();
+        // 캐시별 TTL 개별 설정
+        Map<String, RedisCacheConfiguration> cacheConfigs = Map.of(
+            // 카카오 검색 결과: 책 목록은 자주 변하지 않으므로 6시간 유지
+            "bookSearchCache", defaultConfig.entryTtl(Duration.ofHours(6)),
+            // 인기 도서: 1시간마다 갱신하여 최신 트렌드 반영
+            "popularBooksCache", defaultConfig.entryTtl(Duration.ofHours(1))
+        );
+
+        log.info("Redis CacheManager initialized. default TTL=6h, popularBooksCache TTL=1h");
+        return RedisCacheManager.RedisCacheManagerBuilder
+                .fromConnectionFactory(cf)
+                .cacheDefaults(defaultConfig)
+                .withInitialCacheConfigurations(cacheConfigs)
+                .build();
     }
 
     @PostConstruct
     public void checkRedisConnection() {
-        log.info("RedisConfig initialized. Attempting to connect to Redis at {}:{}",
-                 "localhost", "6379");
-        // 실제 연결 테스트는 RedisConnectionFactory를 직접 주입받아야 가능하지만,
-        // 여기서는 설정 초기화 로그만 남깁니다.
+        log.info("RedisConfig initialized.");
     }
 }

@@ -68,6 +68,9 @@ public class Book {
     @Column(name = "average_rating")
     private Double averageRating = 0.0;
 
+    @Column(name = "embedded", nullable = false)
+    private boolean embedded = false;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();

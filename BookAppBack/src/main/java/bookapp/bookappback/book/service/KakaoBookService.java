@@ -1,10 +1,15 @@
 package bookapp.bookappback.book.service;
 
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
+import io.netty.channel.ChannelOption;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
+
+import java.time.Duration;
 
 @Service
 public class KakaoBookService {
@@ -15,10 +20,17 @@ public class KakaoBookService {
     private String kakaoApiKey;
 
     public KakaoBookService() {
-        this.webClient = WebClient.builder().build();
+        // 커넥션 타임아웃 3초, 응답 타임아웃 5초
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3_000)
+                .responseTimeout(Duration.ofSeconds(5));
+
+        this.webClient = WebClient.builder()
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .build();
     }
 
-    // Constructor for dependency injection (if needed)
+    // 테스트용 생성자
     public KakaoBookService(WebClient webClient) {
         this.webClient = webClient;
     }
@@ -41,7 +53,6 @@ public class KakaoBookService {
                             .queryParam("size", size)
                             .queryParam("sort", sort);
 
-                    // target이 있으면 추가
                     if (target != null) {
                         builder.queryParam("target", target);
                     }
@@ -53,7 +64,6 @@ public class KakaoBookService {
                 .bodyToMono(KakaoBookSearchResponse.class);
     }
 
-    // Overloaded method with default parameters
     public Mono<KakaoBookSearchResponse> searchBooks(String query) {
         return searchBooks(query, 1, 10, "accuracy", null);
     }

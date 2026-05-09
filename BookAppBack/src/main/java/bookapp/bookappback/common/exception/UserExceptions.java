@@ -12,7 +12,13 @@ public class UserExceptions {
 
     public static class NickNameDuplicateException extends AppException {
         public NickNameDuplicateException(String nickname) {
-            super(HttpStatus.CONFLICT, "NICKNAME_DUPLICATE", "이미 가입된 이메일입니다: " + nickname);
+            super(HttpStatus.CONFLICT, "NICKNAME_DUPLICATE", "이미 사용 중인 닉네임입니다: " + nickname);
+        }
+    }
+
+    public static class PasswordMismatchException extends AppException {
+        public PasswordMismatchException() {
+            super(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH", "현재 비밀번호가 올바르지 않습니다.");
         }
     }
 

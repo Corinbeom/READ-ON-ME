@@ -12,10 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.scheduler.Schedulers;
-import reactor.util.retry.Retry;
 
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -29,7 +26,7 @@ import java.util.stream.Collectors;
 public class BookService {
 
     private final BookRepository bookRepository;
-    private final KakaoBookService kakaoBookService;
+    private final KakaoSearchCacheService kakaoSearchCacheService;
     private final WebClient.Builder webClientBuilder;
     private final UserBookStatusRepository userBookStatusRepository;
 
@@ -37,32 +34,23 @@ public class BookService {
 
     @Autowired
     public BookService(BookRepository bookRepository,
-                       KakaoBookService kakaoBookService,
+                       KakaoSearchCacheService kakaoSearchCacheService,
                        WebClient.Builder webClientBuilder,
                        UserBookStatusRepository userBookStatusRepository,
                        @org.springframework.beans.factory.annotation.Value("${ai.base-url}") String aiBaseUrl) {
         this.bookRepository = bookRepository;
-        this.kakaoBookService = kakaoBookService;
+        this.kakaoSearchCacheService = kakaoSearchCacheService;
         this.webClientBuilder = webClientBuilder;
         this.userBookStatusRepository = userBookStatusRepository;
         this.aiBaseUrl = aiBaseUrl;
     }
 
 
-    // ✅ 카카오 API에서 책 검색 (동기식)
-    @Cacheable(value = "bookSearchCache", key = "#query + #page + #size + #sort + #target")
+    // 카카오 API에서 책 검색 (캐싱은 KakaoSearchCacheService에서 처리)
     public KakaoBookSearchResponse searchBooksFromKakao(
             String query, int page, int size, String sort, String target
     ) {
-        try {
-            return kakaoBookService.searchBooks(query, page, size, sort, target)
-                    .retryWhen(Retry.fixedDelay(1, Duration.ofMillis(300)))
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .block(); // ✅ Mono → 동기 변환
-        } catch (Exception e) {
-            log.error("카카오 API 호출 실패: {}", e.getMessage());
-            throw new BookExceptions.ExternalApiException("카카오 API 호출 실패: " + e.getMessage());
-        }
+        return kakaoSearchCacheService.searchBooks(query, page, size, sort, target);
     }
 
     // 기본값 오버로드
@@ -70,11 +58,11 @@ public class BookService {
         return searchBooksFromKakao(query, 1, 10, "accuracy", null);
     }
 
-    // ✅ ISBN으로 책 상세 정보 조회
+    // ISBN으로 책 상세 정보 조회
     public Book getBookByIsbn(String isbn) {
         return bookRepository.findByIsbn13(isbn)
                 .orElseGet(() -> {
-                    KakaoBookSearchResponse response = fetchKakaoBookByIsbnAndCache(isbn); // Call the cached method
+                    KakaoBookSearchResponse response = kakaoSearchCacheService.searchBookByIsbn(isbn);
 
                     if (response == null || response.getDocuments().isEmpty()) {
                         throw new BookExceptions.BookNotFoundException("검색 결과가 없습니다: " + isbn);
@@ -84,6 +72,7 @@ public class BookService {
                 });
     }
 
+    // 출판사별 책 조회
     public List<Book> getBookEditions(String isbn) {
         Book originalBook = bookRepository.findByIsbn13(isbn)
                 .orElseThrow(() -> new BookExceptions.BookNotFoundException("책을 찾을 수 없습니다: " + isbn));
@@ -99,10 +88,14 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ DB에 책 저장 (사용자 서재 추가 시)
+    // DB에 책 저장 (사용자 서재 추가 시)
     public Book saveBookToUserLibrary(KakaoBookDto kakaoBook) {
         try {
-            String[] isbns = kakaoBook.getIsbn().split(" ");
+            String rawIsbn = kakaoBook.getIsbn();
+            if (rawIsbn == null || rawIsbn.isBlank()) {
+                throw new BookExceptions.ExternalApiException("ISBN 정보가 없습니다.");
+            }
+            String[] isbns = rawIsbn.split(" ");
             String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
 
             Optional<Book> existingBook = bookRepository.findByIsbn13(isbn13);
@@ -142,17 +135,14 @@ public class BookService {
         );
     }
 
-    // 인기 도서 조회
+    // 인기 도서 조회 — 매 요청마다 COUNT 집계를 피하기 위해 1시간 캐시
+    @Cacheable(value = "popularBooksCache", key = "#limit")
     public List<Book> getPopularBooks(int limit) {
         List<Object[]> raw = userBookStatusRepository.findPopularBooksByStatuses(
                 List.of(ReadingStatus.READING, ReadingStatus.COMPLETED)
         );
         if (raw.isEmpty()) {
-            return bookRepository.findAll()
-                    .stream()
-                    .sorted((b1, b2) -> b2.getCreatedAt().compareTo(b1.getCreatedAt()))
-                    .limit(limit)
-                    .toList();
+            return bookRepository.findTopNByOrderByCreatedAtDesc(limit);
         }
 
         LinkedHashMap<Long, Long> orderedIds = new LinkedHashMap<>();
@@ -172,24 +162,11 @@ public class BookService {
                 .collect(Collectors.toList());
     }
 
-    // ✅ 카카오 API에서 ISBN으로 책을 가져와 캐시하는 private 메소드
-    @Cacheable(value = "bookSearchCache", key = "#isbn")
-    private KakaoBookSearchResponse fetchKakaoBookByIsbnAndCache(String isbn) {
-        try {
-            return kakaoBookService.searchBookByIsbn(isbn)
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .block();
-        } catch (Exception e) {
-            log.error("카카오 API (ISBN) 호출 실패: {}", e.getMessage());
-            throw new BookExceptions.ExternalApiException("카카오 API (ISBN) 호출 실패: " + e.getMessage());
-        }
-    }
-
     public List<Book> getBooksByIds(List<Long> ids) {
         return bookRepository.findAllById(ids);
     }
 
-    private void triggerSingleBookEmbedding(Book book) {
+    public void triggerSingleBookEmbedding(Book book) {
         WebClient webClient = webClientBuilder.baseUrl(aiBaseUrl).build();
 
         Map<String, Object> bookData = Map.of(
@@ -206,8 +183,14 @@ public class BookService {
                 .bodyValue(bookData)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnSuccess(response -> log.info("✅ Successfully triggered single book embedding for ISBN {}: {}", book.getIsbn13(), response))
-                .doOnError(error -> log.error("❌ Failed to trigger single book embedding for ISBN {}: {}", book.getIsbn13(), error.getMessage()))
+                .doOnSuccess(response -> {
+                    log.info("임베딩 성공 [isbn={}]", book.getIsbn13());
+                    bookRepository.findByIsbn13(book.getIsbn13()).ifPresent(b -> {
+                        b.setEmbedded(true);
+                        bookRepository.save(b);
+                    });
+                })
+                .doOnError(error -> log.error("임베딩 실패 [isbn={}]: {} — 스케줄러가 재시도합니다", book.getIsbn13(), error.getMessage()))
                 .subscribe();
     }
 }

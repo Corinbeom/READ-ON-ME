@@ -132,7 +132,7 @@ public class BookReviewService {
         bookReviewRepository.delete(review);
     }
 
-    // ✅ 리뷰 좋아요 토글
+    // 리뷰 좋아요 토글 — DB 레벨 원자적 업데이트로 Race Condition 방지
     public void toggleReviewLike(Long reviewId, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
@@ -142,13 +142,11 @@ public class BookReviewService {
         Optional<ReviewLike> existingLike = reviewLikeRepository.findByUserAndReview(user, review);
 
         if (existingLike.isPresent()) {
-            review.getLikes().remove(existingLike.get());
             reviewLikeRepository.delete(existingLike.get());
-            review.setLikeCount(review.getLikeCount() - 1); // 좋아요 카운트 감소
+            bookReviewRepository.decrementLikeCount(reviewId);
         } else {
-            ReviewLike newLike = new ReviewLike(user, review);
-            review.getLikes().add(newLike);
-            review.setLikeCount(review.getLikeCount() + 1); // 좋아요 카운트 증가
+            reviewLikeRepository.save(new ReviewLike(user, review));
+            bookReviewRepository.incrementLikeCount(reviewId);
             notificationService.notifyReviewLiked(review, user);
         }
     }

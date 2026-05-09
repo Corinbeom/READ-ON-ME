@@ -25,4 +25,11 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     // 저자 이름 포함 검색
     List<Book> findByAuthorsContaining(String author);
+
+    // AI 임베딩이 완료되지 않은 책 조회 (재시도 스케줄러용)
+    List<Book> findAllByEmbeddedFalse();
+
+    // 최근 등록된 N권 조회 (인기 도서 폴백용)
+    @Query(value = "SELECT * FROM books ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
+    List<Book> findTopNByOrderByCreatedAtDesc(@Param("limit") int limit);
 }
