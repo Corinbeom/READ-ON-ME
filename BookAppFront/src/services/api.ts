@@ -66,11 +66,6 @@ api.interceptors.request.use(async (config) => {
   const shouldSkipAuth = noAuthPaths.some((path) =>
     config.url?.includes(path)
   );
-  const token = await AsyncStorage.getItem('accessToken');
-
-  console.log('📤 요청 URL:', config.url);
-  console.log('🔐 shouldSkipAuth:', shouldSkipAuth);
-  console.log('🔑 토큰:', token);
 
   if (!shouldSkipAuth) {
     const token = await AsyncStorage.getItem('accessToken');
