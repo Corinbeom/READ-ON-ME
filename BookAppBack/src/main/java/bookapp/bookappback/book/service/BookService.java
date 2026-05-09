@@ -12,9 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,25 +116,6 @@ public class BookService {
         }
     }
 
-    // Book → KakaoBookDto 변환
-    private KakaoBookDto convertToDto(Book book) {
-        return new KakaoBookDto(
-                book.getTitle(),
-                book.getContents() != null ? book.getContents() : "",
-                book.getUrl() != null ? book.getUrl() : "",
-                (book.getIsbn10() != null ? book.getIsbn10() : "") +
-                        (book.getIsbn13() != null ? " " + book.getIsbn13() : ""),
-                book.getPublishDate() != null ? book.getPublishDate().toString() : "",
-                book.getAuthors() != null ? Arrays.asList(book.getAuthors().split(",")) : Collections.emptyList(),
-                book.getPublisher() != null ? book.getPublisher() : "",
-                book.getTranslators() != null ? Arrays.asList(book.getTranslators().split(",")) : Collections.emptyList(),
-                book.getPrice() != null ? book.getPrice() : 0,
-                book.getSalePrice() != null ? book.getSalePrice() : 0,
-                book.getThumbnail() != null ? book.getThumbnail() : "",
-                ""
-        );
-    }
-
     // 인기 도서 조회 — 매 요청마다 COUNT 집계를 피하기 위해 1시간 캐시
     @Cacheable(value = "popularBooksCache", key = "#limit")
     public List<Book> getPopularBooks(int limit) {
@@ -183,13 +164,10 @@ public class BookService {
                 .bodyValue(bookData)
                 .retrieve()
                 .bodyToMono(String.class)
-                .doOnSuccess(response -> {
+                .flatMap(response -> Mono.fromRunnable(() -> {
                     log.info("임베딩 성공 [isbn={}]", book.getIsbn13());
-                    bookRepository.findByIsbn13(book.getIsbn13()).ifPresent(b -> {
-                        b.setEmbedded(true);
-                        bookRepository.save(b);
-                    });
-                })
+                    bookRepository.markAsEmbedded(book.getIsbn13());
+                }).subscribeOn(Schedulers.boundedElastic()).thenReturn(response))
                 .doOnError(error -> log.error("임베딩 실패 [isbn={}]: {} — 스케줄러가 재시도합니다", book.getIsbn13(), error.getMessage()))
                 .subscribe();
     }

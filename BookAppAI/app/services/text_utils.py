@@ -2,6 +2,78 @@ from __future__ import annotations
 
 from typing import List, Optional, Union
 
+# ---------------------------------------------------------------------------
+# 장르 키워드 → 카카오 검색 프록시 용어 매핑
+# 카카오 Book API는 장르 필터를 지원하지 않으므로 더 구체적인 검색어로 대체.
+# 예: "문학" → ["한국문학 추천", "세계문학전집", ...] (수능문학 노이즈 감소)
+# ---------------------------------------------------------------------------
+GENRE_SEED_MAPPING: dict[str, list[str]] = {
+    # 소설 계열
+    "소설":     ["한국소설", "세계문학전집", "현대소설", "장편소설"],
+    "문학":     ["세계문학전집", "고전소설", "현대문학"],
+    "sf":       ["SF소설", "SF문학"],
+    "판타지":   ["판타지", "로맨스판타지", "이세계"],
+    "로맨스":   ["로맨스소설", "연애소설"],
+    "스릴러":   ["스릴러소설", "범죄소설"],
+    "미스터리": ["미스터리소설", "추리소설"],
+    "역사소설": ["역사소설", "시대소설"],
+    # 비문학 계열
+    "자기계발": ["자기계발서", "습관", "동기부여"],
+    "경제경영": ["경제경영", "투자", "비즈니스"],
+    "인문학":   ["인문학", "철학", "역사교양"],
+    "심리학":   ["심리학", "심리학베스트"],
+    "과학":     ["과학교양서", "과학책"],
+    "에세이":   ["에세이", "산문집"],
+    "사회":     ["사회학", "정치", "사회이슈"],
+}
+
+# 장르 키워드별 허용 primary_keyword 집합 (Gemini 분류 결과 검증용).
+# Gemini가 이 집합 밖의 키워드를 반환하면 해당 도서는 장르 불일치로 제외.
+GENRE_VALIDATION_GROUPS: dict[str, set[str]] = {
+    "소설":     {"소설", "문학", "sf", "판타지", "로맨스", "스릴러", "미스터리", "역사소설", "현대소설"},
+    "문학":     {"소설", "문학", "시", "에세이", "고전"},
+    "sf":       {"sf", "소설", "판타지"},
+    "판타지":   {"판타지", "소설", "sf"},
+    "로맨스":   {"로맨스", "소설"},
+    "스릴러":   {"스릴러", "소설", "추리", "범죄", "미스터리"},
+    "미스터리": {"미스터리", "스릴러", "추리", "범죄", "소설"},
+    "역사소설": {"역사소설", "소설", "문학"},
+    "자기계발": {"자기계발", "비즈니스", "리더십", "경제경영", "성공", "생산성", "심리학"},
+    "경제경영": {"경제경영", "투자", "비즈니스", "재테크", "경제", "경영", "자기계발"},
+    "인문학":   {"인문학", "철학", "역사", "사회", "문화", "교양"},
+    "심리학":   {"심리학", "정신건강", "자기계발", "인문학"},
+    "과학":     {"과학", "자연과학", "교양과학"},
+    "에세이":   {"에세이", "산문", "수필", "문학"},
+    "사회":     {"사회", "정치", "사회과학", "인문학"},
+}
+
+
+def get_proxy_search_terms(keyword: str) -> list[str]:
+    """
+    장르 키워드를 카카오 검색에 효과적인 프록시 검색어 목록으로 변환.
+    매핑이 없으면 원본 키워드 그대로 반환.
+    """
+    normalized = _normalize_text(keyword).lower()
+    return GENRE_SEED_MAPPING.get(normalized) or GENRE_SEED_MAPPING.get(keyword) or [keyword]
+
+
+def is_genre_match(target_keyword: str, primary_keyword: Optional[str]) -> bool:
+    """
+    Gemini 분류 결과(primary_keyword)가 target_keyword 장르 그룹에 속하는지 확인.
+    검증 그룹이 없는 키워드는 True를 반환(관대하게 허용).
+    """
+    if not primary_keyword:
+        return True
+    normalized_target = _normalize_text(target_keyword).lower()
+    validation_group = (
+        GENRE_VALIDATION_GROUPS.get(normalized_target)
+        or GENRE_VALIDATION_GROUPS.get(target_keyword)
+    )
+    if not validation_group:
+        return True
+    return primary_keyword.lower() in validation_group
+
+
 # Terms that almost always indicate 학습/문제집 계열 도서.
 EXCLUSION_STRICT_TERMS = [
     "수능",

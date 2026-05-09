@@ -2,9 +2,11 @@ package bookapp.bookappback.book.repository;
 
 import bookapp.bookappback.book.entity.Book;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -32,4 +34,10 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     // 최근 등록된 N권 조회 (인기 도서 폴백용)
     @Query(value = "SELECT * FROM books ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
     List<Book> findTopNByOrderByCreatedAtDesc(@Param("limit") int limit);
+
+    // AI 임베딩 완료 상태 업데이트 — Reactor 스레드에서 안전하게 호출하기 위해 직접 UPDATE 쿼리 사용
+    @Modifying
+    @Transactional
+    @Query("UPDATE Book b SET b.embedded = true WHERE b.isbn13 = :isbn13")
+    void markAsEmbedded(@Param("isbn13") String isbn13);
 }

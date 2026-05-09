@@ -1,35 +1,37 @@
 package bookapp.bookappback.common.filter;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * IP 기반 Rate Limiting 필터.
- * 퍼블릭 검색 API의 무제한 호출을 방지한다.
+ * IP 기반 Rate Limiting 필터 — Redis INCR/EXPIRE 사용.
  *
  * - /api/books/search : 분당 60회
  * - /api/ai/search    : 분당 20회
+ *
+ * Redis 키: "rate:{endpoint}:{ip}" — TTL 1분
+ * INCR은 원자적 연산이므로 다중 인스턴스 환경에서도 안전.
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    // IP별 버킷 저장 (추후 Redis 기반으로 교체 가능)
-    private final Map<String, Bucket> bookSearchBuckets = new ConcurrentHashMap<>();
-    private final Map<String, Bucket> aiSearchBuckets   = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
+
+    private static final long BOOK_SEARCH_LIMIT = 60;
+    private static final long AI_SEARCH_LIMIT    = 20;
 
     @Override
     protected void doFilterInternal(
@@ -40,13 +42,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         if (path.startsWith("/api/books/search")) {
-            if (!tryConsume(bookSearchBuckets, getClientIp(request), 60)) {
-                rejectRequest(response, "/api/books/search");
+            if (!tryConsume(getClientIp(request), "book-search", BOOK_SEARCH_LIMIT)) {
+                rejectRequest(response, path);
                 return;
             }
         } else if (path.startsWith("/api/ai/search")) {
-            if (!tryConsume(aiSearchBuckets, getClientIp(request), 20)) {
-                rejectRequest(response, "/api/ai/search");
+            if (!tryConsume(getClientIp(request), "ai-search", AI_SEARCH_LIMIT)) {
+                rejectRequest(response, path);
                 return;
             }
         }
@@ -54,16 +56,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private boolean tryConsume(Map<String, Bucket> bucketMap, String ip, long capacity) {
-        Bucket bucket = bucketMap.computeIfAbsent(ip, k ->
-                Bucket.builder()
-                        .addLimit(Bandwidth.builder()
-                                .capacity(capacity)
-                                .refillGreedy(capacity, Duration.ofMinutes(1))
-                                .build())
-                        .build()
-        );
-        return bucket.tryConsume(1);
+    private boolean tryConsume(String ip, String endpoint, long limit) {
+        String key = "rate:" + endpoint + ":" + ip;
+        Long count = redisTemplate.opsForValue().increment(key);
+        if (count != null && count == 1) {
+            redisTemplate.expire(key, Duration.ofMinutes(1));
+        }
+        return count != null && count <= limit;
     }
 
     private void rejectRequest(HttpServletResponse response, String path) throws IOException {

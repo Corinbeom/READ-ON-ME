@@ -20,6 +20,8 @@ from app.services.text_utils import (
     build_keyword_prompt,
     contains_exclusion_terms,
     format_authors,
+    get_proxy_search_terms,
+    is_genre_match,
     should_skip_book,
 )
 
@@ -226,81 +228,102 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
     total_saved_count = 0
     total_similarity = 0
     processed_books_count = 0
+
     for keyword in keywords:
-        print(f"Processing keyword: {keyword} (filter={'ON' if SIMILARITY_FILTER_ENABLED else 'OFF'})")
+        proxy_terms = get_proxy_search_terms(keyword)
+        print(
+            f"Processing keyword: '{keyword}' → proxy terms: {proxy_terms} "
+            f"(filter={'ON' if SIMILARITY_FILTER_ENABLED else 'OFF'})"
+        )
+
+        # 임베딩 유사도 비교 기준은 원본 장르 키워드 기반으로 생성
         keyword_prompt = build_keyword_prompt(keyword)
         keyword_embedding = await get_embedding(keyword_prompt)
         if not keyword_embedding:
             print(f"Could not generate embedding for keyword prompt '{keyword_prompt}'. Skipping keyword.")
             continue
-        for page in range(1, 6):
-            books = await search_kakao_books(keyword, page)
-            if not books:
-                break
-            for book in books:
-                isbn = book.get("isbn")
-                if isbn and len(isbn.split()) > 1:
-                    isbn = isbn.split()[1]
-                else:
-                    continue
 
-                if should_skip_book(keyword, book):
-                    print(f"Skipping '{book.get('title')}' due to heuristic exclusion rules.")
-                    continue
+        for proxy_term in proxy_terms:
+            for page in range(1, 6):
+                books = await search_kakao_books(proxy_term, page)
+                if not books:
+                    break
 
-                if await check_if_isbn_exists(db, isbn):
-                    continue
+                for book in books:
+                    isbn = book.get("isbn")
+                    if isbn and len(isbn.split()) > 1:
+                        isbn = isbn.split()[1]
+                    else:
+                        continue
 
-                book_text = build_book_text(
-                    book.get("title", ""),
-                    book.get("contents", ""),
-                    book.get("authors"),
-                )
-                book_embedding = await get_embedding(book_text)
-                if not book_embedding:
-                    continue
-                classification = await book_classifier_fast.classify(
-                    book.get("title", ""),
-                    book.get("contents", ""),
-                    format_authors(book.get("authors")),
-                )
-                if not classification.used_llm:
-                    await tagging_retry_manager.record_fallback(isbn, "fast_tagger_fallback")
-                resolved_keyword, tags = _merge_tags(
-                    classification.primary_keyword,
-                    classification.tags,
-                    fallback=keyword,
-                )
+                    if should_skip_book(keyword, book):
+                        print(f"Skipping '{book.get('title')}' due to heuristic exclusion rules.")
+                        continue
 
-                similarity = cosine_similarity(keyword_embedding, book_embedding)
-                processed_books_count += 1
-                total_similarity += similarity
+                    if await check_if_isbn_exists(db, isbn):
+                        continue
 
-                passes_similarity = True
-                if SIMILARITY_FILTER_ENABLED and similarity < SIMILARITY_THRESHOLD:
-                    passes_similarity = False
-
-                if passes_similarity:
-                    new_book = BookCorpus(
-                        title=book.get("title"),
-                        contents=book.get("contents"),
-                        isbn=isbn,
-                        authors=format_authors(book.get("authors")),
-                        publisher=book.get("publisher"),
-                        thumbnail=book.get("thumbnail"),
-                        keyword=resolved_keyword,
-                        similarity_score=similarity,
-                        embedding=book_embedding,
-                        tags=tags,
+                    book_text = build_book_text(
+                        book.get("title", ""),
+                        book.get("contents", ""),
+                        book.get("authors"),
                     )
-                    db.add(new_book)
-                    total_saved_count += 1
-                    print(
-                        f"Saved book: {book.get('title')} (Similarity: {similarity:.4f}) "
-                        f"[filter={'ON' if SIMILARITY_FILTER_ENABLED else 'OFF'}]"
+                    book_embedding = await get_embedding(book_text)
+                    if not book_embedding:
+                        continue
+
+                    classification = await book_classifier_fast.classify(
+                        book.get("title", ""),
+                        book.get("contents", ""),
+                        format_authors(book.get("authors")),
                     )
-                else:
-                    print(f"Discarded book: {book.get('title')} (Similarity below threshold: {similarity:.4f})")
+                    if not classification.used_llm:
+                        await tagging_retry_manager.record_fallback(isbn, "fast_tagger_fallback")
+
+                    # 장르 검증: Gemini 분류 결과가 목표 장르와 불일치하면 제외
+                    if not is_genre_match(keyword, classification.primary_keyword):
+                        print(
+                            f"Genre mismatch: '{book.get('title')}' classified as "
+                            f"'{classification.primary_keyword}', expected '{keyword}'. Skipping."
+                        )
+                        continue
+
+                    resolved_keyword, tags = _merge_tags(
+                        classification.primary_keyword,
+                        classification.tags,
+                        fallback=keyword,
+                    )
+
+                    similarity = cosine_similarity(keyword_embedding, book_embedding)
+                    processed_books_count += 1
+                    total_similarity += similarity
+
+                    passes_similarity = True
+                    if SIMILARITY_FILTER_ENABLED and similarity < SIMILARITY_THRESHOLD:
+                        passes_similarity = False
+
+                    if passes_similarity:
+                        new_book = BookCorpus(
+                            title=book.get("title"),
+                            contents=book.get("contents"),
+                            isbn=isbn,
+                            authors=format_authors(book.get("authors")),
+                            publisher=book.get("publisher"),
+                            thumbnail=book.get("thumbnail"),
+                            keyword=resolved_keyword,
+                            similarity_score=similarity,
+                            embedding=book_embedding,
+                            tags=tags,
+                        )
+                        db.add(new_book)
+                        total_saved_count += 1
+                        print(
+                            f"Saved book: {book.get('title')} (Similarity: {similarity:.4f}) "
+                            f"[filter={'ON' if SIMILARITY_FILTER_ENABLED else 'OFF'}]"
+                        )
+                    else:
+                        print(f"Discarded book: {book.get('title')} (Similarity below threshold: {similarity:.4f})")
+
     await db.commit()
     average_similarity = (total_similarity / processed_books_count) if processed_books_count > 0 else 0
     return {
