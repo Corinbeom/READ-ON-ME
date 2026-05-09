@@ -16,7 +16,6 @@ import {
   Alert,
   Dimensions
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { api } from '../src/services/api';
@@ -47,12 +46,9 @@ const INITIAL_CHAT_MESSAGE: ChatMessage = {
 
 export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const styles = getStyles(colorScheme);
-  const colors = Colors[colorScheme];
-  const reloadIcon = colorScheme === 'light'
-    ? require('@/assets/images/reload-light.png')
-    : require('@/assets/images/reload-dark.png');
+  const c = Colors[colorScheme];
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([INITIAL_CHAT_MESSAGE]);
   const [currentInput, setCurrentInput] = useState('');
@@ -82,7 +78,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
       const aiResponse: ChatMessage = {
         id: String(Date.now() + 1),
         type: 'ai',
-        text: response.data.length > 0 ? "사용자님의 질문에 맞는 책을 찾아봤어요!" : "죄송해요, 추천할 만한 책을 찾지 못했어요.",
+        text: response.data.length > 0 ? "질문에 맞는 책을 찾아봤어요." : "추천할 만한 책을 찾지 못했어요.",
         results: response.data,
       };
       setChatHistory((prev) => [...prev, aiResponse]);
@@ -91,7 +87,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
       customAlert('오류', 'AI 추천을 받는 중 오류가 발생했습니다.');
       setChatHistory((prev) => [
         ...prev,
-        { id: String(Date.now() + 1), type: 'ai', text: "죄송해요, 추천을 가져오는 데 실패했어요." },
+        { id: String(Date.now() + 1), type: 'ai', text: "추천을 가져오는 데 실패했어요." },
       ]);
     } finally {
       setIsLoading(false);
@@ -117,7 +113,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
       const aiResponse: ChatMessage = {
         id: String(Date.now() + 1),
         type: 'ai',
-        text: response.data.length > 0 ? "다른 책들을 찾아봤어요!" : "죄송해요, 다른 추천을 찾지 못했어요.",
+        text: response.data.length > 0 ? "다른 책들을 찾아봤어요." : "다른 추천을 찾지 못했어요.",
         results: response.data,
       };
       setChatHistory((prev) => [...prev, aiResponse]);
@@ -126,7 +122,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
       customAlert('오류', '다시 추천을 받는 중 오류가 발생했습니다.');
       setChatHistory((prev) => [
         ...prev,
-        { id: String(Date.now() + 1), type: 'ai', text: "죄송해요, 다시 추천을 가져오는 데 실패했어요." },
+        { id: String(Date.now() + 1), type: 'ai', text: "다시 추천을 가져오는 데 실패했어요." },
       ]);
     } finally {
       setIsLoading(false);
@@ -136,11 +132,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const handleClearChat = () => {
     Alert.alert('채팅 초기화', '채팅창을 초기화 하시겠습니까?', [
       { text: '취소', style: 'cancel' },
-      {
-        text: '확인',
-        style: 'destructive',
-        onPress: () => setChatHistory([INITIAL_CHAT_MESSAGE]),
-      },
+      { text: '확인', style: 'destructive', onPress: () => setChatHistory([INITIAL_CHAT_MESSAGE]) },
     ]);
   };
 
@@ -152,7 +144,6 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const renderMessage = ({ item }: { item: ChatMessage }) => (
     <View style={[styles.messageBubble, item.type === 'user' ? styles.userBubble : styles.aiBubble]}>
       <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
-
       {item.results && item.results.length > 0 && (
         <FlatList
           horizontal
@@ -160,7 +151,11 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
           keyExtractor={(book) => book.isbn}
           renderItem={({ item: book }) => (
             <TouchableOpacity style={styles.bookResultItem} onPress={() => navigateToDetail(book.isbn)}>
-              <Image source={{ uri: book.thumbnail || 'https://via.placeholder.com/100x150.png?text=No+Image' }} style={styles.bookThumbnail} />
+              <Image
+                source={{ uri: book.thumbnail }}
+                style={styles.bookThumbnail}
+                resizeMode="cover"
+              />
               <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
             </TouchableOpacity>
           )}
@@ -168,7 +163,6 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
           style={styles.bookResultsList}
         />
       )}
-
     </View>
   );
 
@@ -181,14 +175,15 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
             style={styles.modalWrapper}
           >
             <View style={styles.modalContent}>
+              {/* ── Header ── */}
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>AI 도서 추천</Text>
+                <Text style={styles.modalTitle}>AI 사서</Text>
                 <View style={styles.headerActions}>
                   <TouchableOpacity onPress={handleClearChat} style={styles.clearButton}>
-                    <Image source={reloadIcon} style={styles.clearButtonIcon} />
+                    <Text style={styles.clearButtonText}>↺</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color={colors.text} />
+                    <Text style={styles.closeButtonText}>×</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -204,13 +199,15 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                     contentContainerStyle={styles.chatListContent}
                   />
 
-                  {isLoading && <ActivityIndicator size="small" color={colors.primary} style={styles.loadingIndicator} />}
+                  {isLoading && (
+                    <ActivityIndicator size="small" color={c.inkSoft} style={styles.loadingIndicator} />
+                  )}
 
                   <View style={styles.inputContainer}>
                     <TextInput
                       style={styles.textInput}
                       placeholder="어떤 책을 찾으세요?"
-                      placeholderTextColor={colors.darkGray}
+                      placeholderTextColor={c.inkFaint}
                       value={currentInput}
                       onChangeText={setCurrentInput}
                       onSubmitEditing={handleSendMessage}
@@ -218,32 +215,26 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                       editable={!isLoading}
                     />
                     <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton} disabled={isLoading}>
-                      <Ionicons name="send" size={22} color={colors.background} />
+                      <Text style={styles.sendButtonText}>→</Text>
                     </TouchableOpacity>
                   </View>
                 </>
               ) : (
                 <View style={styles.authPromptContainer}>
-                  <Text style={styles.authPromptTitle}>로그인이 필요해요 !</Text>
+                  <Text style={styles.authPromptTitle}>로그인이 필요해요</Text>
                   <Text style={styles.authPromptSubtitle}>
                     AI 추천 검색 기능은 로그인 후 이용할 수 있어요.
                   </Text>
                   <View style={styles.authButtonRow}>
                     <TouchableOpacity
                       style={styles.authPrimaryButton}
-                      onPress={() => {
-                        onClose();
-                        router.push('/auth/login');
-                      }}
+                      onPress={() => { onClose(); router.push('/auth/login'); }}
                     >
                       <Text style={styles.authPrimaryButtonText}>로그인</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.authSecondaryButton}
-                      onPress={() => {
-                        onClose();
-                        router.push('/auth/register');
-                      }}
+                      onPress={() => { onClose(); router.push('/auth/register'); }}
                     >
                       <Text style={styles.authSecondaryButtonText}>회원가입</Text>
                     </TouchableOpacity>
@@ -259,150 +250,158 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
 }
 
 const getStyles = (colorScheme: 'light' | 'dark') => {
-  const colors = Colors[colorScheme];
+  const c = Colors[colorScheme];
   return StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.45)',
+      backgroundColor: 'rgba(0,0,0,0.6)',
       justifyContent: 'flex-end',
     },
     modalWrapper: {
       width: '100%',
-      alignItems: 'center',
-      justifyContent: 'center',
-      flex: 1,
-      paddingHorizontal: 12,
+      maxHeight: SCREEN_HEIGHT * 0.85,
     },
     modalContent: {
-      backgroundColor: colors.card,
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
-      borderBottomLeftRadius: 20,
-      borderBottomRightRadius: 20,
+      backgroundColor: c.card,
+      borderTopWidth: 2,
+      borderTopColor: c.text,
       flex: 1,
-      maxHeight: SCREEN_HEIGHT * 0.8,
-      width: '100%',
-      paddingTop: 10,
-      overflow: 'hidden',
     },
     modalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 18,
-      paddingBottom: 10,
+      paddingHorizontal: 22,
+      paddingVertical: 16,
       borderBottomWidth: 1,
-      borderBottomColor: colors.lightGray,
+      borderBottomColor: c.line,
     },
     headerActions: {
       flexDirection: 'row',
       alignItems: 'center',
-      columnGap: 8,
+      gap: 12,
     },
     modalTitle: {
       fontSize: 20,
-      fontFamily: 'Pretendard-SemiBold',
-      color: colors.text,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.text,
+      fontStyle: 'italic',
+      letterSpacing: -0.3,
     },
-    closeButton: { padding: 5 },
-    clearButton: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.lightGray,
+    closeButton: {
+      width: 28,
+      height: 28,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    clearButtonIcon: {
-      width: 16,
-      height: 16,
-      tintColor: colorScheme === 'light' ? undefined : colors.text,
+    closeButtonText: {
+      fontSize: 22,
+      color: c.text,
+      lineHeight: 26,
+      fontFamily: 'Pretendard-SemiBold',
+    },
+    clearButton: {
+      width: 28,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: c.line,
+    },
+    clearButtonText: {
+      fontSize: 16,
+      color: c.inkSoft,
+      lineHeight: 22,
     },
     chatList: {
       flex: 1,
-      paddingHorizontal: 12,
+      paddingHorizontal: 16,
     },
     chatListContent: {
-      paddingVertical: 10,
+      paddingVertical: 16,
+      gap: 10,
     },
     messageBubble: {
       maxWidth: '85%',
-      padding: 10,
-      borderRadius: 15,
-      marginVertical: 5,
+      padding: 12,
       flexShrink: 1,
     },
     userBubble: {
       alignSelf: 'flex-end',
-      backgroundColor: colors.primary,
+      backgroundColor: c.text,
     },
     aiBubble: {
       alignSelf: 'flex-start',
-      backgroundColor: colors.card,
+      backgroundColor: c.background,
       borderWidth: 1,
-      borderColor: colors.lightGray,
+      borderColor: c.line,
     },
     userText: {
-      color: colors.background,
+      color: c.background,
       fontFamily: 'NotoSerifKR-Regular',
+      fontSize: 14,
+      lineHeight: 20,
     },
     aiText: {
-      color: colors.text,
+      color: c.text,
       fontFamily: 'NotoSerifKR-Regular',
+      fontSize: 14,
+      lineHeight: 20,
     },
     bookResultsList: {
-      marginTop: 8,
-      maxHeight: 150,
+      marginTop: 12,
     },
     bookResultItem: {
-      width: 100,
+      width: 84,
       marginRight: 10,
       alignItems: 'center',
     },
     bookThumbnail: {
-      width: 80,
-      height: 120,
-      borderRadius: 8,
-      backgroundColor: colors.lightGray,
+      width: 72,
+      height: 104,
+      borderRadius: 0,
+      backgroundColor: c.surface2,
     },
     bookTitle: {
-      fontSize: 13,
+      fontSize: 11,
       textAlign: 'center',
-      marginTop: 4,
+      marginTop: 6,
       fontFamily: 'NotoSerifKR-Regular',
-      color: colors.text,
+      color: c.text,
+      lineHeight: 15,
     },
     inputContainer: {
       flexDirection: 'row',
       alignItems: 'center',
       borderTopWidth: 1,
-      borderTopColor: colors.lightGray,
-      paddingVertical: 10,
-      paddingHorizontal: 15,
-      backgroundColor: colors.background,
+      borderTopColor: c.line,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      backgroundColor: c.card,
     },
     textInput: {
       flex: 1,
       borderWidth: 1,
-      borderColor: colors.lightGray,
-      borderRadius: 25,
-      paddingHorizontal: 15,
+      borderColor: c.line,
+      paddingHorizontal: 14,
       paddingVertical: 10,
       marginRight: 10,
       fontFamily: 'NotoSerifKR-Regular',
-      fontSize: 16,
-      backgroundColor: colors.card,
-      color: colors.text,
+      fontSize: 14,
+      backgroundColor: c.background,
+      color: c.text,
     },
     sendButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 25,
-      width: 45,
-      height: 45,
+      backgroundColor: c.text,
+      width: 42,
+      height: 42,
       justifyContent: 'center',
       alignItems: 'center',
+    },
+    sendButtonText: {
+      color: c.background,
+      fontSize: 18,
+      fontFamily: 'Pretendard-SemiBold',
     },
     loadingIndicator: {
       marginVertical: 8,
@@ -411,20 +410,22 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       flex: 1,
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 24,
+      paddingHorizontal: 32,
+      paddingVertical: 40,
     },
     authPromptTitle: {
       fontSize: 20,
-      fontFamily: 'Pretendard-SemiBold',
-      color: colors.text,
-      marginBottom: 8,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.text,
+      fontStyle: 'italic',
+      marginBottom: 10,
       textAlign: 'center',
     },
     authPromptSubtitle: {
-      fontSize: 15,
-      color: colors.darkGray,
+      fontSize: 14,
+      color: c.inkSoft,
       textAlign: 'center',
-      marginBottom: 24,
+      marginBottom: 28,
       lineHeight: 22,
       fontFamily: 'NotoSerifKR-Regular',
     },
@@ -433,26 +434,27 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       gap: 12,
     },
     authPrimaryButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 22,
-      paddingVertical: 12,
-      paddingHorizontal: 28,
+      backgroundColor: c.text,
+      paddingVertical: 10,
+      paddingHorizontal: 24,
     },
     authPrimaryButtonText: {
-      color: colors.background,
+      color: c.background,
       fontFamily: 'Pretendard-SemiBold',
+      fontSize: 12,
+      letterSpacing: 0.1,
     },
     authSecondaryButton: {
-      borderRadius: 22,
-      paddingVertical: 12,
-      paddingHorizontal: 28,
+      paddingVertical: 10,
+      paddingHorizontal: 24,
       borderWidth: 1,
-      borderColor: colors.lightGray,
-      backgroundColor: colors.card,
+      borderColor: c.text,
     },
     authSecondaryButtonText: {
-      color: colors.text,
+      color: c.text,
       fontFamily: 'Pretendard-SemiBold',
+      fontSize: 12,
+      letterSpacing: 0.1,
     },
   });
 };

@@ -2,76 +2,68 @@ import { StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
 export const getBookCarouselStyles = (colorScheme: 'light' | 'dark') => {
-  const colors = Colors[colorScheme];
+  const c = Colors[colorScheme];
 
   return StyleSheet.create({
     container: {
-      marginTop: 24,
+      marginTop: 8,
     },
     header: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 16,
+      paddingHorizontal: 22,
       marginBottom: 12,
     },
     headerTitle: {
       fontSize: 20,
-      fontFamily: 'Pretendard-SemiBold',
-      color: colors.text, // Dynamic color
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.text,
+      letterSpacing: -0.3,
     },
     listContentContainer: {
-      paddingHorizontal: 16,
+      paddingHorizontal: 22,
       paddingBottom: 8,
-      gap: 10,
+      gap: 16,
     },
     bookItem: {
-      width: 140,
+      width: 120,
     },
     bookThumbnail: {
-      width: 130,
-      height: 190,
-      borderRadius: 10,
-      backgroundColor: colors.lightGray, // Dynamic color
+      width: 110,
+      height: 158,
+      borderRadius: 0,
+      backgroundColor: c.surface2,
       marginBottom: 8,
-      borderWidth: 1,
-      borderColor: colors.lightGray, // Dynamic color
     },
-    thumbnailOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: colorScheme === 'light' ? 'rgba(255, 250, 240, 0.05)' : 'rgba(0, 0, 0, 0.1)',
-      borderRadius: 10,
-    },
+    thumbnailOverlay: {},
     bookTitle: {
-      fontSize: 13,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: colors.text, // Dynamic color
-      textAlign: 'center',
-      lineHeight: 18,
-      width: 120,
-      alignSelf: 'center',
-    },
-    bookAuthor: {
       fontSize: 12,
       fontFamily: 'NotoSerifKR-Regular',
-      color: colors.darkGray, // Dynamic color
-      textAlign: 'center',
-      width: 120,
+      color: c.text,
+      lineHeight: 17,
+      width: 110,
+    },
+    bookAuthor: {
+      fontSize: 10,
+      fontFamily: 'Pretendard-SemiBold',
+      color: c.inkSoft,
+      width: 110,
       marginTop: 4,
-      alignSelf: 'center',
+      letterSpacing: 0.1,
+      textTransform: 'uppercase',
     },
     loadingIndicator: {
-      height: 190, // Match book thumbnail height
-      color: colors.primary, // Dynamic color
+      height: 158,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: 13,
       fontFamily: 'NotoSerifKR-Regular',
-      color: colors.darkGray, // Dynamic color
-      textAlign: 'center',
+      color: c.inkSoft,
+      fontStyle: 'italic',
       paddingVertical: 16,
       lineHeight: 22,
-      paddingHorizontal: 16,
+      paddingHorizontal: 22,
     },
   });
 };

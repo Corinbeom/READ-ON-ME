@@ -1,44 +1,54 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Design B — Editorial Mono
+ * Light: off-white / monochrome ink
+ * Dark:  deep brown-black / cream
  */
-
-const primary = '#8B5E3C'; // Ink Brown
-const accent = '#E3C565'; // Toned-down Gold
-const background = '#FFFDF9'; // Ivory
-const text = '#121212'; // Dark text
-const warmGray = '#A09486'; // Warm Gray
-const lightBeige = '#F2E9D8'; // Light Beige for borders
 
 export const Colors = {
   light: {
-    text: text,
-    background: background,
-    tint: primary,
-    icon: warmGray,
-    tabIconDefault: warmGray,
-    tabIconSelected: primary,
+    text: '#0e0e0c',
+    background: '#fafaf7',
+    tint: '#0e0e0c',
+    icon: '#5a5a55',
+    tabIconDefault: '#a0a09a',
+    tabIconSelected: '#0e0e0c',
 
-    // Custom colors
-    primary: primary,
-    accent: accent,
-    card: '#FFFEFB', // Slightly off-white for cards
-    lightGray: lightBeige, // Used for borders
-    darkGray: warmGray, // Used for secondary text
+    // Semantic aliases
+    primary: '#0e0e0c',
+    accent: '#0e0e0c',
+    card: '#ffffff',
+    surface2: '#f1f1ee',
+    inkSoft: '#5a5a55',
+    inkFaint: '#a0a09a',
+    line: '#e5e5df',
+    star: '#0e0e0c',
+    danger: '#b53225',
+
+    // Legacy aliases (기존 코드 호환)
+    lightGray: '#e5e5df',
+    darkGray: '#5a5a55',
   },
-  dark: { // Dark mode colors remain for now, can be updated later.
-    text: '#ECEDEE',
-    background: '#121212',
-    tint: accent,
-    icon: warmGray,
-    tabIconDefault: warmGray,
-    tabIconSelected: accent,
+  dark: {
+    text: '#efe9d8',
+    background: '#1c1a16',
+    tint: '#efe9d8',
+    icon: '#a39a85',
+    tabIconDefault: '#6b6453',
+    tabIconSelected: '#efe9d8',
 
-    // Custom colors
-    primary: primary,
-    accent: accent,
-    card: '#1E1E1E',
-    lightGray: lightBeige,
-    darkGray: warmGray,
+    // Semantic aliases
+    primary: '#efe9d8',
+    accent: '#efe9d8',
+    card: '#23201b',
+    surface2: '#2c2820',
+    inkSoft: '#a39a85',
+    inkFaint: '#6b6453',
+    line: '#3a342a',
+    star: '#d6b169',
+    danger: '#c97a5a',
+
+    // Legacy aliases (기존 코드 호환)
+    lightGray: '#3a342a',
+    darkGray: '#a39a85',
   },
 };

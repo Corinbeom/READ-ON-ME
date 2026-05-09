@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { View, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/src/store';
 import { logout } from '@/src/store/authSlice';
@@ -8,12 +8,8 @@ import { Link, router, useFocusEffect } from 'expo-router';
 import { bookApi, reviewApi } from '../../src/services/api';
 import { BookDto } from '../../src/types/BookDto';
 import { Review } from '../../src/types/review';
-import { Book, BookOpen, CheckCircle, Pencil } from 'lucide-react-native';
 import { getMyLibraryScreenStyles } from '../../src/styles/MyLibraryScreen.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
-import { Colors } from '@/constants/Colors';
 import { markAllNotificationsAsRead, markNotificationAsRead } from '@/src/store/notificationSlice';
 
 interface UserLibraryResponse {
@@ -38,9 +34,8 @@ export default function MyLibraryScreen() {
   const [modalReviews, setModalReviews] = useState<Review[]>([]);
   const [isReviewModal, setIsReviewModal] = useState(false);
 
-  const colorScheme = useColorScheme() ?? 'light';
+  const colorScheme = useColorScheme() ?? 'dark';
   const styles = getMyLibraryScreenStyles(colorScheme);
-  const colors = Colors[colorScheme];
   const limitedNotifications = notifications.slice(0, 3);
   const hasUnreadNotifications = unreadCount > 0;
 
@@ -101,157 +96,214 @@ export default function MyLibraryScreen() {
   };
 
   const handleMarkAllNotifications = () => {
-    if (!hasUnreadNotifications) {
-      return;
-    }
+    if (!hasUnreadNotifications) return;
     dispatch(markAllNotificationsAsRead());
   };
 
   const renderBookItem = ({ item }: { item: BookDto }) => (
     <Link href={`/book/${item.isbn13}`} asChild>
       <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}>
-        <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} />
-        <View style={styles.bookThumbnailOverlay} />
+        <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} resizeMode="cover" />
         <View style={styles.bookInfoContainer}>
-          <ThemedText style={styles.bookTitle} numberOfLines={2}>{item.title}</ThemedText>
-          <ThemedText style={styles.bookAuthor} numberOfLines={1}>{Array.isArray(item.authors) ? item.authors.join(', ') : item.authors}</ThemedText>
+          <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
+          <Text style={styles.bookAuthor} numberOfLines={1}>
+            {Array.isArray(item.authors) ? item.authors.join(', ') : item.authors}
+          </Text>
         </View>
       </TouchableOpacity>
     </Link>
   );
 
   const renderReviewItem = ({ item }: { item: Review }) => (
-    <TouchableOpacity style={styles.reviewItemContainer} onPress={() => { setModalVisible(false); router.push(`/book/${item.book.isbn13}`); }}>
-      <Image source={{ uri: item.book.thumbnail }} style={styles.reviewBookThumbnail} />
-      <View style={styles.reviewBookThumbnailOverlay} />
+    <TouchableOpacity
+      style={styles.reviewItemContainer}
+      onPress={() => { setModalVisible(false); router.push(`/book/${item.book.isbn13}`); }}
+    >
+      <Image source={{ uri: item.book.thumbnail }} style={styles.reviewBookThumbnail} resizeMode="cover" />
       <View style={styles.reviewInfoContainer}>
-        <ThemedText style={styles.reviewItemTitle}>{item.book.title}</ThemedText>
-        <ThemedText style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</ThemedText>
-        <ThemedText style={styles.reviewItemComment} numberOfLines={3} ellipsizeMode="tail">
+        <Text style={styles.reviewItemTitle}>{item.book.title}</Text>
+        <Text style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</Text>
+        <Text style={styles.reviewItemComment} numberOfLines={3} ellipsizeMode="tail">
           {item.comment}
-        </ThemedText>
+        </Text>
       </View>
     </TouchableOpacity>
   );
 
+  const statItems = [
+    { label: '읽고 싶어요', count: userLibrary.toReadBooks.length, books: userLibrary.toReadBooks },
+    { label: '읽는 중', count: userLibrary.readingBooks.length, books: userLibrary.readingBooks },
+    { label: '완독', count: userLibrary.completedBooks.length, books: userLibrary.completedBooks },
+  ];
+
   return (
-    
-    <ScrollView style={styles.container}>
-      <ThemedText style={styles.headerTitle}>내 서재</ThemedText>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+
+      {/* ── Masthead ── */}
+      <View style={styles.masthead}>
+        <Text style={styles.headerTitle}>서재.</Text>
+        {isAuthenticated && (
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>로그아웃</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* ── Profile Bar / Login Prompt ── */}
       {isAuthenticated && user ? (
-        <ThemedView style={styles.profileSection}>
-          <ThemedText style={styles.greeting}>안녕하세요, {user.nickname}님!</ThemedText>
-          <ThemedText style={styles.email}>{user.email}</ThemedText>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <ThemedText style={styles.logoutButtonText}>로그아웃</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+        <View style={styles.profileBar}>
+          <Text style={styles.profileBarText}>{user.nickname}</Text>
+          <Text style={styles.profileBarText}>{user.email}</Text>
+        </View>
       ) : (
-        <ThemedView style={styles.loginPrompt}>
-          <ThemedText style={styles.loginPromptText}>로그인이 필요합니다.</ThemedText>
-          <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>
-            <ThemedText style={styles.loginButtonText}>로그인 하러 가기</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
+        <>
+          <View style={styles.profileBar}>
+            <Text style={styles.profileBarText}>Read On Me</Text>
+          </View>
+          <View style={styles.loginSection}>
+            <Text style={styles.loginPromptText}>로그인하여 내 서재를 관리하세요.</Text>
+            <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>
+              <Text style={styles.loginButtonText}>로그인</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       )}
 
       {isAuthenticated && (
         <>
-          <ThemedView style={styles.notificationSection}>
-            <View style={styles.notificationHeaderRow}>
-              <ThemedText style={styles.notificationTitle}>최근 알림</ThemedText>
-              <View style={styles.notificationHeaderActions}>
-                <ThemedText style={styles.notificationBadge}>{unreadCount}개의 새 알림</ThemedText>
-                <TouchableOpacity onPress={handleMarkAllNotifications} disabled={!hasUnreadNotifications}>
-                  <ThemedText style={[styles.notificationMarkAll, !hasUnreadNotifications && styles.notificationMarkAllDisabled]}>모두 읽음</ThemedText>
-                </TouchableOpacity>
-              </View>
-            </View>
-            {notifications.length === 0 ? (
-              <ThemedText style={styles.emptySectionText}>아직 받은 알림이 없습니다.</ThemedText>
-            ) : (
-              limitedNotifications.map((notification) => (
+          {/* ── Stats Row ── */}
+          <View style={styles.statsRow}>
+            {statItems.map((item, index) => (
+              <React.Fragment key={item.label}>
+                {index > 0 && <View style={styles.statDivider} />}
                 <TouchableOpacity
-                  key={notification.id}
+                  style={styles.statItem}
+                  onPress={() => openBookListModal(item.label, item.books)}
+                >
+                  <Text style={styles.statCount}>{item.count}</Text>
+                  <Text style={styles.statLabel}>{item.label}</Text>
+                </TouchableOpacity>
+              </React.Fragment>
+            ))}
+          </View>
+
+          {/* ── Reviews Summary ── */}
+          <TouchableOpacity
+            style={styles.reviewsSummaryRow}
+            onPress={() => openReviewListModal('내가 쓴 리뷰', myReviews)}
+          >
+            <View style={styles.reviewsSummaryLeft}>
+              <Text style={styles.reviewsSummaryCount}>{myReviews.length}</Text>
+              <Text style={styles.reviewsSummaryLabel}>내가 쓴 리뷰</Text>
+            </View>
+            <Text style={styles.reviewsSummaryArrow}>전체 보기 →</Text>
+          </TouchableOpacity>
+
+          {/* ── Notifications ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>최근 알림</Text>
+            <View style={styles.notificationHeaderActions}>
+              {unreadCount > 0 && (
+                <Text style={styles.notificationBadge}>{unreadCount}개 새 알림</Text>
+              )}
+              <TouchableOpacity onPress={handleMarkAllNotifications} disabled={!hasUnreadNotifications}>
+                <Text style={[styles.notificationMarkAll, !hasUnreadNotifications && styles.notificationMarkAllDisabled]}>
+                  모두 읽음
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.sectionDividerTop} />
+
+          {notifications.length === 0 ? (
+            <Text style={styles.emptySectionText}>아직 받은 알림이 없습니다.</Text>
+          ) : (
+            limitedNotifications.map((notification, index) => (
+              <React.Fragment key={notification.id}>
+                {index > 0 && <View style={styles.sectionDivider} />}
+                <TouchableOpacity
                   style={[styles.notificationItem, !notification.read && styles.notificationUnreadItem]}
                   onPress={() => handleNotificationPress(notification.id)}
                 >
                   {!notification.read && <View style={styles.notificationUnreadDot} />}
                   <View style={styles.notificationCopy}>
-                    <ThemedText style={styles.notificationMessage}>{notification.message}</ThemedText>
-                    <ThemedText style={styles.notificationMeta}>{new Date(notification.createdAt).toLocaleString()}</ThemedText>
+                    <Text style={styles.notificationMessage}>{notification.message}</Text>
+                    <Text style={styles.notificationMeta}>
+                      {new Date(notification.createdAt).toLocaleString()}
+                    </Text>
                   </View>
                 </TouchableOpacity>
-              ))
-            )}
-          </ThemedView>
+              </React.Fragment>
+            ))
+          )}
 
-          <ThemedView style={styles.summaryContainer}>
-            <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽고 싶은 책', userLibrary.toReadBooks)}>
-              <Book size={22} color={colors.primary} />
-              <ThemedText style={styles.summaryCount}>{userLibrary.toReadBooks.length}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>읽고 싶은 책</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('읽는 중인 책', userLibrary.readingBooks)}>
-              <BookOpen size={22} color={colors.primary} />
-              <ThemedText style={styles.summaryCount}>{userLibrary.readingBooks.length}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>읽는 중인 책</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.summaryItem} onPress={() => openBookListModal('완독한 책', userLibrary.completedBooks)}>
-              <CheckCircle size={22} color={colors.primary} />
-              <ThemedText style={styles.summaryCount}>{userLibrary.completedBooks.length}</ThemedText>
-              <ThemedText style={styles.summaryLabel}>완독한 책</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+          {/* ── Recent Reviews ── */}
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>나의 최근 리뷰</Text>
+          </View>
+          <View style={styles.sectionDividerTop} />
 
-          <TouchableOpacity style={styles.myReviewsSummaryCard} onPress={() => openReviewListModal('내가 쓴 리뷰', myReviews)}>
-            <Pencil size={22} color={colors.primary} />
-            <ThemedText style={styles.myReviewsSummaryCount}>{myReviews.length}</ThemedText>
-            <ThemedText style={styles.myReviewsSummaryLabel}>내가 쓴 리뷰</ThemedText>
-          </TouchableOpacity>
-
-          <ThemedView style={styles.recentReviewsSection}>
-            <ThemedText style={styles.recentReviewsTitle}>나의 최근 리뷰</ThemedText>
-            {myReviews.length === 0 ? (
-              <ThemedText style={styles.emptySectionText}>아직 작성한 리뷰가 없습니다.</ThemedText>
-            ) : (
-              <FlatList
-                data={myReviews.slice(0, 3)}
-                renderItem={renderReviewItem}
-                keyExtractor={(item) => item.id.toString()}
-                scrollEnabled={false}
-                contentContainerStyle={styles.recentReviewsListContent}
-              />
-            )}
-          </ThemedView>
+          {myReviews.length === 0 ? (
+            <Text style={styles.emptySectionText}>아직 작성한 리뷰가 없습니다.</Text>
+          ) : (
+            myReviews.slice(0, 3).map((review, index) => (
+              <React.Fragment key={review.id}>
+                {index > 0 && <View style={styles.sectionDivider} />}
+                {renderReviewItem({ item: review })}
+              </React.Fragment>
+            ))
+          )}
         </>
       )}
 
-      <Modal animationType="slide" transparent={true} visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+      <View style={{ height: 40 }} />
+
+      {/* ── Modal ── */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
         <View style={styles.modalOverlay}>
-          <ThemedView style={styles.modalContent}>
-            <ThemedText style={styles.modalTitle}>{modalTitle}</ThemedText>
+          <View style={styles.modalContent}>
+            <View style={styles.modalTitleRow}>
+              <Text style={styles.modalTitle}>{modalTitle}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalCloseButtonText}>닫기</Text>
+              </TouchableOpacity>
+            </View>
+
             {loadingLibrary ? (
-              <ThemedText style={styles.loadingText}>불러오는 중...</ThemedText>
+              <Text style={styles.loadingText}>불러오는 중...</Text>
             ) : errorLibrary ? (
-              <ThemedText style={styles.errorText}>{errorLibrary}</ThemedText>
+              <Text style={styles.errorText}>{errorLibrary}</Text>
             ) : isReviewModal ? (
               modalReviews.length === 0 ? (
-                <ThemedText style={styles.emptySectionText}>작성한 리뷰가 없습니다.</ThemedText>
+                <Text style={styles.emptySectionText}>작성한 리뷰가 없습니다.</Text>
               ) : (
-                <FlatList data={modalReviews} renderItem={renderReviewItem} keyExtractor={(item) => item.id.toString()} contentContainerStyle={styles.modalReviewListContent} />
+                <FlatList
+                  data={modalReviews}
+                  renderItem={renderReviewItem}
+                  keyExtractor={(item) => item.id.toString()}
+                  ItemSeparatorComponent={() => <View style={styles.sectionDivider} />}
+                  contentContainerStyle={styles.modalReviewListContent}
+                />
               )
             ) : (
               modalBooks.length === 0 ? (
-                <ThemedText style={styles.emptySectionText}>등록된 책이 없습니다.</ThemedText>
+                <Text style={styles.emptySectionText}>등록된 책이 없습니다.</Text>
               ) : (
-                <FlatList data={modalBooks} renderItem={renderBookItem} keyExtractor={(item) => item.id.toString()} contentContainerStyle={styles.modalBookListContent} numColumns={2} />
+                <FlatList
+                  data={modalBooks}
+                  renderItem={renderBookItem}
+                  keyExtractor={(item) => item.id.toString()}
+                  contentContainerStyle={styles.modalBookListContent}
+                  numColumns={2}
+                />
               )
             )}
-            <TouchableOpacity style={styles.modalCloseButton} onPress={() => setModalVisible(false)}>
-              <ThemedText style={styles.modalCloseButtonText}>닫기</ThemedText>
-            </TouchableOpacity>
-          </ThemedView>
+          </View>
         </View>
       </Modal>
     </ScrollView>
