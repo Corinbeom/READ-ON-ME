@@ -151,10 +151,10 @@ export const reviewApi = {
   getMyReviews: () => api.get('/api/reviews/my'), // New method to fetch user's reviews
 }; 
 
-// 🔮 추천 관련 API
+// 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
 export const recommendationApi = {
-  getRecommendations: (userId: number) =>
-    recommendationApiInstance.get<number[]>(`/recommendations/${userId}`),
+  getRecommendations: () =>
+    api.get<number[]>('/api/recommendations'),
 };
 
 // 🔔 알림 관련 API

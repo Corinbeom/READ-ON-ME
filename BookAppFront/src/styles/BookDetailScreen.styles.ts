@@ -1,5 +1,5 @@
 
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
 
 export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
@@ -48,7 +48,7 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 26,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       letterSpacing: -0.5,
       marginBottom: 10,
       lineHeight: 36,
@@ -82,7 +82,7 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 20,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.inkFaint,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       lineHeight: 26,
     },
     description: {

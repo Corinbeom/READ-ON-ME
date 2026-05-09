@@ -25,7 +25,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 28,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       letterSpacing: -0.5,
     },
     logoutButton: {},
@@ -69,7 +69,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 15,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.inkSoft,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       marginBottom: 20,
     },
     loginButton: {

@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  FlatList,
+  ScrollView,
   Image,
   TouchableWithoutFeedback,
   Keyboard,
@@ -53,12 +53,13 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([INITIAL_CHAT_MESSAGE]);
   const [currentInput, setCurrentInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const flatListRef = useRef<FlatList>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
-    }
+    const timer = setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+    return () => clearTimeout(timer);
   }, [chatHistory]);
 
   const handleSendMessage = async () => {
@@ -141,16 +142,17 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
     router.push(`/book/${isbn}`);
   };
 
-  const renderMessage = ({ item }: { item: ChatMessage }) => (
+  const renderMessage = ({ item }: { item: ChatMessage }): React.ReactElement => (
     <View style={[styles.messageBubble, item.type === 'user' ? styles.userBubble : styles.aiBubble]}>
       <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
       {item.results && item.results.length > 0 && (
-        <FlatList
-          horizontal
-          data={item.results}
-          keyExtractor={(book) => book.isbn}
-          renderItem={({ item: book }) => (
-            <TouchableOpacity style={styles.bookResultItem} onPress={() => navigateToDetail(book.isbn)}>
+        <View style={styles.bookResultsList}>
+          {item.results.slice(0, 6).map((book: any) => (
+            <TouchableOpacity
+              key={book.isbn}
+              style={styles.bookResultItem}
+              onPress={() => navigateToDetail(book.isbn)}
+            >
               <Image
                 source={{ uri: book.thumbnail }}
                 style={styles.bookThumbnail}
@@ -158,22 +160,22 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
               />
               <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
             </TouchableOpacity>
-          )}
-          showsHorizontalScrollIndicator={false}
-          style={styles.bookResultsList}
-        />
+          ))}
+        </View>
       )}
     </View>
   );
 
   return (
     <Modal animationType="slide" transparent visible={isVisible} onRequestClose={onClose}>
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-            style={styles.modalWrapper}
-          >
+      <View style={styles.overlay}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.overlayBackground} />
+        </TouchableWithoutFeedback>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.modalWrapper}
+        >
             <View style={styles.modalContent}>
               {/* ── Header ── */}
               <View style={styles.modalHeader}>
@@ -190,14 +192,18 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
 
               {isAuthenticated ? (
                 <>
-                  <FlatList
-                    ref={flatListRef}
-                    data={chatHistory}
-                    renderItem={renderMessage}
-                    keyExtractor={(item) => item.id}
+                  <ScrollView
+                    ref={scrollViewRef}
                     style={styles.chatList}
                     contentContainerStyle={styles.chatListContent}
-                  />
+                    keyboardShouldPersistTaps="handled"
+                  >
+                    {chatHistory.map((item) => (
+                      <React.Fragment key={item.id}>
+                        {renderMessage({ item })}
+                      </React.Fragment>
+                    ))}
+                  </ScrollView>
 
                   {isLoading && (
                     <ActivityIndicator size="small" color={c.inkSoft} style={styles.loadingIndicator} />
@@ -244,7 +250,6 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
             </View>
           </KeyboardAvoidingView>
         </View>
-      </TouchableWithoutFeedback>
     </Modal>
   );
 }
@@ -257,15 +262,22 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       backgroundColor: 'rgba(0,0,0,0.6)',
       justifyContent: 'flex-end',
     },
+    overlayBackground: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
     modalWrapper: {
       width: '100%',
-      maxHeight: SCREEN_HEIGHT * 0.85,
+      height: SCREEN_HEIGHT * 0.85,
     },
     modalContent: {
+      flex: 1,
       backgroundColor: c.card,
       borderTopWidth: 2,
       borderTopColor: c.text,
-      flex: 1,
     },
     modalHeader: {
       flexDirection: 'row',
@@ -285,7 +297,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 20,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       letterSpacing: -0.3,
     },
     closeButton: {
@@ -319,12 +331,13 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     },
     chatListContent: {
       paddingVertical: 16,
-      gap: 10,
     },
     messageBubble: {
       maxWidth: '85%',
       padding: 12,
-      flexShrink: 1,
+      marginBottom: 10,
+      flexGrow: 0,
+      flexShrink: 0,
     },
     userBubble: {
       alignSelf: 'flex-end',
@@ -349,11 +362,13 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       lineHeight: 20,
     },
     bookResultsList: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
       marginTop: 12,
+      gap: 8,
     },
     bookResultItem: {
-      width: 84,
-      marginRight: 10,
+      width: 72,
       alignItems: 'center',
     },
     bookThumbnail: {
@@ -417,7 +432,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 20,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       marginBottom: 10,
       textAlign: 'center',
     },

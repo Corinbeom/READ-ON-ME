@@ -40,7 +40,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 28,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       letterSpacing: -0.5,
     },
 
@@ -137,7 +137,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 14,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.inkSoft,
-      fontStyle: 'italic',
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
     },
     resultLabel: {
       fontSize: 10,

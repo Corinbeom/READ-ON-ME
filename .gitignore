@@ -21,6 +21,7 @@
 **/out/
 
 # Docs (private extracts)
-docs/_extracted/
+docs/*
+
 
 

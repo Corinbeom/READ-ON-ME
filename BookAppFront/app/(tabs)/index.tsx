@@ -53,7 +53,7 @@ export default function HomeScreen() {
     }
     setRecommendationsLoading(true);
     try {
-      const response = await recommendationApi.getRecommendations(user.id);
+      const response = await recommendationApi.getRecommendations();
       const recommendedIds = response.data;
       if (recommendedIds && recommendedIds.length > 0) {
         const booksResponse = await bookApi.getBooksByIds(recommendedIds);

@@ -20,7 +20,7 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
-    'NotoSerifKR-Regular': require('../assets/fonts/NotoSerifKR-Variable.ttf'),
+    'NotoSerifKR-Regular': require('../assets/fonts/NotoSerifKR-Regular.ttf'),
   });
 
   useEffect(() => {
@@ -64,8 +64,7 @@ export default function RootLayout() {
             name="book/[isbn]"
             options={{
               title: '',
-              headerBackTitle: '',              // ← 뒤로가기 텍스트 제거
-              headerBackButtonMenuEnabled: false, // ← iOS 메뉴도 제거(선택)
+              headerBackTitle: ' ',
             }}
           />
           <Stack.Screen name="+not-found" />

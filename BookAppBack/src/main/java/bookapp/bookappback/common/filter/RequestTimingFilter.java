@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * 포트폴리오/운영 관점의 기본 관측(Observability)을 위해
+ * 운영 관점의 기본 관측(Observability)을 위해
  * 요청 단위 latency/상태코드/요청ID를 구조화 로그로 남깁니다.
  *
  * - request_id: 클라이언트가 X-Request-Id를 주면 그대로 사용, 없으면 생성
@@ -65,6 +65,7 @@ public class RequestTimingFilter extends OncePerRequestFilter {
         }
     }
 }
+
 
 
 
