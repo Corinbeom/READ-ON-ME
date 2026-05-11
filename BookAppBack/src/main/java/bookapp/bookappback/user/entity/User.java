@@ -32,14 +32,18 @@ public class User {
     @Column(name = "profile_image")
     private String profileImage;
 
+    @Column(name = "birth_year")
+    private Integer birthYear;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public User(String email, String password, String nickname, String profileImage) {
+    public User(String email, String password, String nickname, String profileImage, Integer birthYear) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.profileImage = profileImage;
+        this.birthYear = birthYear;
         this.createdAt = LocalDateTime.now();
     }
 

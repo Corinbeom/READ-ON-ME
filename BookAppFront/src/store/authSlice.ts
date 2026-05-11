@@ -6,6 +6,7 @@ export interface User {
   id: number;
   email: string;
   nickname: string;
+  birth_year?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,7 +65,7 @@ export const signIn = createAsyncThunk(
 
 export const signUp = createAsyncThunk(
   'auth/signUp',
-  async (userData: { email: string; password: string; nickname: string }, { rejectWithValue }) => {
+  async (userData: { email: string; password: string; nickname: string; birth_year?: number }, { rejectWithValue }) => {
     try {
       const response = await authApi.signUp(userData);
       if (response.data.success) {
@@ -155,6 +156,7 @@ const authSlice = createSlice({
       .addCase(getProfile.fulfilled, (state, action) => {
         state.isLoading = false;
         state.user = action.payload;
+        state.isAuthenticated = true;
         state.error = null;
       })
       .addCase(getProfile.rejected, (state, action) => {

@@ -162,6 +162,14 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       backgroundColor: c.line,
       marginHorizontal: 22,
     },
+    birthYearHint: {
+      paddingHorizontal: 22,
+      paddingBottom: 12,
+      fontSize: 11,
+      color: c.inkFaint,
+      fontFamily: 'Pretendard-SemiBold',
+      letterSpacing: 0.1,
+    },
 
     // ── Recommendation Header ─────────────────────────────
     recommendationHeaderTitle: {

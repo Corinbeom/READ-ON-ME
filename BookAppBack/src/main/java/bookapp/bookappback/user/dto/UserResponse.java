@@ -14,7 +14,10 @@ public class UserResponse {
     
     @JsonProperty("profile_image")
     private String profileImage;
-    
+
+    @JsonProperty("birth_year")
+    private Integer birthYear;
+
     @JsonProperty("created_at")
     private String createdAt;
 
@@ -22,11 +25,12 @@ public class UserResponse {
     public UserResponse() {}
 
     // Constructor with all fields
-    public UserResponse(Long id, String email, String nickname, String profileImage, String createdAt) {
+    public UserResponse(Long id, String email, String nickname, String profileImage, Integer birthYear, String createdAt) {
         this.id = id;
         this.email = email;
         this.nickname = nickname;
         this.profileImage = profileImage;
+        this.birthYear = birthYear;
         this.createdAt = createdAt;
     }
 

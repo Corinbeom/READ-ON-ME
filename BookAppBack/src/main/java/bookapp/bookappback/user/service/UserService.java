@@ -52,7 +52,8 @@ public class UserService implements UserDetailsService {
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword()),
                 request.getNickname(),
-                request.getProfileImage()
+                request.getProfileImage(),
+                request.getBirthYear()
         );
         userRepository.save(user);
 
@@ -61,6 +62,7 @@ public class UserService implements UserDetailsService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImage(),
+                user.getBirthYear(),
                 user.getCreatedAt().toString()
         );
     }
@@ -80,6 +82,7 @@ public class UserService implements UserDetailsService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImage(),
+                user.getBirthYear(),
                 user.getCreatedAt().toString()
         );
 
@@ -95,6 +98,7 @@ public class UserService implements UserDetailsService {
                 user.getEmail(),
                 user.getNickname(),
                 user.getProfileImage(),
+                user.getBirthYear(),
                 user.getCreatedAt().toString()
         );
     }

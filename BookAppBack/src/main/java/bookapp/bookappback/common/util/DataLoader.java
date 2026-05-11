@@ -55,9 +55,15 @@ public class DataLoader implements CommandLineRunner {
             testuser.setEmail("test@test.com");
             testuser.setPassword(passwordEncoder.encode("1111"));
             testuser.setNickname("tester");
+            testuser.setBirthYear(2000);
             testuser.setCreatedAt(LocalDateTime.now());
             userRepository.save(testuser);
             log.info("테스트 유저 'test@test.com 생성 완료");
+        }
+
+        if (bookRepository.count() > 0) {
+            log.info("===== [DataLoader] DB에 도서 데이터 존재. 도서 시딩·임베딩·코퍼스 구축 스킵. =====");
+            return;
         }
 
         log.info("===== 📚 초기 인기 도서 데이터 로드 시작 =====");

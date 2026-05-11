@@ -48,6 +48,13 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     input: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.lightGray, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: colors.text },
     inputError: { borderColor: '#dc3545' },
     errorText: { color: '#dc3545', fontSize: 12, marginTop: 4, marginLeft: 8 },
+    hintText: { color: colors.darkGray, fontSize: 12, marginTop: 4, marginLeft: 8 },
+    ageGroupLabel: { color: colors.darkGray, fontSize: 13, marginBottom: 8 },
+    ageGroupRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    ageGroupButton: { borderWidth: 1, borderColor: colors.lightGray, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: colors.card },
+    ageGroupButtonSelected: { borderColor: colors.primary, backgroundColor: colors.primary },
+    ageGroupButtonText: { fontSize: 13, color: colors.text, fontWeight: '500' },
+    ageGroupButtonTextSelected: { color: '#fff', fontWeight: '600' },
     button: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
     buttonDisabled: { backgroundColor: colors.darkGray },
     buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
@@ -62,6 +69,7 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState<number | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const dispatch = useDispatch<AppDispatch>();
@@ -88,8 +96,13 @@ export default function RegisterScreen() {
     const isValid = ['nickname', 'email', 'password', 'confirmPassword'].every(f => validateField(f, { nickname, email, password, confirmPassword }[f]));
     if (!isValid) return;
 
+    // 선택한 나이대 → 대표 출생연도 (나이대 중간값 사용)
+    const birthYear = selectedAgeGroup
+      ? new Date().getFullYear() - (selectedAgeGroup + 5)
+      : undefined;
+
     try {
-      const result = await dispatch(signUp({ nickname, email, password }));
+      const result = await dispatch(signUp({ nickname, email, password, birth_year: birthYear }));
       if (signUp.fulfilled.match(result)) {
         Alert.alert('성공', '회원가입이 완료되었습니다!', [{ text: '로그인하기', onPress: () => router.replace('/auth/login') }]);
       } else {
@@ -148,6 +161,26 @@ export default function RegisterScreen() {
             <View style={styles.inputContainer}>
               <TextInput style={[styles.input, errors.confirmPassword && styles.inputError]} placeholder="비밀번호 확인" value={confirmPassword} onChangeText={(text) => onInputChange('confirmPassword', text, setConfirmPassword)} onBlur={() => validateField('confirmPassword', confirmPassword)} secureTextEntry autoCapitalize="none" placeholderTextColor={colors.darkGray} />
               {errors.confirmPassword && <ThemedText style={styles.errorText}>{errors.confirmPassword}</ThemedText>}
+            </View>
+
+            <View style={styles.inputContainer}>
+              <ThemedText style={styles.ageGroupLabel}>나이대 (선택) — 나이대별 맞춤 추천을 받을 수 있어요</ThemedText>
+              <View style={styles.ageGroupRow}>
+                {([10, 20, 30, 40, 50, 60] as const).map((age) => {
+                  const isSelected = selectedAgeGroup === age;
+                  return (
+                    <TouchableOpacity
+                      key={age}
+                      style={[styles.ageGroupButton, isSelected && styles.ageGroupButtonSelected]}
+                      onPress={() => setSelectedAgeGroup(isSelected ? null : age)}
+                    >
+                      <ThemedText style={[styles.ageGroupButtonText, isSelected && styles.ageGroupButtonTextSelected]}>
+                        {age === 60 ? '60대 이상' : `${age}대`}
+                      </ThemedText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
 
             <TouchableOpacity style={[styles.button, (isLoading || Object.values(errors).some(e => e)) && styles.buttonDisabled]} onPress={handleRegister} disabled={isLoading || Object.values(errors).some(e => e)}>

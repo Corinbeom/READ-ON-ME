@@ -57,8 +57,6 @@ api.interceptors.request.use(async (config) => {
   const noAuthPaths = [
     '/api/books/search',
     '/api/books/detail',
-    '/api/books/popular',
-    // '/api/books', 
     '/api/users/signin',
     '/api/users/signup',
   ];
@@ -75,12 +73,23 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// 전역 알림을 띄우지 않을 경로 (화면/슬라이스에서 직접 처리하는 엔드포인트)
+const silentPaths = [
+  '/api/users/profile',
+  '/api/users/signin',
+  '/api/users/signup',
+];
+
 // ✅ 전역 인터셉터 — 모든 API 오류를 한 곳에서 처리
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    const message = handleApiError(error);
-    customAlert('오류', message); // 사용자에게 표시
+    const url = error.config?.url ?? '';
+    const isSilent = silentPaths.some((path) => url.includes(path));
+    if (!isSilent) {
+      const message = handleApiError(error);
+      customAlert('오류', message);
+    }
     return Promise.reject(error);
   }
 );
@@ -94,7 +103,7 @@ export const authApi = {
   signIn: (data: { email: string; password: string }) =>
     api.post('/api/users/signin', data),
 
-  signUp: (data: { email: string; password: string; nickname: string }) =>
+  signUp: (data: { email: string; password: string; nickname: string; birth_year?: number }) =>
     api.post('/api/users/signup', data),
 
   getProfile: (token: string) =>
@@ -127,6 +136,10 @@ export const bookApi = {
   getUserLibrary: () => api.get('/api/library'),
 
   getBooksByIds: (ids: number[]) => api.post('/api/books/details', ids),
+
+  // 도서관 정보나루 인기 대출 도서 (로그인 시 나이대별, 비로그인 시 전체)
+  getPopularBooksFromLibrary: (ageGroup?: number) =>
+    api.get('/api/books/popular/naru', ageGroup ? { params: { ageGroup } } : {}),
 };
 
 // 🔹 리뷰 관련 API

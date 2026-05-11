@@ -1,7 +1,9 @@
 package bookapp.bookappback.book.controller;
 
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
+import bookapp.bookappback.book.dto.LibraryBookDto;
 import bookapp.bookappback.book.entity.Book;
+import bookapp.bookappback.book.repository.PopularNaruBookRepository;
 import bookapp.bookappback.book.service.BookService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.Max;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Validated
 @RestController
@@ -23,10 +26,12 @@ import java.util.Map;
 public class BookController {
 
     private final BookService bookService;
+    private final PopularNaruBookRepository popularNaruBookRepository;
 
     @Autowired
-    public BookController(BookService bookService) {
+    public BookController(BookService bookService, PopularNaruBookRepository popularNaruBookRepository) {
         this.bookService = bookService;
+        this.popularNaruBookRepository = popularNaruBookRepository;
     }
 
     @GetMapping("/search")
@@ -59,6 +64,20 @@ public class BookController {
     @Operation(summary = "메인화면 인기책", description = "메인화면에 인기 책을 렌더링해주는 메소드.")
     public ResponseEntity<List<Book>> getPopularBooks() {
         List<Book> books = bookService.getPopularBooks(20);
+        return ResponseEntity.ok(books);
+    }
+
+    // ✅ 도서관 정보나루 인기 대출 도서 (DB에서 읽기)
+    @GetMapping("/popular/naru")
+    @Operation(summary = "나이대별 인기 대출 도서", description = "ageGroup(10/20/.../60) 전달 시 나이대별, 없으면 전체 인기 도서 반환.")
+    public ResponseEntity<List<LibraryBookDto>> getPopularBooksFromLibrary(
+            @RequestParam(required = false) Integer ageGroup) {
+        int group = ageGroup != null ? ageGroup : 0;
+        List<LibraryBookDto> books = popularNaruBookRepository
+                .findByAgeGroupOrderByRankingAsc(group)
+                .stream()
+                .map(e -> e.toDto())
+                .collect(Collectors.toList());
         return ResponseEntity.ok(books);
     }
 

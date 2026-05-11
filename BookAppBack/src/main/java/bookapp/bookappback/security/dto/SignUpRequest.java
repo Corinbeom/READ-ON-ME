@@ -31,15 +31,19 @@ public class SignUpRequest {
     @JsonProperty("profile_image")
     private String profileImage;
 
+    @JsonProperty("birth_year")
+    private Integer birthYear;
+
     // Default constructor
     public SignUpRequest() {}
 
     // Constructor with all fields
-    public SignUpRequest(String email, String password, String nickname, String profileImage) {
+    public SignUpRequest(String email, String password, String nickname, String profileImage, Integer birthYear) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.profileImage = profileImage;
+        this.birthYear = birthYear;
     }
 
 

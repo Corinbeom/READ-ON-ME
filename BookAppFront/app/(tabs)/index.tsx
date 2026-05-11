@@ -12,6 +12,30 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
 import { bookApi, recommendationApi } from '@/src/services/api';
 import { Book } from '@/src/types/book';
+
+interface LibraryBook {
+  ranking: string;
+  bookname: string;
+  authors: string;
+  publisher: string;
+  isbn13: string;
+  bookImageURL: string;
+}
+
+const calcAgeGroup = (birthYear: number): number => {
+  const actualAge = new Date().getFullYear() - birthYear;
+  return Math.max(10, Math.min(60, Math.floor(actualAge / 10) * 10));
+};
+
+const mapLibraryBookToBook = (item: LibraryBook, index: number): Book => ({
+  id: parseInt(item.ranking, 10) || index + 1,
+  title: item.bookname || '',
+  thumbnail: item.bookImageURL || '',
+  authors: item.authors || '',
+  publisher: item.publisher || '',
+  isbn13: item.isbn13 || '',
+  contents: '', url: '', isbn10: '', datetime: '', price: 0, sale_price: 0, status: '',
+});
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
 import AiChatModal from '@/components/AiChatModal';
@@ -19,8 +43,8 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
 export default function HomeScreen() {
-  const [popularBooks, setPopularBooks] = useState<Book[]>([]);
-  const [popularLoading, setPopularLoading] = useState(false);
+  const [naruBooks, setNaruBooks] = useState<Book[]>([]);
+  const [naruLoading, setNaruLoading] = useState(false);
   const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
@@ -34,15 +58,17 @@ export default function HomeScreen() {
   const c = Colors[colorScheme];
   const hasUnreadNotifications = unreadCount > 0;
 
-  const fetchPopularBooks = async () => {
-    setPopularLoading(true);
+  const fetchNaruBooks = async () => {
+    setNaruLoading(true);
     try {
-      const response = await bookApi.getPopularBooks();
-      setPopularBooks(response.data);
+      const ageGroup = user?.birth_year ? calcAgeGroup(user.birth_year) : undefined;
+      const response = await bookApi.getPopularBooksFromLibrary(ageGroup);
+      const mapped = (response.data as LibraryBook[]).map(mapLibraryBookToBook);
+      setNaruBooks(mapped);
     } catch (error) {
       console.error('인기 책 조회 실패:', error);
     } finally {
-      setPopularLoading(false);
+      setNaruLoading(false);
     }
   };
 
@@ -68,7 +94,7 @@ export default function HomeScreen() {
     }
   };
 
-  useEffect(() => { fetchPopularBooks(); }, []);
+  useEffect(() => { fetchNaruBooks(); }, [isAuthenticated]);
   useEffect(() => { fetchRecommendations(); }, [isAuthenticated, user]);
 
   const now = new Date();
@@ -131,19 +157,28 @@ export default function HomeScreen() {
         <Text style={styles.aiSubText}>탭하여 AI에게 추천받기 →</Text>
       </TouchableOpacity>
 
-      {/* ── 인기 책 ── */}
+      {/* ── 인기 책 (도서관 정보나루) ── */}
       <View>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>인기 책</Text>
-          {popularBooks.length > 0 && (
-            <Text style={styles.sectionCount}>{popularBooks.length}권</Text>
+          <Text style={styles.sectionTitle}>
+            {isAuthenticated && user?.birth_year
+              ? `${calcAgeGroup(user.birth_year)}대에게 인기인 책`
+              : '이달의 인기 책'}
+          </Text>
+          {naruBooks.length > 0 && (
+            <Text style={styles.sectionCount}>{naruBooks.length}권</Text>
           )}
         </View>
+        {isAuthenticated && !user?.birth_year && (
+          <Text style={styles.birthYearHint}>
+            출생연도를 설정하면 나이대별 인기 책을 볼 수 있어요
+          </Text>
+        )}
         <View style={styles.sectionDivider} />
         <BookCarousel
           title=""
-          books={popularBooks}
-          loading={popularLoading}
+          books={naruBooks}
+          loading={naruLoading}
         />
       </View>
 

@@ -4,13 +4,33 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { Provider } from 'react-redux';
+import { Provider, useDispatch } from 'react-redux';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { store } from '../src/store';
+import { store, AppDispatch } from '../src/store';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '@/components/ThemedView';
 import NotificationListener from '@/components/NotificationListener';
+import { getProfile, setToken, logout } from '@/src/store/authSlice';
+
+function SessionRestorer() {
+  const dispatch = useDispatch<AppDispatch>();
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = await AsyncStorage.getItem('accessToken');
+      if (!token) return;
+      dispatch(setToken(token));
+      const result = await dispatch(getProfile(token));
+      if (getProfile.rejected.match(result)) {
+        // Token is invalid/expired — clear everything silently
+        dispatch(logout());
+      }
+    };
+    restoreSession();
+  }, []);
+  return null;
+}
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
@@ -38,6 +58,7 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <ThemedView style={{ flex: 1 }}>
+        <SessionRestorer />
         <NotificationListener />
         <Stack
           screenOptions={{
