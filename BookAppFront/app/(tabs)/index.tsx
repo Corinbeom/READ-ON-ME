@@ -47,6 +47,7 @@ export default function HomeScreen() {
   const [naruLoading, setNaruLoading] = useState(false);
   const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [recommendationType, setRecommendationType] = useState<string>('personalized');
   const [modalVisible, setModalVisible] = useState(false);
   const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false);
 
@@ -80,9 +81,10 @@ export default function HomeScreen() {
     setRecommendationsLoading(true);
     try {
       const response = await recommendationApi.getRecommendations();
-      const recommendedIds = response.data;
-      if (recommendedIds && recommendedIds.length > 0) {
-        const booksResponse = await bookApi.getBooksByIds(recommendedIds);
+      const { type, bookIds } = response.data;
+      setRecommendationType(type);
+      if (bookIds && bookIds.length > 0) {
+        const booksResponse = await bookApi.getBooksByIds(bookIds);
         setRecommendedBooks(booksResponse.data);
       } else {
         setRecommendedBooks([]);
@@ -105,7 +107,7 @@ export default function HomeScreen() {
 
       {/* ── Masthead ── */}
       <View style={styles.masthead}>
-        <Text style={styles.mastheadTitle}>Read.</Text>
+        <Text style={styles.mastheadTitle}>Read On Me</Text>
         <View style={styles.mastheadRight}>
           {isAuthenticated ? (
             <TouchableOpacity
@@ -187,7 +189,9 @@ export default function HomeScreen() {
         <View>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {user?.nickname}님의 추천
+              {recommendationType === 'personalized'
+                ? '나와 같은 취향의 사람들이 읽은 책'
+                : `${user?.nickname}님을 위한 인기 도서`}
             </Text>
             <Pressable onPress={() => setModalVisible(true)}>
               <Text style={[styles.sectionCount, { textDecorationLine: 'underline' }]}>
@@ -216,7 +220,7 @@ export default function HomeScreen() {
           <View style={styles.modalView}>
             <Text style={styles.modalTitle}>사용자 기반 추천이란?</Text>
             <Text style={styles.modalText}>
-              회원님의 독서 기록을 바탕으로, 비슷한 독서 취향을 가진 다른 사용자들이 읽은 책을 추천해 드리는 기능입니다.
+              비슷한 독서 취향을 가진 사용자들이 읽은 책을 보여드립니다.
             </Text>
             <Pressable
               style={[styles.button, styles.buttonClose]}

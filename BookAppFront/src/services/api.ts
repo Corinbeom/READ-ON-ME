@@ -162,7 +162,7 @@ export const reviewApi = {
 // 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
 export const recommendationApi = {
   getRecommendations: () =>
-    api.get<number[]>('/api/recommendations'),
+    api.get<{ type: string; bookIds: number[] }>('/api/recommendations'),
 };
 
 // 🔔 알림 관련 API

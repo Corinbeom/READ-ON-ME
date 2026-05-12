@@ -14,6 +14,7 @@ import bookapp.bookappback.book.dto.BookDto; // Import BookDto
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -90,5 +91,26 @@ public class UserBookStatusService {
                         status -> status.getUser().getId(),
                         Collectors.mapping(status -> status.getBook().getId(), Collectors.toList())
                 ));
+    }
+
+    public Map<Long, Map<Long, Double>> getAllUserLibrariesWeighted() {
+        List<UserBookStatus> allStatuses = userBookStatusRepository.findAll();
+
+        Map<Long, Map<Long, Double>> result = new HashMap<>();
+        for (UserBookStatus status : allStatuses) {
+            ReadingStatus rs = status.getStatus();
+            double weight;
+            if (rs == ReadingStatus.READING || rs == ReadingStatus.COMPLETED) {
+                weight = 1.0;
+            } else if (rs == ReadingStatus.TO_READ) {
+                weight = 0.5;
+            } else {
+                continue;
+            }
+            Long userId = status.getUser().getId();
+            Long bookId = status.getBook().getId();
+            result.computeIfAbsent(userId, k -> new HashMap<>()).put(bookId, weight);
+        }
+        return result;
     }
 }
