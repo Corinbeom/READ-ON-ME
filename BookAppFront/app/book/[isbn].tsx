@@ -1,6 +1,6 @@
 
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
@@ -12,6 +12,8 @@ import {
   FlatList,
   ScrollView,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import customAlert from '../../src/utils/alert';
 import { bookApi, reviewApi } from '../../src/services/api';
@@ -51,6 +53,7 @@ export default function BookDetailScreen() {
   const [userBookStatus, setUserBookStatus] = useState<ReadingStatus | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const flatListRef = useRef<FlatList>(null);
 
   const normalizedIsbn = useMemo(() => {
     const raw = String(isbn ?? '');
@@ -259,9 +262,15 @@ export default function BookDetailScreen() {
   }
 
   return (
-    <>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+    >
       <Stack.Screen options={{ title: book?.title || '책 상세' }} />
       <FlatList
+        ref={flatListRef}
+        keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: styles.container.backgroundColor }}
         ListHeaderComponent={
           <>
@@ -409,6 +418,9 @@ export default function BookDetailScreen() {
                     onChangeText={setNewReviewComment}
                     multiline
                     maxLength={REVIEW_MAX_LENGTH}
+                    onFocus={() => {
+                      setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 300);
+                    }}
                   />
                 </ScrollView>
                 <Text style={styles.reviewCharCount}>
@@ -427,6 +439,6 @@ export default function BookDetailScreen() {
           </View>
         }
       />
-    </>
+    </KeyboardAvoidingView>
   );
 }
