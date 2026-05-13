@@ -15,6 +15,8 @@ from app.services.gemini_tagger import GeminiTagger
 from app.services.intent_classifier import IntentAnalyzer, IntentMetadata
 from app.services.keyword_expander import KeywordExpander
 from app.services.prompt_templates import PromptTemplateBuilder
+from app.services.query_rewriter import rewrite_query
+from app.services.reranker import rerank_with_gemini
 from app.services.text_utils import (
     build_book_text,
     build_keyword_prompt,
@@ -385,7 +387,11 @@ async def search_by_natural_language(query: str, db: AsyncSession):
     if hybrid_keywords:
         print(f"[Hybrid keywords] {hybrid_keywords}")
 
-    query_embedding = await get_embedding(prompt_text)
+    # Query Rewriting: Gemini로 임베딩 최적화 — 실패 시 template prompt 폴백
+    rewritten = await rewrite_query(query, intent)
+    embedding_text = rewritten if rewritten else prompt_text
+
+    query_embedding = await get_embedding(embedding_text)
     if not query_embedding:
         raise HTTPException(status_code=500, detail="Could not generate embedding for the search query.")
 
@@ -456,7 +462,18 @@ async def search_by_natural_language(query: str, db: AsyncSession):
             f"[AUTHOR RERANK] Prioritized {len(exact_matches)} exact author matches for '{intent.focus_author}'."
         )
 
-    search_results = filtered[:AI_SEARCH_RESULT_LIMIT]
+    # Re-ranking: Gemini로 Top N → 최적 5권 선별 + 추천 이유 생성
+    search_results = await rerank_with_gemini(query, filtered)
+
+    # Reranker가 부족하게 반환한 경우 원본 순서(벡터 유사도)로 나머지 보충
+    if len(search_results) < AI_SEARCH_RESULT_LIMIT and not intent.focus_author:
+        seen_isbns = {r.get("isbn") for r in search_results}
+        for candidate in filtered:
+            if len(search_results) >= AI_SEARCH_RESULT_LIMIT:
+                break
+            if candidate.get("isbn") not in seen_isbns:
+                search_results.append(candidate)
+                seen_isbns.add(candidate.get("isbn"))
 
     if intent.focus_author and len(search_results) < AI_SEARCH_RESULT_LIMIT:
         remaining = AI_SEARCH_RESULT_LIMIT - len(search_results)

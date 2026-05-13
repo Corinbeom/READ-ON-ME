@@ -146,22 +146,33 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
     <View style={[styles.messageBubble, item.type === 'user' ? styles.userBubble : styles.aiBubble]}>
       <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
       {item.results && item.results.length > 0 && (
-        <View style={styles.bookResultsList}>
-          {item.results.slice(0, 6).map((book: any) => (
-            <TouchableOpacity
-              key={book.isbn}
-              style={styles.bookResultItem}
-              onPress={() => navigateToDetail(book.isbn)}
-            >
-              <Image
-                source={{ uri: book.thumbnail }}
-                style={styles.bookThumbnail}
-                resizeMode="cover"
-              />
-              <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <>
+          <View style={styles.bookResultsList}>
+            {item.results.slice(0, 6).map((book: any) => (
+              <TouchableOpacity
+                key={book.isbn}
+                style={styles.bookResultItem}
+                onPress={() => navigateToDetail(book.isbn)}
+              >
+                <Image
+                  source={{ uri: book.thumbnail }}
+                  style={styles.bookThumbnail}
+                  resizeMode="cover"
+                />
+                <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {item.results.some((b: any) => b.reason) && (
+            <View style={styles.reasonList}>
+              {item.results.filter((b: any) => b.reason).slice(0, 5).map((book: any, i: number) => (
+                <Text key={book.isbn} style={styles.reasonItem}>
+                  {i + 1}. {book.title} — {book.reason}
+                </Text>
+              ))}
+            </View>
+          )}
+        </>
       )}
     </View>
   );
@@ -384,6 +395,16 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
       lineHeight: 15,
+    },
+    reasonList: {
+      marginTop: 12,
+      gap: 6,
+    },
+    reasonItem: {
+      fontSize: 12,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.inkSoft,
+      lineHeight: 18,
     },
     inputContainer: {
       flexDirection: 'row',
