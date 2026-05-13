@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List, Optional, Union
 
 import httpx
@@ -222,6 +223,78 @@ async def check_if_isbn_exists(db: AsyncSession, isbn: str):
     return result.scalars().first() is not None
 
 
+# --- Deduplication Helpers ---
+
+_EDITION_RE = re.compile(
+    r'[\(\[\{][^\)\]\}]*[\)\]\}]'                                        # 괄호 내 내용
+    r'|(?:개정판|증보판|초판본?|리커버|특별판|한정판|양장본|문고판'       # 한국어 에디션
+    r'|revised|edition|classics|signet|penguin|reprint)',                 # 영문 에디션
+    re.IGNORECASE,
+)
+_WHITESPACE_RE = re.compile(r'[\s\-·\/]+')
+_AUTHOR_SUFFIX_RE = re.compile(r'\s*(지음|저|역|옮김|글|그림|편)\s*')
+
+
+def _normalize_title(title: str) -> str:
+    """에디션 표기 제거 후 소문자 정규화."""
+    t = _EDITION_RE.sub('', title or '')
+    t = _WHITESPACE_RE.sub(' ', t).strip().lower()
+    return t
+
+
+def _normalize_first_author(authors: str) -> str:
+    """첫 번째 저자만 추출, 역할 표기 제거, 공백 제거."""
+    if not authors:
+        return ''
+    first = re.split(r'[,/·]', authors)[0]
+    first = _AUTHOR_SUFFIX_RE.sub('', first)
+    return first.strip().lower().replace(' ', '')
+
+
+def _deduplicate_results(results: list) -> list:
+    """
+    (정규화 제목, 정규화 첫 저자) 기준으로 중복 제거.
+    같은 그룹 내에서 similarity가 가장 높은 것만 유지.
+    """
+    seen: dict = {}
+    for row in results:
+        key = (
+            _normalize_title(row.get('title', '')),
+            _normalize_first_author(row.get('authors', '')),
+        )
+        existing = seen.get(key)
+        if existing is None or (row.get('similarity') or 0) > (existing.get('similarity') or 0):
+            seen[key] = row
+    return list(seen.values())
+
+
+async def check_if_similar_in_corpus(db: AsyncSession, title: str, authors: str) -> bool:
+    """
+    같은 저작의 다른 에디션이 corpus에 이미 있는지 확인.
+    (정규화 제목 + 첫 저자)가 일치하는 항목이 있으면 True.
+    """
+    norm_title = _normalize_title(title)
+    if not norm_title:
+        return False
+
+    first_author = re.split(r'[,/·]', authors or '')[0].strip()
+    first_author_prefix = first_author[:12]  # 성명 앞 12자로 필터
+
+    if first_author_prefix:
+        stmt = text(
+            "SELECT title FROM book_corpus WHERE authors ILIKE :author LIMIT 200"
+        )
+        result = await db.execute(stmt, {"author": f"%{first_author_prefix}%"})
+    else:
+        stmt = text("SELECT title FROM book_corpus LIMIT 500")
+        result = await db.execute(stmt)
+
+    for row in result.fetchall():
+        if _normalize_title(row.title) == norm_title:
+            return True
+    return False
+
+
 # --- Main Orchestrators & Search ---
 
 
@@ -263,6 +336,10 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
                         continue
 
                     if await check_if_isbn_exists(db, isbn):
+                        continue
+
+                    if await check_if_similar_in_corpus(db, book.get("title", ""), book.get("authors", "")):
+                        print(f"[DEDUP] Skipping duplicate edition: '{book.get('title')}'")
                         continue
 
                     book_text = build_book_text(
@@ -340,6 +417,10 @@ async def embed_single_book(book_data: SingleBookRequest, db: AsyncSession):
     print(f"Processing single book with ISBN: {book_data.isbn}")
     if await check_if_isbn_exists(db, book_data.isbn):
         print(f"Book with ISBN {book_data.isbn} already exists in corpus. Skipping.")
+        return
+
+    if await check_if_similar_in_corpus(db, book_data.title, book_data.authors):
+        print(f"[DEDUP] Skipping duplicate edition for single book: '{book_data.title}'")
         return
 
     book_text = build_book_text(book_data.title, book_data.contents or "", book_data.authors)
@@ -461,6 +542,12 @@ async def search_by_natural_language(query: str, db: AsyncSession):
         print(
             f"[AUTHOR RERANK] Prioritized {len(exact_matches)} exact author matches for '{intent.focus_author}'."
         )
+
+    # 에디션 중복 제거: (정규화 제목, 첫 저자) 기준으로 가장 높은 유사도 항목만 유지
+    before_dedup = len(filtered)
+    filtered = _deduplicate_results(filtered)
+    if len(filtered) < before_dedup:
+        print(f"[DEDUP] Removed {before_dedup - len(filtered)} duplicate editions for query '{query}'.")
 
     # Re-ranking: Gemini로 Top N → 최적 5권 선별 + 추천 이유 생성
     search_results = await rerank_with_gemini(query, filtered)
