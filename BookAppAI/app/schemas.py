@@ -14,3 +14,11 @@ class SingleBookRequest(BaseModel):
 
 class AiSearchRequest(BaseModel):
     query: str
+
+class UserBookEntry(BaseModel):
+    isbn: str
+    status: str  # "COMPLETED" | "READING" | "TO_READ"
+
+class ContentRecommendRequest(BaseModel):
+    user_books: List[UserBookEntry]
+    limit: int = 10

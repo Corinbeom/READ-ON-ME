@@ -9,6 +9,7 @@ import bookapp.bookappback.user.repository.UserRepository;
 import bookapp.bookappback.userbookstatus.entity.ReadingStatus;
 import bookapp.bookappback.userbookstatus.entity.UserBookStatus;
 import bookapp.bookappback.userbookstatus.repository.UserBookStatusRepository;
+import bookapp.bookappback.userbookstatus.dto.UserBookIsbnDto;
 import bookapp.bookappback.userbookstatus.dto.UserLibraryResponse;
 import bookapp.bookappback.book.dto.BookDto; // Import BookDto
 import lombok.RequiredArgsConstructor;
@@ -91,6 +92,13 @@ public class UserBookStatusService {
                         status -> status.getUser().getId(),
                         Collectors.mapping(status -> status.getBook().getId(), Collectors.toList())
                 ));
+    }
+
+    public List<UserBookIsbnDto> getUserBooksWithIsbn(Long userId) {
+        return userBookStatusRepository.findByUserId(userId).stream()
+                .filter(s -> s.getBook().getIsbn13() != null)
+                .map(s -> new UserBookIsbnDto(s.getBook().getIsbn13(), s.getStatus().name()))
+                .collect(Collectors.toList());
     }
 
     public Map<Long, Map<Long, Double>> getAllUserLibrariesWeighted() {

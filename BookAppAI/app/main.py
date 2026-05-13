@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from contextlib import asynccontextmanager
 
-from app.routers import data_builder
+from app.routers import data_builder, recommendation
 from app.database import engine, Base
 from .recommendation_service import get_recommendations
 
@@ -51,6 +51,7 @@ app.add_middleware(
   )
 
 app.include_router(data_builder.router)
+app.include_router(recommendation.router)
 
 # Docker 환경에서는 컨테이너 간 통신을 위해 서비스명(backend)을 사용해야 합니다.
 # - 로컬 실행: http://localhost:8080
