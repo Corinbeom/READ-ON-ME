@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   TextInput,
   TouchableOpacity,
@@ -23,6 +23,7 @@ interface SearchResponse {
   documents: KakaoBook[];
   meta: { total_count: number; is_end: boolean };
 }
+
 
 const getStyles = (colorScheme: 'light' | 'dark') => {
   const c = Colors[colorScheme];
@@ -149,6 +150,52 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       paddingTop: 20,
       paddingBottom: 14,
     },
+
+    // ── Idle State ────────────────────────────────────────
+    idleContainer: {
+      paddingHorizontal: 22,
+      paddingTop: 40,
+    },
+    idleHint: {
+      fontSize: 13,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.inkSoft,
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
+      lineHeight: 22,
+    },
+
+    // ── Autocomplete ──────────────────────────────────────
+    suggestionItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    suggestionThumbnail: {
+      width: 28,
+      height: 40,
+      backgroundColor: c.surface2,
+      marginRight: 12,
+    },
+    suggestionTitle: {
+      fontSize: 13,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.text,
+      flex: 1,
+    },
+    suggestionAuthor: {
+      fontSize: 10,
+      fontFamily: 'Pretendard-SemiBold',
+      color: c.inkSoft,
+      letterSpacing: 0.1,
+      textTransform: 'uppercase',
+      marginTop: 2,
+    },
+    suggestionDivider: {
+      height: 1,
+      backgroundColor: c.line,
+      marginHorizontal: 14,
+    },
   });
 };
 
@@ -157,19 +204,26 @@ export default function SearchScreen() {
   const [books, setBooks] = useState<KakaoBook[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [suggestions, setSuggestions] = useState<KakaoBook[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getStyles(colorScheme);
 
-  const searchBooks = async () => {
-    if (!searchQuery.trim()) {
+  const searchBooks = async (q?: string) => {
+    const query = q ?? searchQuery;
+    if (!query.trim()) {
       customAlert('알림', '검색어를 입력해주세요.');
       return;
     }
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setShowSuggestions(false);
+    setSuggestions([]);
     setLoading(true);
     setHasSearched(true);
     try {
-      const response = await bookApi.searchBooks({ query: searchQuery, size: 20 });
+      const response = await bookApi.searchBooks({ query, size: 20 });
       setBooks((response.data as SearchResponse).documents);
     } catch (error) {
       console.error('검색 실패:', error);
@@ -177,6 +231,33 @@ export default function SearchScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTextChange = (text: string) => {
+    setSearchQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (text.trim().length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const response = await bookApi.searchBooks({ query: text, size: 5 });
+        const docs = (response.data as SearchResponse)?.documents ?? [];
+        setSuggestions(docs);
+        setShowSuggestions(docs.length > 0);
+      } catch (e) {
+        console.error('[AC] error:', e);
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 400);
+  };
+
+  const handleSuggestionPress = (book: KakaoBook) => {
+    setSearchQuery(book.title);
+    searchBooks(book.title);
   };
 
   const renderBookItem = ({ item }: { item: KakaoBook }) => {
@@ -209,26 +290,49 @@ export default function SearchScreen() {
             placeholder="제목 또는 저자"
             placeholderTextColor={Colors[colorScheme].inkFaint}
             value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={searchBooks}
+            onChangeText={handleTextChange}
+            onSubmitEditing={() => searchBooks()}
             returnKeyType="search"
           />
-          <TouchableOpacity style={styles.searchButton} onPress={searchBooks}>
+          <TouchableOpacity style={styles.searchButton} onPress={() => searchBooks()}>
             <Text style={styles.searchButtonText}>검색</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ── Results ── */}
+      {/* ── Results / Autocomplete ── */}
       <FlatList
-        data={books}
-        renderItem={renderBookItem}
+        data={showSuggestions ? suggestions : books}
+        renderItem={showSuggestions
+          ? ({ item }: { item: KakaoBook }) => (
+              <TouchableOpacity
+                style={styles.suggestionItem}
+                onPress={() => handleSuggestionPress(item)}
+                activeOpacity={0.7}
+              >
+                <Image source={{ uri: item.thumbnail }} style={styles.suggestionThumbnail} resizeMode="cover" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.suggestionTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.suggestionAuthor} numberOfLines={1}>{item.authors.join(', ')}</Text>
+                </View>
+              </TouchableOpacity>
+            )
+          : renderBookItem
+        }
         keyExtractor={(item) => item.isbn || item.title}
         style={styles.bookList}
+        keyboardShouldPersistTaps="handled"
         ItemSeparatorComponent={() => <View style={styles.divider} />}
         ListHeaderComponent={
+          showSuggestions ? null :
           loading ? (
             <ActivityIndicator style={{ marginVertical: 32 }} color={Colors[colorScheme].inkSoft} />
+          ) : !hasSearched ? (
+            <View style={styles.idleContainer}>
+              <Text style={styles.idleHint}>
+                제목 또는 저자 이름으로{'\n'}원하는 책을 찾아보세요.
+              </Text>
+            </View>
           ) : books.length > 0 ? (
             <>
               <Text style={styles.resultLabel}>{books.length}건의 검색 결과</Text>
@@ -237,7 +341,8 @@ export default function SearchScreen() {
           ) : null
         }
         ListEmptyComponent={
-          !loading && hasSearched ? (
+          showSuggestions || loading ? null :
+          hasSearched ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>검색 결과가 없습니다.</Text>
             </View>
