@@ -37,7 +37,7 @@ class IntentMetadata:
 
 AUTHOR_PATTERN = re.compile(r"([\w\s·가-힣]+?)\s*(?:작가)?\s*의\s*(?:책|작품|소설)")
 AUTHOR_KEYWORDS = ["작가", "저자", "필명"]
-AUTHOR_INVALID_TOKENS = {"분위기", "느낌", "감성", "무드", "주제", "테마"}
+AUTHOR_INVALID_TOKENS = {"분위기", "느낌", "감성", "무드", "주제", "테마", "내용", "비슷", "같은", "유사"}
 
 DOMAIN_KEYWORDS = {
     "창업": "비즈니스",
@@ -138,13 +138,14 @@ class IntentAnalyzer:
         constraints = [kw for kw in CONSTRAINT_KEYWORDS if kw in query]
         focus_author = self._extract_author(query)
 
+        # similar/mood 키워드가 있으면 author보다 우선 (ex. "인간 실격이랑 비슷한 책")
         query_type = "general"
-        if focus_author:
-            query_type = "author"
-        elif any(token in query for token in QUERY_TYPE_KEYWORDS["similar"]):
+        if any(token in query for token in QUERY_TYPE_KEYWORDS["similar"]):
             query_type = "similar"
         elif any(token in query for token in QUERY_TYPE_KEYWORDS["mood"]):
             query_type = "mood"
+        elif focus_author:
+            query_type = "author"
 
         keywords = []
         if domain:

@@ -10,6 +10,7 @@ Gemini를 이용한 검색 쿼리 리라이팅.
 from __future__ import annotations
 
 import os
+import time
 from typing import Optional
 
 import httpx
@@ -19,7 +20,10 @@ from app.services.intent_classifier import IntentMetadata
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1")
 REWRITE_MODEL = os.getenv("GEMINI_DETAILED_MODEL", "gemini-2.5-flash")
-REWRITE_TIMEOUT = 8.0
+REWRITE_TIMEOUT = 15.0
+REWRITE_CACHE_TTL = 300  # 5분 캐시
+
+_rewrite_cache: dict[str, tuple[Optional[str], float]] = {}
 
 
 async def rewrite_query(query: str, intent: IntentMetadata) -> Optional[str]:
@@ -29,6 +33,11 @@ async def rewrite_query(query: str, intent: IntentMetadata) -> Optional[str]:
     """
     if not GEMINI_API_KEY:
         return None
+
+    # 캐시 확인 (동일 쿼리 반복 시 Gemini 재호출 차단)
+    cached_value, cached_at = _rewrite_cache.get(query, (None, 0.0))
+    if time.time() - cached_at < REWRITE_CACHE_TTL:
+        return cached_value
 
     intent_parts = []
     if intent.genre:        intent_parts.append(f"장르: {intent.genre}")
@@ -66,8 +75,10 @@ async def rewrite_query(query: str, intent: IntentMetadata) -> Optional[str]:
             )
             if text:
                 print(f"[QueryRewriter] '{query}' → '{text[:80]}...'")
+                _rewrite_cache[query] = (text, time.time())
                 return text
     except Exception as exc:
         print(f"[QueryRewriter] 실패, 템플릿 폴백: {exc}")
 
+    _rewrite_cache[query] = (None, time.time())  # 실패도 캐시 (429 반복 방지)
     return None

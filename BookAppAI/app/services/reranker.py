@@ -17,7 +17,7 @@ import httpx
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1")
 RERANK_MODEL = os.getenv("GEMINI_DETAILED_MODEL", "gemini-2.5-flash")
-RERANK_TIMEOUT = 15.0
+RERANK_TIMEOUT = 30.0
 
 RERANK_CANDIDATE_LIMIT = 10   # Gemini에 넘길 후보 수 (프롬프트 크기 제어)
 FINAL_RESULT_LIMIT = 5        # 최종 반환 수
@@ -52,15 +52,15 @@ async def rerank_with_gemini(
 {book_list}
 
 반드시 아래 형식으로만 출력해 (한 줄에 하나, 다른 말 없이):
-번호|추천이유(30자 이내)
+번호|추천이유(50자 이내, 완성된 문장으로)
 
 출력 예시:
-2|잔잔한 서사와 따뜻한 감성의 힐링 소설
-5|일상의 위로를 담은 에세이"""
+2|인간 소외와 실존적 고통을 서정적으로 그린 일본 현대문학의 걸작
+5|일상의 균열과 자아 붕괴를 섬세하게 담아낸 에세이"""
 
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 512},
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 600},
     }
     url = f"{GEMINI_API_BASE}/models/{RERANK_MODEL}:generateContent"
 

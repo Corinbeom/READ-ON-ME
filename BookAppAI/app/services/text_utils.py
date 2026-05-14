@@ -89,6 +89,18 @@ EXCLUSION_STRICT_TERMS = [
     "단원평가",
     "자이스토리",
     "내신",
+    "교과연계",
+    "대학입시",
+    "언어영역",
+    "풀지오",
+    "꼭 출제되는",
+    "실전문제",
+    "입시에",
+    "토론해봅시다",
+    "기초연구",
+    "기초 연구",
+    "연구총서",
+    "학술총서",
 ]
 
 EXCLUSION_COMBO_LEADS = [
@@ -116,6 +128,8 @@ EXCLUSION_COMBO_TRAILERS = [
     "내신",
     "평가",
     "학년",
+    "세트",       # "중등 역사소설 세트" 류 학습 패키지
+    "필독서",     # "중등 필독서" 등 교육과정 연계 묶음
 ]
 
 # Optional human crafted prompts for 더 풍부한 키워드 표현.
@@ -173,8 +187,8 @@ def should_skip_book(keyword: str, book: dict) -> bool:
     if contains_exclusion_terms(title, contents):
         return True
 
-    # Kakao API에서 가끔 제목만 있고 다른 정보가 비어있는 자료는 노이즈인 경우가 많다.
-    if not _normalize_text(contents) and not authors:
+    # 설명이 30자 미만이면 제목만으로 임베딩 → 품질 낮아 스킵
+    if len(_normalize_text(contents)) < 30:
         return True
 
     return False

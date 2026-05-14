@@ -62,6 +62,7 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       borderColor: c.text,
       paddingHorizontal: 14,
       paddingVertical: 6,
+      borderRadius: 5,
     },
     loginButtonText: {
       color: c.text,
@@ -73,6 +74,7 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       backgroundColor: c.text,
       paddingHorizontal: 14,
       paddingVertical: 6,
+      borderRadius: 5,
     },
     registerButtonText: {
       color: c.background,

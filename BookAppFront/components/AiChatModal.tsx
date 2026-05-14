@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -14,7 +13,8 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
-  Dimensions
+  Dimensions,
+  Animated,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -42,6 +42,56 @@ const INITIAL_CHAT_MESSAGE: ChatMessage = {
   id: '1',
   type: 'ai',
   text: "안녕하세요! 어떤 책을 추천해 드릴까요?",
+};
+
+function TypingIndicator({ dotColor = '#888', borderColor = '#cccccc44', bgColor = 'transparent' }: { dotColor?: string; borderColor?: string; bgColor?: string }) {
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+  const dot3 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const anim = (dot: Animated.Value, delay: number) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(dot, { toValue: 1, duration: 280, useNativeDriver: true }),
+          Animated.timing(dot, { toValue: 0, duration: 280, useNativeDriver: true }),
+          Animated.delay(840 - delay),
+        ])
+      );
+    const a1 = anim(dot1, 0);
+    const a2 = anim(dot2, 180);
+    const a3 = anim(dot3, 360);
+    a1.start(); a2.start(); a3.start();
+    return () => { a1.stop(); a2.stop(); a3.stop(); };
+  }, []);
+
+  const dotStyle = (dot: Animated.Value) => ({
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginHorizontal: 3,
+    opacity: dot.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+    transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }],
+  });
+
+  return (
+    <View style={[typingBubbleStyle, { borderColor, backgroundColor: bgColor }]}>
+      <Animated.View style={[{ backgroundColor: dotColor, borderRadius: 4 }, dotStyle(dot1)]} />
+      <Animated.View style={[{ backgroundColor: dotColor, borderRadius: 4 }, dotStyle(dot2)]} />
+      <Animated.View style={[{ backgroundColor: dotColor, borderRadius: 4 }, dotStyle(dot3)]} />
+    </View>
+  );
+}
+
+const typingBubbleStyle: import('react-native').ViewStyle = {
+  alignSelf: 'flex-start',
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 16,
+  paddingVertical: 14,
+  marginBottom: 10,
+  borderWidth: 1,
 };
 
 export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
@@ -142,40 +192,45 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
     router.push(`/book/${isbn}`);
   };
 
-  const renderMessage = ({ item }: { item: ChatMessage }): React.ReactElement => (
-    <View style={[styles.messageBubble, item.type === 'user' ? styles.userBubble : styles.aiBubble]}>
-      <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
-      {item.results && item.results.length > 0 && (
-        <>
-          <View style={styles.bookResultsList}>
-            {item.results.slice(0, 6).map((book: any) => (
+  const renderMessage = ({ item }: { item: ChatMessage }): React.ReactElement => {
+    const hasBooks = item.results && item.results.length > 0;
+    return (
+      <View style={[
+        styles.messageBubble,
+        item.type === 'user' ? styles.userBubble : styles.aiBubble,
+        hasBooks && styles.aiBubbleWide,
+      ]}>
+        <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
+        {hasBooks && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.bookCardScroll}
+            contentContainerStyle={styles.bookCardScrollContent}
+          >
+            {item.results!.slice(0, 5).map((book: any) => (
               <TouchableOpacity
                 key={book.isbn}
-                style={styles.bookResultItem}
+                style={styles.bookCard}
                 onPress={() => navigateToDetail(book.isbn)}
+                activeOpacity={0.7}
               >
                 <Image
                   source={{ uri: book.thumbnail }}
-                  style={styles.bookThumbnail}
+                  style={styles.bookCardCover}
                   resizeMode="cover"
                 />
-                <Text style={styles.bookTitle} numberOfLines={1}>{book.title}</Text>
+                <Text style={styles.bookCardTitle} numberOfLines={2}>{book.title}</Text>
+                {book.authors ? (
+                  <Text style={styles.bookCardAuthor} numberOfLines={1}>{book.authors}</Text>
+                ) : null}
               </TouchableOpacity>
             ))}
-          </View>
-          {item.results.some((b: any) => b.reason) && (
-            <View style={styles.reasonList}>
-              {item.results.filter((b: any) => b.reason).slice(0, 5).map((book: any, i: number) => (
-                <Text key={book.isbn} style={styles.reasonItem}>
-                  {i + 1}. {book.title} — {book.reason}
-                </Text>
-              ))}
-            </View>
-          )}
-        </>
-      )}
-    </View>
-  );
+          </ScrollView>
+        )}
+      </View>
+    );
+  };
 
   return (
     <Modal animationType="slide" transparent visible={isVisible} onRequestClose={onClose}>
@@ -214,11 +269,14 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                         {renderMessage({ item })}
                       </React.Fragment>
                     ))}
+                    {isLoading && (
+                      <TypingIndicator
+                        dotColor={c.inkSoft}
+                        borderColor={c.line}
+                        bgColor={c.background}
+                      />
+                    )}
                   </ScrollView>
-
-                  {isLoading && (
-                    <ActivityIndicator size="small" color={c.inkSoft} style={styles.loadingIndicator} />
-                  )}
 
                   <View style={styles.inputContainer}>
                     <TextInput
@@ -360,6 +418,10 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       borderWidth: 1,
       borderColor: c.line,
     },
+    aiBubbleWide: {
+      maxWidth: '96%',
+      maxHeight: SCREEN_HEIGHT * 0.55,
+    },
     userText: {
       color: c.background,
       fontFamily: 'NotoSerifKR-Regular',
@@ -372,39 +434,43 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontSize: 14,
       lineHeight: 20,
     },
-    bookResultsList: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: 12,
+    bookCardScroll: {
+      marginTop: 10,
+      marginHorizontal: -12,
+    },
+    bookCardScrollContent: {
+      paddingHorizontal: 12,
       gap: 8,
     },
-    bookResultItem: {
-      width: 72,
-      alignItems: 'center',
+    bookCard: {
+      width: 96,
     },
-    bookThumbnail: {
-      width: 72,
-      height: 104,
-      borderRadius: 0,
+    bookCardCover: {
+      width: 96,
+      height: 135,
       backgroundColor: c.surface2,
+      marginBottom: 6,
     },
-    bookTitle: {
+    bookCardTitle: {
       fontSize: 11,
-      textAlign: 'center',
-      marginTop: 6,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      lineHeight: 15,
+      lineHeight: 16,
+      marginBottom: 2,
     },
-    reasonList: {
-      marginTop: 12,
-      gap: 6,
-    },
-    reasonItem: {
-      fontSize: 12,
+    bookCardAuthor: {
+      fontSize: 10,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.inkSoft,
-      lineHeight: 18,
+      lineHeight: 14,
+      marginBottom: 3,
+    },
+    bookCardReason: {
+      fontSize: 10,
+      fontFamily: 'NotoSerifKR-Regular',
+      color: c.inkSoft,
+      lineHeight: 15,
+      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
     },
     inputContainer: {
       flexDirection: 'row',
@@ -438,9 +504,6 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       color: c.background,
       fontSize: 18,
       fontFamily: 'Pretendard-SemiBold',
-    },
-    loadingIndicator: {
-      marginVertical: 8,
     },
     authPromptContainer: {
       flex: 1,

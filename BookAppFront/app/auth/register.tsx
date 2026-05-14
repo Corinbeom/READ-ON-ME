@@ -10,6 +10,7 @@ import {
   Image,
   View,
   Dimensions,
+  Text,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
@@ -57,7 +58,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     ageGroupButtonTextSelected: { color: '#fff', fontWeight: '600' },
     button: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
     buttonDisabled: { backgroundColor: colors.darkGray },
-    buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+    buttonText: { color: colors.background, fontSize: 16, fontWeight: '600' },
     linkContainer: { alignItems: 'center', paddingVertical: 12 },
     link: { color: colors.primary },
     backButtonText: { color: colors.darkGray, fontSize: 14 },
@@ -184,7 +185,7 @@ export default function RegisterScreen() {
             </View>
 
             <TouchableOpacity style={[styles.button, (isLoading || Object.values(errors).some(e => e)) && styles.buttonDisabled]} onPress={handleRegister} disabled={isLoading || Object.values(errors).some(e => e)}>
-              <ThemedText style={styles.buttonText}>{isLoading ? '회원가입 중...' : '회원가입'}</ThemedText>
+              <Text style={styles.buttonText}>{isLoading ? '회원가입 중...' : '회원가입'}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.linkContainer} onPress={() => router.replace('/auth/login')}>

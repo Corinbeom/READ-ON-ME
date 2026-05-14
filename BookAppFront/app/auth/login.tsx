@@ -9,6 +9,7 @@ import {
   Image,
   useColorScheme as useSystemColorScheme, // Rename to avoid conflict
   Dimensions,
+  Text,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch } from 'react-redux';
@@ -77,7 +78,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       backgroundColor: colors.darkGray,
     },
     buttonText: {
-      color: '#fff',
+      color: colors.background,
       fontSize: 16,
       fontWeight: '600',
     },
@@ -171,9 +172,9 @@ export default function LoginScreen() {
             onPress={handleLogin}
             disabled={loading}
           >
-            <ThemedText style={styles.buttonText}>
+            <Text style={styles.buttonText}>
               {loading ? '로그인 중...' : '로그인'}
-            </ThemedText>
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity

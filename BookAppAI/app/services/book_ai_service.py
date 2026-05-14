@@ -41,7 +41,7 @@ if not KAKAO_API_KEY:
 KAKAO_API_URL = "https://dapi.kakao.com/v3/search/book"
 SIMILARITY_THRESHOLD = 0.65
 AI_SEARCH_THRESHOLD = 0.65
-AI_SIMILARITY_THRESHOLD = 0.55  # New threshold for general similarity queries
+AI_SIMILARITY_THRESHOLD = 0.45  # similar/mood 쿼리 — reranker가 품질 보완하므로 여유 있게 설정
 AI_SEARCH_LIMIT = int(os.getenv("AI_SEARCH_LIMIT", "40"))
 AI_SEARCH_RESULT_LIMIT = int(os.getenv("AI_SEARCH_RESULT_LIMIT", "5"))
 AUTHOR_SEARCH_THRESHOLD = float(os.getenv("AUTHOR_SEARCH_THRESHOLD", "0.5"))
@@ -519,6 +519,9 @@ async def search_by_natural_language(query: str, db: AsyncSession):
         if contains_exclusion_terms(title, contents, authors):
             filtered_out_count += 1
             continue
+        if len(contents.strip()) < 30:  # 설명 없는 책은 임베딩 품질이 낮아 제외
+            filtered_out_count += 1
+            continue
         filtered.append(row)
 
     if intent.focus_author:
@@ -542,6 +545,27 @@ async def search_by_natural_language(query: str, db: AsyncSession):
         print(
             f"[AUTHOR RERANK] Prioritized {len(exact_matches)} exact author matches for '{intent.focus_author}'."
         )
+
+    # threshold 조건을 만족하는 결과가 없을 경우: 임계값 없이 Top-N으로 재조회
+    if not filtered and intent.query_type in {"similar", "mood"}:
+        print(f"[FALLBACK] No results above threshold={current_threshold:.2f} — retrying without threshold.")
+        fallback_no_threshold = text("""
+            SELECT id, title, contents, isbn, authors, publisher, thumbnail,
+                   1 - (embedding <=> :query_embedding) AS similarity
+            FROM book_corpus
+            ORDER BY embedding <=> :query_embedding
+            LIMIT :limit
+        """)
+        fallback_result = await db.execute(
+            fallback_no_threshold,
+            {"query_embedding": str(list(query_embedding)), "limit": AI_SEARCH_LIMIT},
+        )
+        for row in fallback_result.mappings():
+            row_dict = dict(row)
+            if not contains_exclusion_terms(
+                row_dict.get("title", ""), row_dict.get("contents", ""), row_dict.get("authors", "")
+            ):
+                filtered.append(row_dict)
 
     # 에디션 중복 제거: (정규화 제목, 첫 저자) 기준으로 가장 높은 유사도 항목만 유지
     before_dedup = len(filtered)

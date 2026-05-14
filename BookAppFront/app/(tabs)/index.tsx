@@ -173,7 +173,7 @@ export default function HomeScreen() {
         </View>
         {isAuthenticated && !user?.birth_year && (
           <Text style={styles.birthYearHint}>
-            출생연도를 설정하면 나이대별 인기 책을 볼 수 있어요
+            출생연도를 설정하면 나이대에 맞는 인기 책을 볼 수 있어요
           </Text>
         )}
         <View style={styles.sectionDivider} />
