@@ -165,6 +165,11 @@ export const recommendationApi = {
     api.get<{ type: string; bookIds: number[] }>('/api/recommendations'),
 };
 
+// 👤 유저 관련 API
+export const userApi = {
+  getReadingKeywords: () => api.get('/api/users/reading-keywords'),
+};
+
 // 🔔 알림 관련 API
 export const notificationApi = {
   getNotifications: () => api.get('/api/notifications'),

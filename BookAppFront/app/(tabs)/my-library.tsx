@@ -1,16 +1,27 @@
 
-import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal } from 'react-native';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { View, Text, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/src/store';
 import { logout } from '@/src/store/authSlice';
 import { Link, router, useFocusEffect } from 'expo-router';
-import { bookApi, reviewApi } from '../../src/services/api';
+import { bookApi, reviewApi, userApi } from '../../src/services/api';
 import { BookDto } from '../../src/types/BookDto';
 import { Review } from '../../src/types/review';
 import { getMyLibraryScreenStyles } from '../../src/styles/MyLibraryScreen.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
 import { markAllNotificationsAsRead, markNotificationAsRead } from '@/src/store/notificationSlice';
+
+interface KeywordItem {
+  tag: string;
+  count: number;
+}
+
+interface ReadingKeywordsData {
+  keywords: KeywordItem[];
+  analyzed: number;
+}
 
 interface UserLibraryResponse {
   toReadBooks: BookDto[];
@@ -28,6 +39,13 @@ export default function MyLibraryScreen() {
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [errorLibrary, setErrorLibrary] = useState<string | null>(null);
 
+  const [readingKeywords, setReadingKeywords] = useState<ReadingKeywordsData | null>(null);
+
+  const keywordAnimValues = useMemo(
+    () => Array.from({ length: readingKeywords?.keywords.length ?? 0 }, () => new Animated.Value(0)),
+    [readingKeywords]
+  );
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalBooks, setModalBooks] = useState<BookDto[]>([]);
@@ -36,6 +54,7 @@ export default function MyLibraryScreen() {
 
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getMyLibraryScreenStyles(colorScheme);
+  const c = Colors[colorScheme];
   const limitedNotifications = notifications.slice(0, 3);
   const hasUnreadNotifications = unreadCount > 0;
 
@@ -49,11 +68,18 @@ export default function MyLibraryScreen() {
         }
         setLoadingLibrary(true);
         try {
-          const libraryResponse = await bookApi.getUserLibrary();
+          const [libraryResponse, reviewsResponse, keywordsResponse] = await Promise.all([
+            bookApi.getUserLibrary(),
+            reviewApi.getMyReviews(),
+            userApi.getReadingKeywords().catch(() => null),
+          ]);
           setUserLibrary(libraryResponse.data);
-
-          const reviewsResponse = await reviewApi.getMyReviews();
           setMyReviews(reviewsResponse.data.data || []);
+
+          if (keywordsResponse) {
+            const data = keywordsResponse.data?.data ?? keywordsResponse.data;
+            setReadingKeywords(data);
+          }
         } catch (error: any) {
           console.error('Failed to fetch user library or reviews:', error);
           setErrorLibrary(error.message || '내 서재 및 리뷰를 불러오는데 실패했습니다.');
@@ -64,6 +90,22 @@ export default function MyLibraryScreen() {
       fetchUserLibraryAndReviews();
     }, [isAuthenticated])
   );
+
+  useEffect(() => {
+    if (!readingKeywords || readingKeywords.keywords.length === 0) return;
+    keywordAnimValues.forEach((a) => a.setValue(0));
+    Animated.stagger(
+      90,
+      keywordAnimValues.map((anim) =>
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 480,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.cubic),
+        })
+      )
+    ).start();
+  }, [readingKeywords, keywordAnimValues]);
 
   const handleLogout = () => {
     Alert.alert('로그아웃', '정말로 로그아웃 하시겠습니까?', [
@@ -186,6 +228,81 @@ export default function MyLibraryScreen() {
               </React.Fragment>
             ))}
           </View>
+
+          {/* ── Reading Keywords ── */}
+          {readingKeywords && (readingKeywords.keywords.length > 0 || readingKeywords.analyzed > 0) && (
+            <View style={{ paddingHorizontal: 22, paddingTop: 28, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: c.line }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
+                <Text style={{ fontSize: 20, fontFamily: 'NotoSerifKR-Regular', color: c.text, letterSpacing: -0.3 }}>
+                  나의 독서 키워드
+                </Text>
+                {readingKeywords.analyzed > 0 && (
+                  <Text style={{ fontSize: 10, fontFamily: 'Pretendard-SemiBold', color: c.inkFaint, letterSpacing: 0.15, textTransform: 'uppercase' }}>
+                    {readingKeywords.analyzed}권 분석
+                  </Text>
+                )}
+              </View>
+              <View style={{ height: 2, backgroundColor: c.text, marginBottom: 20 }} />
+              {readingKeywords.keywords.length === 0 ? (
+                <Text style={{ fontSize: 13, fontFamily: 'NotoSerifKR-Regular', color: c.inkSoft, fontStyle: 'italic' }}>
+                  독서 활동이 쌓이면 키워드가 생성돼요
+                </Text>
+              ) : (() => {
+                  // 각 단어의 절대 위치·회전·크기 — 12개 이하에서 겹치지 않도록 설계
+                  const POSITIONS = [
+                    { left: '30%', top: 78,  rotate: '0deg'   , size: 28, color: c.text     }, // rank 1
+                    { left: '55%', top: 10,  rotate: '13deg'  , size: 19, color: c.inkSoft  }, // rank 2
+                    { left: '3%',  top: 22,  rotate: '-14deg' , size: 18, color: c.inkSoft  }, // rank 3
+                    { left: '5%',  top: 118, rotate: '-9deg'  , size: 16, color: c.inkFaint }, // rank 4
+                    { left: '60%', top: 115, rotate: '11deg'  , size: 15, color: c.inkFaint }, // rank 5
+                    { left: '75%', top: 58,  rotate: '-13deg' , size: 13, color: c.inkFaint }, // rank 6
+                    { left: '35%', top: 172, rotate: '6deg'   , size: 13, color: c.inkFaint }, // rank 7
+                    { left: '2%',  top: 168, rotate: '-5deg'  , size: 12, color: c.inkFaint }, // rank 8
+                    { left: '65%', top: 170, rotate: '9deg'   , size: 11, color: c.inkFaint }, // rank 9
+                    { left: '73%', top: 8,   rotate: '-10deg' , size: 11, color: c.inkFaint }, // rank 10
+                    { left: '22%', top: 4,   rotate: '4deg'   , size: 11, color: c.inkFaint }, // rank 11
+                    { left: '42%', top: 198, rotate: '-4deg'  , size: 10, color: c.inkFaint }, // rank 12
+                  ];
+
+                  return (
+                    <View style={{ height: 220, marginTop: 4 }}>
+                      {readingKeywords.keywords.map((item, index) => {
+                        const pos  = POSITIONS[index];
+                        const anim = keywordAnimValues[index];
+                        if (!pos) return null;
+
+                        const opacity = anim
+                          ? anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] })
+                          : 1;
+                        const scale = anim
+                          ? anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] })
+                          : 1;
+
+                        return (
+                          <Animated.Text
+                            key={item.tag}
+                            style={{
+                              position: 'absolute',
+                              left: pos.left,
+                              top: pos.top,
+                              opacity,
+                              transform: [{ scale }, { rotate: pos.rotate }],
+                              fontSize: pos.size,
+                              fontFamily: 'NotoSerifKR-Regular',
+                              color: pos.color,
+                              letterSpacing: index === 0 ? -0.5 : -0.2,
+                            }}
+                          >
+                            {item.tag}
+                          </Animated.Text>
+                        );
+                      })}
+                    </View>
+                  );
+                })()
+              }
+            </View>
+          )}
 
           {/* ── Reviews Summary ── */}
           <TouchableOpacity

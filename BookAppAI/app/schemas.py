@@ -22,3 +22,7 @@ class UserBookEntry(BaseModel):
 class ContentRecommendRequest(BaseModel):
     user_books: List[UserBookEntry]
     limit: int = 10
+
+class ReadingTagsRequest(BaseModel):
+    isbns: List[str]
+    limit: int = 7

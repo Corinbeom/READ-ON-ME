@@ -1,13 +1,14 @@
 package bookapp.bookappback.user.controller;
 
+import bookapp.bookappback.ai.service.ReadingKeywordService;
 import bookapp.bookappback.common.dto.ApiResponse;
+import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.security.dto.ChangePasswordRequest;
 import bookapp.bookappback.security.dto.SignInRequest;
 import bookapp.bookappback.security.dto.SignUpRequest;
 import bookapp.bookappback.security.dto.TokenResponse;
 import bookapp.bookappback.user.dto.UpdateProfileRequest;
 import bookapp.bookappback.user.dto.UserResponse;
-import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -19,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/users")
 @Tag(name = "User", description = "사용자 관리 API")
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+    private final ReadingKeywordService readingKeywordService;
 
     @PostMapping("/signup")
     @Operation(summary = "회원가입", description = "새로운 사용자를 등록합니다.")
@@ -52,8 +56,8 @@ public class UserController {
     @GetMapping("/profile")
     @Operation(summary = "프로필 조회", description = "현재 로그인한 사용자의 프로필 정보를 조회합니다.")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ApiResponse<UserResponse>> getProfile(@AuthenticationPrincipal User user) {
-        UserResponse userResponse = userService.getUserProfile(user.getId());
+    public ResponseEntity<ApiResponse<UserResponse>> getProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        UserResponse userResponse = userService.getUserProfile(userDetails.getUser().getId());
         return ResponseEntity.ok(new ApiResponse<>(true, "프로필 조회 성공", userResponse));
     }
 
@@ -61,10 +65,10 @@ public class UserController {
     @Operation(summary = "프로필 수정", description = "현재 로그인한 사용자의 프로필 정보를 수정합니다.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<Void>> updateProfile(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
             @Valid @RequestBody UpdateProfileRequest request
     ) {
-        userService.updateUserProfile(user.getId(), request);
+        userService.updateUserProfile(userDetails.getUser().getId(), request);
         return ResponseEntity.ok(new ApiResponse<>(true, "프로필이 성공적으로 수정되었습니다."));
     }
 
@@ -72,10 +76,18 @@ public class UserController {
     @Operation(summary = "비밀번호 변경", description = "현재 로그인한 사용자의 비밀번호를 변경합니다.")
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<Void>> changePassword(
-            @AuthenticationPrincipal User user,
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
             @Valid @RequestBody ChangePasswordRequest request
     ) {
-        userService.changePassword(user.getId(), request);
+        userService.changePassword(userDetails.getUser().getId(), request);
         return ResponseEntity.ok(new ApiResponse<>(true, "비밀번호가 성공적으로 변경되었습니다."));
+    }
+
+    @GetMapping("/reading-keywords")
+    @Operation(summary = "독서 키워드 조회", description = "사용자의 서재(완독/읽는중) 책들에서 독서 키워드를 집계합니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getReadingKeywords(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+        Map<String, Object> result = readingKeywordService.getReadingKeywords(userDetails.getUser().getId());
+        return ResponseEntity.ok(new ApiResponse<>(true, "독서 키워드 조회 성공", result));
     }
 }

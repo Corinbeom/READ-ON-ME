@@ -1,8 +1,11 @@
+from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
+from app.models.book_corpus import BookCorpus
 from app.services import book_ai_service
-from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest
+from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest
 
 router = APIRouter()
 
@@ -37,6 +40,35 @@ async def ai_search(request: AiSearchRequest, db: AsyncSession = Depends(get_db)
     """
     if not request.query:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
-    
+
     results = await book_ai_service.search_by_natural_language(request.query, db)
     return results
+
+
+@router.post("/api/user/reading-tags")
+async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Aggregates tags from user's book corpus entries and returns top N keywords.
+    """
+    if not request.isbns:
+        return {"keywords": [], "analyzed": 0}
+
+    result = await db.execute(
+        select(BookCorpus.tags).where(BookCorpus.isbn.in_(request.isbns))
+    )
+    rows = result.scalars().all()
+    analyzed = len(rows)
+
+    all_tags: list[str] = []
+    for tags in rows:
+        if isinstance(tags, list):
+            all_tags.extend(t for t in tags if isinstance(t, str) and t)
+
+    if not all_tags:
+        return {"keywords": [], "analyzed": analyzed}
+
+    counter = Counter(all_tags)
+    top_tags = counter.most_common(request.limit)
+    keywords = [{"tag": tag, "count": count} for tag, count in top_tags]
+
+    return {"keywords": keywords, "analyzed": analyzed}
