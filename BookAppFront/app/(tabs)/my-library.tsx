@@ -206,11 +206,11 @@ export default function MyLibraryScreen() {
               {unreadCount > 0 && (
                 <Text style={styles.notificationBadge}>{unreadCount}개 새 알림</Text>
               )}
-              <TouchableOpacity onPress={handleMarkAllNotifications} disabled={!hasUnreadNotifications}>
-                <Text style={[styles.notificationMarkAll, !hasUnreadNotifications && styles.notificationMarkAllDisabled]}>
-                  모두 읽음
-                </Text>
-              </TouchableOpacity>
+              {hasUnreadNotifications && (
+                <TouchableOpacity onPress={handleMarkAllNotifications}>
+                  <Text style={styles.notificationMarkAll}>모두 읽음</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
           <View style={styles.sectionDividerTop} />

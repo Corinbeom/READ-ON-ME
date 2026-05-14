@@ -31,7 +31,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── Masthead ──────────────────────────────────────────
     masthead: {
-      paddingTop: Platform.OS === 'ios' ? 16 : 20,
+      paddingTop: 4,
       paddingHorizontal: 22,
       paddingBottom: 12,
       backgroundColor: c.background,

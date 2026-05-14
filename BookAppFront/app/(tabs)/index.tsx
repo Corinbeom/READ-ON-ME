@@ -7,6 +7,7 @@ import {
   View,
   Text,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
@@ -115,9 +116,11 @@ export default function HomeScreen() {
               style={styles.notificationBellButton}
               accessibilityLabel="알림 확인"
             >
-              <Text style={{ fontSize: 18, color: c.text }}>
-                {hasUnreadNotifications ? '🔔' : '🔕'}
-              </Text>
+              <Ionicons
+                name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
+                size={22}
+                color={c.text}
+              />
               {hasUnreadNotifications && <View style={styles.notificationDot} />}
             </TouchableOpacity>
           ) : (
