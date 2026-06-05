@@ -47,8 +47,8 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 성공 - 200 OK")
     void signUp_success() throws Exception {
-        SignUpRequest request = new SignUpRequest("test@example.com", "Password1!", "nickname", null);
-        UserResponse response = new UserResponse(1L, request.getEmail(), request.getNickname(), null, "2024-01-01T00:00:00");
+        SignUpRequest request = new SignUpRequest("test@example.com", "Password1!", "nickname", null, null);
+        UserResponse response = new UserResponse(1L, request.getEmail(), request.getNickname(), null, null, "2024-01-01T00:00:00");
         when(userService.signUp(any(SignUpRequest.class))).thenReturn(response);
 
         mockMvc.perform(post("/api/users/signup")
@@ -62,7 +62,7 @@ class UserControllerTest {
     @Test
     @DisplayName("회원가입 실패 - 이메일 중복")
     void signUp_duplicateEmail() throws Exception {
-        SignUpRequest request = new SignUpRequest("dup@example.com", "Password1!", "nickname", null);
+        SignUpRequest request = new SignUpRequest("dup@example.com", "Password1!", "nickname", null, null);
         Mockito.doThrow(new UserExceptions.EmailDuplicateException(request.getEmail()))
                 .when(userService).signUp(any(SignUpRequest.class));
 

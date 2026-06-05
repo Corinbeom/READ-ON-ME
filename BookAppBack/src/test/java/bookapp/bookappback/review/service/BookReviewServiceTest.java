@@ -46,7 +46,7 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 작성 성공")
     void createReview_success() {
-        User user = new User("test@example.com", "encoded", "nickname", null);
+        User user = new User("test@example.com", "encoded", "nickname", null, null);
         user.setId(1L);
         Book book = new Book();
         book.setId(1L);
@@ -79,7 +79,7 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 작성 실패 - 책 없음")
     void createReview_bookNotFound() {
-        User user = new User("test@example.com", "encoded", "nickname", null);
+        User user = new User("test@example.com", "encoded", "nickname", null, null);
         user.setId(1L);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(bookRepository.findById(1L)).thenReturn(Optional.empty());
@@ -109,9 +109,9 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 수정 실패 - 권한 없음")
     void updateReview_accessDenied() {
-        User user1 = new User("user1@example.com", "encoded", "nick1", null);
+        User user1 = new User("user1@example.com", "encoded", "nick1", null, null);
         user1.setId(1L);
-        User user2 = new User("user2@example.com", "encoded", "nick2", null);
+        User user2 = new User("user2@example.com", "encoded", "nick2", null, null);
         user2.setId(2L);
 
         BookReview review = new BookReview();
@@ -131,7 +131,7 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 삭제 성공")
     void deleteReview_success() {
-        User user = new User("user@example.com", "encoded", "nickname", null);
+        User user = new User("user@example.com", "encoded", "nickname", null, null);
         user.setId(1L);
 
         BookReview review = new BookReview();
@@ -147,9 +147,9 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 삭제 실패 - 권한 없음")
     void deleteReview_accessDenied() {
-        User owner = new User("owner@example.com", "encoded", "owner", null);
+        User owner = new User("owner@example.com", "encoded", "owner", null, null);
         owner.setId(1L);
-        User otherUser = new User("other@example.com", "encoded", "other", null);
+        User otherUser = new User("other@example.com", "encoded", "other", null, null);
         otherUser.setId(2L);
 
         BookReview review = new BookReview();
@@ -165,9 +165,9 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 좋아요 토글 - 좋아요 추가")
     void toggleReviewLike_add() {
-        User liker = new User("liker@example.com", "encoded", "liker", null);
+        User liker = new User("liker@example.com", "encoded", "liker", null, null);
         liker.setId(1L);
-        User owner = new User("owner@example.com", "encoded", "owner", null);
+        User owner = new User("owner@example.com", "encoded", "owner", null, null);
         owner.setId(2L);
         BookReview review = new BookReview();
         review.setId(99L);
@@ -181,8 +181,9 @@ class BookReviewServiceTest {
 
         bookReviewService.toggleReviewLike(99L, 1L);
 
-        assertEquals(1, review.getLikeCount());
-        assertEquals(1, review.getLikes().size());
+        // 서비스는 DB 레벨 원자적 업데이트를 사용하므로 인메모리 객체 대신 repository 호출을 검증
+        verify(reviewLikeRepository, times(1)).save(any(ReviewLike.class));
+        verify(bookReviewRepository, times(1)).incrementLikeCount(99L);
         verify(reviewLikeRepository, never()).delete(any());
         verify(notificationService, times(1)).notifyReviewLiked(review, liker);
     }
@@ -190,9 +191,9 @@ class BookReviewServiceTest {
     @Test
     @DisplayName("리뷰 좋아요 토글 - 좋아요 제거")
     void toggleReviewLike_remove() {
-        User liker = new User("liker@example.com", "encoded", "liker", null);
+        User liker = new User("liker@example.com", "encoded", "liker", null, null);
         liker.setId(1L);
-        User owner = new User("owner@example.com", "encoded", "owner", null);
+        User owner = new User("owner@example.com", "encoded", "owner", null, null);
         owner.setId(2L);
         BookReview review = new BookReview();
         review.setId(99L);
@@ -207,9 +208,8 @@ class BookReviewServiceTest {
 
         bookReviewService.toggleReviewLike(99L, 1L);
 
-        assertEquals(0, review.getLikeCount());
-        assertTrue(review.getLikes().isEmpty());
         verify(reviewLikeRepository, times(1)).delete(like);
+        verify(bookReviewRepository, times(1)).decrementLikeCount(99L);
         verify(notificationService, never()).notifyReviewLiked(any(), any());
     }
 

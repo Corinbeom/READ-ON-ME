@@ -42,7 +42,7 @@ class UserServiceTest {
     @Test
     @DisplayName("회원가입 성공 - 예외 없음")
     void signUp_success() {
-        SignUpRequest request = new SignUpRequest("test@example.com", "password123", "nickname", null);
+        SignUpRequest request = new SignUpRequest("test@example.com", "password123", "nickname", null, null);
 
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encodedPassword");
@@ -56,7 +56,7 @@ class UserServiceTest {
     @Test
     @DisplayName("회원가입 실패 - 이메일 중복 예외 발생")
     void signUp_emailDuplicateException() {
-        SignUpRequest request = new SignUpRequest("test@example.com", "password123", "nickname", null);
+        SignUpRequest request = new SignUpRequest("test@example.com", "password123", "nickname", null, null);
         when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
 
         assertThrows(UserExceptions.EmailDuplicateException.class, () -> userService.signUp(request));
@@ -77,7 +77,7 @@ class UserServiceTest {
     @DisplayName("로그인 실패 - 비밀번호 불일치")
     void signIn_invalidPassword() {
         SignInRequest request = new SignInRequest("test@example.com", "wrongpass");
-        User user = new User("test@example.com", "encodedPassword", "nickname", null);
+        User user = new User("test@example.com", "encodedPassword", "nickname", null, null);
 
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(false);
@@ -90,7 +90,7 @@ class UserServiceTest {
     @DisplayName("로그인 성공 - JWT 토큰 생성")
     void signIn_success() {
         SignInRequest request = new SignInRequest("test@example.com", "password");
-        User user = new User("test@example.com", "encodedPassword", "nickname", null);
+        User user = new User("test@example.com", "encodedPassword", "nickname", null, null);
 
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);

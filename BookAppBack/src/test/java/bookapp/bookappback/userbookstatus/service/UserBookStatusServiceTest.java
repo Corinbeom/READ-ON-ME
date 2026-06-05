@@ -41,7 +41,7 @@ class UserBookStatusServiceTest {
     @Test
     @DisplayName("사용자 서재 상태 업데이트 성공")
     void updateStatus_success() {
-        User user = new User("reader@test.com", "encoded", "reader", null);
+        User user = new User("reader@test.com", "encoded", "reader", null, null);
         user.setId(1L);
         Book book = new Book();
         book.setId(100L);
@@ -65,7 +65,7 @@ class UserBookStatusServiceTest {
     @Test
     @DisplayName("사용자 서재 조회 - 상태별 분류")
     void getUserLibrary_success() {
-        User user = new User("reader@test.com", "encoded", "reader", null);
+        User user = new User("reader@test.com", "encoded", "reader", null, null);
         user.setId(1L);
         when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
 
@@ -90,9 +90,9 @@ class UserBookStatusServiceTest {
     @Test
     @DisplayName("모든 사용자 서재 집계 - READING/COMPLETED만 포함")
     void getAllUserLibraries_success() {
-        User user1 = new User("u1@test.com", "encoded", "u1", null);
+        User user1 = new User("u1@test.com", "encoded", "u1", null, null);
         user1.setId(1L);
-        User user2 = new User("u2@test.com", "encoded", "u2", null);
+        User user2 = new User("u2@test.com", "encoded", "u2", null, null);
         user2.setId(2L);
 
         UserBookStatus s1 = buildStatus(user1, buildBook(1L, "책1"), ReadingStatus.READING);
@@ -121,7 +121,7 @@ class UserBookStatusServiceTest {
     @Test
     @DisplayName("도서 미존재 시 예외 발생")
     void updateStatus_bookNotFound() {
-        User user = new User("reader@test.com", "encoded", "reader", null);
+        User user = new User("reader@test.com", "encoded", "reader", null, null);
         user.setId(1L);
         when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
         when(bookRepository.findById(100L)).thenReturn(Optional.empty());
