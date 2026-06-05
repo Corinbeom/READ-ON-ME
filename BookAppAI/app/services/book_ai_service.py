@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from typing import List, Optional, Union
@@ -8,6 +9,10 @@ from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import text
+
+import app.database as _db
+
+logger = logging.getLogger(__name__)
 
 from app.models.book_corpus import BookCorpus
 from app.schemas import SingleBookRequest
@@ -33,10 +38,8 @@ import torch
 
 
 # --- Configuration ---
-KAKAO_API_KEY = os.getenv("KAKAO_API_KEY")
-
-if not KAKAO_API_KEY:
-    raise ValueError("KAKAO_API_KEY must be set in .env file")
+# prod 환경 검증은 lifespan의 validate_prod_config()가 담당
+KAKAO_API_KEY = os.getenv("KAKAO_API_KEY", "")
 
 KAKAO_API_URL = "https://dapi.kakao.com/v3/search/book"
 SIMILARITY_THRESHOLD = 0.65
@@ -195,6 +198,9 @@ async def search_kakao_books(keyword: str, page: int):
             response = await client.get(KAKAO_API_URL, headers=headers, params=params)
             response.raise_for_status()
             return response.json()["documents"]
+        except httpx.HTTPStatusError as e:
+            logger.warning("Kakao API HTTP error [keyword=%s, page=%s]: %s", keyword, page, e)
+            return []
         except httpx.TimeoutException as e:
             print(f"Kakao API timeout [keyword={keyword}, page={page}]: {e}")
             return []
@@ -298,8 +304,13 @@ async def check_if_similar_in_corpus(db: AsyncSession, title: str, authors: str)
 # --- Main Orchestrators & Search ---
 
 
-async def process_keywords(keywords: list[str], db: AsyncSession):
+async def process_keywords(keywords: list[str]):
     """The main function to orchestrate the data building process."""
+    async with _db.async_session() as db:
+        await _process_keywords_with_db(keywords, db)
+
+
+async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
     total_saved_count = 0
     total_similarity = 0
     processed_books_count = 0
@@ -412,8 +423,13 @@ async def process_keywords(keywords: list[str], db: AsyncSession):
     }
 
 
-async def embed_single_book(book_data: SingleBookRequest, db: AsyncSession):
+async def embed_single_book(book_data: SingleBookRequest):
     """Embeds a single book and saves it to the corpus if it doesn't exist."""
+    async with _db.async_session() as db:
+        await _embed_single_book_with_db(book_data, db)
+
+
+async def _embed_single_book_with_db(book_data: SingleBookRequest, db: AsyncSession):
     print(f"Processing single book with ISBN: {book_data.isbn}")
     if await check_if_isbn_exists(db, book_data.isbn):
         print(f"Book with ISBN {book_data.isbn} already exists in corpus. Skipping.")

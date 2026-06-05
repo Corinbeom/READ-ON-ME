@@ -12,24 +12,26 @@ router = APIRouter()
 # --- Endpoints ---
 
 @router.post("/api/books/fetch-and-filter")
-async def fetch_and_filter_books(request: KeywordRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def fetch_and_filter_books(request: KeywordRequest, background_tasks: BackgroundTasks):
     """
     Triggers the AI book data building process in the background.
     """
     if not request.keywords:
         raise HTTPException(status_code=400, detail="Keywords list cannot be empty.")
 
-    background_tasks.add_task(book_ai_service.process_keywords, request.keywords, db)
+    # 백그라운드 태스크는 자체 DB 세션을 열어야 한다 — request-scoped 세션을 넘기면
+    # FastAPI가 의존성을 teardown한 뒤에 세션이 닫혀 InvalidRequestError가 발생한다.
+    background_tasks.add_task(book_ai_service.process_keywords, request.keywords)
 
     return {"message": "AI book data building process started in the background."}
 
 
 @router.post("/api/books/embed-single")
-async def embed_single_book(request: SingleBookRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db)):
+async def embed_single_book(request: SingleBookRequest, background_tasks: BackgroundTasks):
     """
     Embeds a single book and adds it to the AI corpus in the background.
     """
-    background_tasks.add_task(book_ai_service.embed_single_book, request, db)
+    background_tasks.add_task(book_ai_service.embed_single_book, request)
     return {"message": "Single book embedding process started in the background."}
 
 

@@ -88,6 +88,15 @@ class ProdSecretValidatorTest {
     }
 
     @Test
+    void failsWhenDbPasswordIsTooShort() {
+        ReflectionTestUtils.setField(validator, "dbPassword", "short");
+        assertThatThrownBy(validator::validate)
+            .isInstanceOf(IllegalStateException.class)
+            .hasMessageContaining("DB_PASSWORD")
+            .hasMessageContaining("짧습니다");
+    }
+
+    @Test
     void doesNotFailOnLocalhostCorsUrl() {
         // CORS_URL localhost → 경고만, 시작 실패 아님
         ReflectionTestUtils.setField(validator, "corsUrl", "http://localhost:8081");

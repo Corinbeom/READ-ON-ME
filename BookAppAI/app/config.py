@@ -3,7 +3,10 @@ import os
 
 logger = logging.getLogger(__name__)
 
-_FORBIDDEN = {"", "dev-internal-token", "change-me"}
+_FORBIDDEN = {"", "dev-internal-token", "change-me", "readonme"}
+
+# 'production', 'prd' 등 운영 환경 관용 표기를 모두 prod로 취급
+_PROD_ENV_VALUES = {"prod", "production", "prd"}
 
 _REQUIRED_KEYS = [
     "GEMINI_API_KEY",
@@ -16,7 +19,7 @@ _REQUIRED_KEYS = [
 
 def validate_prod_config() -> None:
     """prod 환경에서 필수 env가 누락되거나 개발용 기본값이면 즉시 실패."""
-    if os.getenv("APP_ENV") != "prod":
+    if os.getenv("APP_ENV", "").lower() not in _PROD_ENV_VALUES:
         return
 
     errors = []
@@ -28,7 +31,8 @@ def validate_prod_config() -> None:
             errors.append(f"  - {key}: {reason}")
 
     spring_url = os.getenv("SPRING_BOOT_URL", "")
-    if "localhost" in spring_url and "SPRING_BOOT_URL" not in [e.split(":")[0].strip("  - ") for e in errors]:
+    spring_url_in_errors = any("SPRING_BOOT_URL" in e for e in errors)
+    if "localhost" in spring_url and not spring_url_in_errors:
         logger.warning("[운영 설정 경고] SPRING_BOOT_URL 에 localhost 포함: '%s' — 운영 URL로 교체를 권장합니다.", spring_url)
 
     if errors:

@@ -43,6 +43,15 @@ import AiChatModal from '@/components/AiChatModal';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
+const AI_PROMPTS = [
+  '스릴러 소설 추천해줘',
+  '잠 못 드는 밤에 읽을 책',
+  '나 요즘 좀 지쳐있어. 위로가 되는 책',
+  '일본 소설 입문으로 뭐가 좋아?',
+  '짧은 에세이 하나 추천해줘',
+  '성장하는 주인공 나오는 소설',
+];
+
 export default function HomeScreen() {
   const [naruBooks, setNaruBooks] = useState<Book[]>([]);
   const [naruLoading, setNaruLoading] = useState(false);
@@ -51,6 +60,12 @@ export default function HomeScreen() {
   const [recommendationType, setRecommendationType] = useState<string>('personalized');
   const [modalVisible, setModalVisible] = useState(false);
   const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false);
+
+  // ── 타이핑 애니메이션 ──────────────────────────────────
+  const [typedText, setTypedText]     = useState('');
+  const [promptIdx, setPromptIdx]     = useState(0);
+  const [isTyping, setIsTyping]       = useState(true);
+  const [cursorOn, setCursorOn]       = useState(true);
 
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { unreadCount } = useSelector((state: RootState) => state.notifications);
@@ -99,6 +114,35 @@ export default function HomeScreen() {
 
   useEffect(() => { fetchNaruBooks(); }, [isAuthenticated]);
   useEffect(() => { fetchRecommendations(); }, [isAuthenticated, user]);
+
+  // 타이핑 → 대기 → 지우기 → 다음 프롬프트 사이클
+  useEffect(() => {
+    const current = AI_PROMPTS[promptIdx];
+    let t: ReturnType<typeof setTimeout>;
+
+    if (isTyping) {
+      if (typedText.length < current.length) {
+        t = setTimeout(() => setTypedText(current.slice(0, typedText.length + 1)), 75);
+      } else {
+        t = setTimeout(() => setIsTyping(false), 2000); // 완성 후 대기
+      }
+    } else {
+      if (typedText.length > 0) {
+        t = setTimeout(() => setTypedText(t => t.slice(0, -1)), 35); // 지우기 (더 빠르게)
+      } else {
+        setPromptIdx(i => (i + 1) % AI_PROMPTS.length);
+        setIsTyping(true);
+      }
+    }
+
+    return () => clearTimeout(t);
+  }, [typedText, isTyping, promptIdx]);
+
+  // 커서 깜빡임
+  useEffect(() => {
+    const id = setInterval(() => setCursorOn(v => !v), 530);
+    return () => clearInterval(id);
+  }, []);
 
   const now = new Date();
   const issueLabel = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -157,7 +201,9 @@ export default function HomeScreen() {
         <Text style={styles.aiLabel}>AI 사서</Text>
         <Text style={styles.aiQuote}>"</Text>
         <Text style={styles.aiPromptText}>
-          어떤 책을 찾고 계신가요?{'\n'}스릴러, 자기계발, 감동적인 소설 …
+          어떤 책을 찾고 계신가요?{'\n'}
+          <Text>{typedText}</Text>
+          <Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
         </Text>
         <Text style={styles.aiSubText}>탭하여 AI에게 추천받기 →</Text>
       </TouchableOpacity>

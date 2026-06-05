@@ -63,3 +63,26 @@ def test_reports_all_errors_at_once(monkeypatch):
     assert "GEMINI_API_KEY" in msg
     assert "KAKAO_API_KEY" in msg
     assert "INTERNAL_API_TOKEN" in msg
+
+
+def test_production_env_value_triggers_validation(monkeypatch):
+    """APP_ENV=production 도 prod와 동일하게 검증을 실행해야 한다."""
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("GEMINI_API_KEY", "")
+    with pytest.raises(RuntimeError, match="GEMINI_API_KEY"):
+        validate_prod_config()
+
+
+def test_prd_env_value_triggers_validation(monkeypatch):
+    """APP_ENV=prd 도 prod와 동일하게 검증을 실행해야 한다."""
+    monkeypatch.setenv("APP_ENV", "prd")
+    monkeypatch.setenv("KAKAO_API_KEY", "")
+    with pytest.raises(RuntimeError, match="KAKAO_API_KEY"):
+        validate_prod_config()
+
+
+def test_fails_when_value_is_readonme(monkeypatch):
+    """'readonme' 는 FORBIDDEN 값이다."""
+    monkeypatch.setenv("INTERNAL_API_TOKEN", "readonme")
+    with pytest.raises(RuntimeError, match="INTERNAL_API_TOKEN"):
+        validate_prod_config()

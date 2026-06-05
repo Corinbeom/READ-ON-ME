@@ -18,21 +18,22 @@ public class ProdSecretValidator {
     private static final Logger log = LoggerFactory.getLogger(ProdSecretValidator.class);
     private static final Set<String> FORBIDDEN = Set.of("change-me", "dev-internal-token", "readonme");
     private static final int MIN_SECRET_LEN = 32;
+    private static final int MIN_DB_PASSWORD_LEN = 16;
 
     @Value("${jwt.secret:}")
-    String jwtSecret;
+    private String jwtSecret;
 
     @Value("${internal.api.token:}")
-    String internalApiToken;
+    private String internalApiToken;
 
     @Value("${spring.datasource.password:}")
-    String dbPassword;
+    private String dbPassword;
 
     @Value("${cors.allowed.origins:}")
-    String corsUrl;
+    private String corsUrl;
 
     @Value("${ai.base-url:}")
-    String aiBaseUrl;
+    private String aiBaseUrl;
 
     @PostConstruct
     public void validate() {
@@ -69,6 +70,8 @@ public class ProdSecretValidator {
             errors.add("  - DB_PASSWORD: 값이 비어 있습니다.");
         } else if (FORBIDDEN.contains(dbPassword)) {
             errors.add("  - DB_PASSWORD: 개발용 기본값 사용 불가 ('" + dbPassword + "')");
+        } else if (dbPassword.length() < MIN_DB_PASSWORD_LEN) {
+            errors.add("  - DB_PASSWORD: 너무 짧습니다. 최소 " + MIN_DB_PASSWORD_LEN + "자 이상 필요 (현재 " + dbPassword.length() + "자)");
         }
     }
 

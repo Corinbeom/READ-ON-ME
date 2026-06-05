@@ -8,14 +8,16 @@ from typing import List
 from contextlib import asynccontextmanager
 
 from app.routers import data_builder, recommendation
-from app.database import engine, Base
+import app.database as _db
+from app.database import Base
 from app.config import validate_prod_config
 from .recommendation_service import get_recommendations
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    validate_prod_config()
-    async with engine.begin() as conn:
+    validate_prod_config()  # 먼저 검증 — DATABASE_URL 포함
+    _db.init_db()           # 검증 통과 후 엔진 생성
+    async with _db.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
 
