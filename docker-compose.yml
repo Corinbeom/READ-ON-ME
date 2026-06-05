@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-readonme}
       POSTGRES_USER: ${POSTGRES_USER:-readonme}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-readonme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -30,7 +30,7 @@ services:
       # Spring JDBC
       DB_URL: ${SPRING_DB_URL:-jdbc:postgresql://postgres:5432/readonme}
       DB_USERNAME: ${POSTGRES_USER:-readonme}
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-readonme}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
 
       # Spring Redis
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
@@ -39,13 +39,13 @@ services:
       AI_BASE_URL: ${AI_BASE_URL:-http://ai:8000}
 
       # 내부 통신 토큰(Spring <-> AI)
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
 
       # 외부 API / 보안
       KAKAO_API_KEY: ${KAKAO_API_KEY}
       KAKAO_API_URL: ${KAKAO_API_URL:-https://dapi.kakao.com/v3/search/book}
-      CORS_URL: ${CORS_URL:-http://localhost:8081}
-      JWT_SECRET: ${JWT_SECRET:-change-me}
+      CORS_URL: ${CORS_URL}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRED: ${JWT_EXPIRED:-3600000}
 
       # JVM 메모리 튜닝(중요)
@@ -65,13 +65,14 @@ services:
       # 예: Gemini key, DB 접근 필요하면 Supabase 연결 등
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       # AI worker는 async SQLAlchemy DSN 사용
-      DATABASE_URL: ${AI_DATABASE_URL:-postgresql+asyncpg://readonme:readonme@postgres:5432/readonme}
+      DATABASE_URL: ${AI_DATABASE_URL}
       # AI 빌더는 카카오 API도 직접 호출함
       KAKAO_API_KEY: ${KAKAO_API_KEY}
       # AI -> Spring (협업필터링 입력)
       SPRING_BOOT_URL: ${SPRING_BOOT_URL:-http://backend:8080}
       # Spring 내부 API 호출 토큰
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      APP_ENV: ${APP_ENV:-prod}
       # 운영에서 SQL 로깅이 필요하면 true로
       SQL_ECHO: ${AI_SQL_ECHO:-false}
     ports:

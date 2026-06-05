@@ -9,10 +9,12 @@ from contextlib import asynccontextmanager
 
 from app.routers import data_builder, recommendation
 from app.database import engine, Base
+from app.config import validate_prod_config
 from .recommendation_service import get_recommendations
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    validate_prod_config()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
