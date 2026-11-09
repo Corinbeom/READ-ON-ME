@@ -12,16 +12,19 @@ import {
   Image,
   TouchableWithoutFeedback,
   Keyboard,
-  Alert,
   Dimensions,
   Animated,
+  AccessibilityInfo,
+  TextStyle,
+  ViewStyle,
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { api } from '../src/services/api';
+import { aiJobApi, AiSearchJob } from '../src/services/api';
 import customAlert from '../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
+import { isAxiosError } from 'axios';
 import { RootState } from '@/src/store';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -33,7 +36,7 @@ interface AiChatModalProps {
 
 interface ChatMessage {
   id: string;
-  type: 'user' | 'ai';
+  type: 'user' | 'ai' | 'status';
   text: string;
   results?: any[];
 }
@@ -44,112 +47,158 @@ const INITIAL_CHAT_MESSAGE: ChatMessage = {
   text: "안녕하세요! 어떤 책을 추천해 드릴까요?",
 };
 
-function TypingIndicator({ dotColor = '#888', borderColor = '#cccccc44', bgColor = 'transparent' }: { dotColor?: string; borderColor?: string; bgColor?: string }) {
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+function ShimmerStatusText({ text, style, containerStyle, active }: {
+  text: string;
+  style: TextStyle;
+  containerStyle: ViewStyle;
+  active: boolean;
+}) {
+  const sweep = useRef(new Animated.Value(-2)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const characters = Array.from(text);
 
   useEffect(() => {
-    const anim = (dot: Animated.Value, delay: number) =>
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(dot, { toValue: 1, duration: 280, useNativeDriver: true }),
-          Animated.timing(dot, { toValue: 0, duration: 280, useNativeDriver: true }),
-          Animated.delay(840 - delay),
-        ])
-      );
-    const a1 = anim(dot1, 0);
-    const a2 = anim(dot2, 180);
-    const a3 = anim(dot3, 360);
-    a1.start(); a2.start(); a3.start();
-    return () => { a1.stop(); a2.stop(); a3.stop(); };
-  }, [dot1, dot2, dot3]);
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
 
-  const dotStyle = (dot: Animated.Value) => ({
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginHorizontal: 3,
-    opacity: dot.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-    transform: [{ translateY: dot.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }) }],
-  });
+  useEffect(() => {
+    sweep.setValue(-2);
+    if (!active || reduceMotion) return;
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(sweep, {
+        toValue: characters.length + 2,
+        duration: 2200,
+        useNativeDriver: true,
+      }),
+      Animated.delay(700),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [active, reduceMotion, sweep, text, characters.length]);
 
   return (
-    <View style={[typingBubbleStyle, { borderColor, backgroundColor: bgColor }]}>
-      <Animated.View style={[{ backgroundColor: dotColor, borderRadius: 4 }, dotStyle(dot1)]} />
-      <Animated.View style={[{ backgroundColor: dotColor, borderRadius: 4 }, dotStyle(dot2)]} />
-      <Animated.View style={[{ backgroundColor: dotColor, borderRadius: 4 }, dotStyle(dot3)]} />
+    <View style={containerStyle} accessible accessibilityRole="text" accessibilityLabel={text}>
+      {characters.map((character, index) => (
+        <Animated.Text
+          key={index}
+          accessible={false}
+          style={[style, {
+            opacity: reduceMotion ? 0.6 : sweep.interpolate({
+              inputRange: [index - 2, index - 1, index, index + 1, index + 2],
+              outputRange: [0.42, 0.62, 0.98, 0.62, 0.42],
+              extrapolate: 'clamp',
+            }),
+          }]}
+        >
+          {character}
+        </Animated.Text>
+      ))}
     </View>
   );
 }
-
-const typingBubbleStyle: import('react-native').ViewStyle = {
-  alignSelf: 'flex-start',
-  flexDirection: 'row',
-  alignItems: 'center',
-  paddingHorizontal: 16,
-  paddingVertical: 14,
-  marginBottom: 10,
-  borderWidth: 1,
-};
 
 export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getStyles(colorScheme);
   const c = Colors[colorScheme];
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([INITIAL_CHAT_MESSAGE]);
+  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const [jobs, setJobs] = useState<AiSearchJob[]>([]);
   const [currentInput, setCurrentInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorText, setErrorText] = useState('');
+  const pendingSubmission = useRef<{ query: string; key: string } | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    setJobs([]);
+    pendingSubmission.current = null;
+  }, [user?.id]);
+
+  const chatHistory: ChatMessage[] = [INITIAL_CHAT_MESSAGE, ...[...jobs].reverse().flatMap((job): ChatMessage[] => [
+    { id: `${job.id}-user`, type: 'user', text: job.query },
+    {
+      id: `${job.id}-ai`, type: job.status === 'QUEUED' || job.status === 'RUNNING' ? 'status' : 'ai',
+      text: job.status === 'QUEUED' ? '요청을 받았어요. 순서를 기다리고 있어요.'
+        : job.status === 'RUNNING' ? 'AI 사서가 서재에서 책을 찾고 있어요.'
+        : job.status === 'FAILED' ? (job.error_code === 'INTERRUPTED'
+          ? '서버가 다시 시작되어 검색이 중단됐어요. 다시 요청해 주세요.'
+          : job.error_code === 'TIMEOUT' ? '검색 시간이 초과됐어요. 다시 요청해 주세요.'
+          : '책을 찾는 중 문제가 생겼어요. 다시 요청해 주세요.')
+        : job.results?.length ? '질문에 맞는 책을 찾아봤어요.' : '추천할 만한 책을 찾지 못했어요.',
+      results: job.status === 'SUCCEEDED' ? job.results ?? [] : undefined,
+    },
+  ])];
+
+  useEffect(() => {
+    if (!isVisible || !isAuthenticated) return;
+    let active = true;
+    aiJobApi.recent().then((response) => {
+      if (active) {
+        setJobs((previous) => {
+          const serverJobs = response.data.data;
+          const known = new Set(serverJobs.map((job) => job.id));
+          return [...serverJobs, ...previous.filter((job) => !known.has(job.id))];
+        });
+        setErrorText('');
+      }
+    }).catch(() => { if (active) setErrorText('최근 검색을 불러오지 못했어요. 잠시 후 다시 열어 주세요.'); });
+    return () => { active = false; };
+  }, [isVisible, isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    if (!isVisible || !isAuthenticated || !jobs.some((job) => job.status === 'QUEUED' || job.status === 'RUNNING')) return;
+    let active = true;
+    const timer = setInterval(() => {
+      aiJobApi.recent().then((response) => {
+        if (active) { setJobs(response.data.data); setErrorText(''); }
+      }).catch(() => { if (active) setErrorText('검색 상태를 확인하지 못했어요. 연결을 확인해 주세요.'); });
+    }, 3000);
+    return () => { active = false; clearInterval(timer); };
+  }, [isVisible, isAuthenticated, jobs]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 50);
     return () => clearTimeout(timer);
-  }, [chatHistory]);
+  }, [jobs]);
 
   const handleSendMessage = async () => {
     if (!isAuthenticated) {
       customAlert('알림', 'AI 추천을 사용하려면 로그인이 필요합니다.');
       return;
     }
-    if (!currentInput.trim()) return;
-
-    const userMessage: ChatMessage = { id: String(Date.now()), type: 'user', text: currentInput };
-    setChatHistory((prev) => [...prev, userMessage]);
-    setCurrentInput('');
-    setIsLoading(true);
+    const query = currentInput.trim();
+    if (!query || isSubmitting) return;
+    const submission = pendingSubmission.current?.query === query
+      ? pendingSubmission.current
+      : { query, key: `${Date.now()}-${Math.random().toString(36).slice(2)}` };
+    pendingSubmission.current = submission;
+    setIsSubmitting(true);
+    setErrorText('');
 
     try {
-      const response = await api.post('/api/ai/search', { query: userMessage.text });
-      const aiResponse: ChatMessage = {
-        id: String(Date.now() + 1),
-        type: 'ai',
-        text: response.data.length > 0 ? "질문에 맞는 책을 찾아봤어요." : "추천할 만한 책을 찾지 못했어요.",
-        results: response.data,
-      };
-      setChatHistory((prev) => [...prev, aiResponse]);
+      const response = await aiJobApi.submit(submission.query, submission.key);
+      setJobs((previous) => [response.data.data, ...previous.filter((job) => job.id !== response.data.data.id)]);
+      setCurrentInput('');
+      pendingSubmission.current = null;
     } catch (error) {
       console.error('AI search failed:', error);
-      customAlert('오류', 'AI 추천을 받는 중 오류가 발생했습니다.');
-      setChatHistory((prev) => [
-        ...prev,
-        { id: String(Date.now() + 1), type: 'ai', text: "추천을 가져오는 데 실패했어요." },
-      ]);
+      setErrorText(isAxiosError(error) && error.response?.status === 503
+        ? '지금은 대기 중인 요청이 많아요. 잠시 후 다시 보내 주세요.'
+        : '요청을 접수하지 못했어요. 잠시 후 다시 보내 주세요.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
-  };
-
-  const handleClearChat = () => {
-    Alert.alert('채팅 초기화', '채팅창을 초기화 하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '확인', style: 'destructive', onPress: () => setChatHistory([INITIAL_CHAT_MESSAGE]) },
-    ]);
   };
 
   const navigateToDetail = (isbn: string) => {
@@ -158,6 +207,9 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }): React.ReactElement => {
+    if (item.type === 'status') {
+      return <ShimmerStatusText text={item.text} style={styles.statusText} containerStyle={styles.statusRow} active={isVisible} />;
+    }
     const hasBooks = item.results && item.results.length > 0;
     return (
       <View style={[
@@ -212,9 +264,6 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>AI 사서</Text>
                 <View style={styles.headerActions}>
-                  <TouchableOpacity onPress={handleClearChat} style={styles.clearButton}>
-                    <Text style={styles.clearButtonText}>↺</Text>
-                  </TouchableOpacity>
                   <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                     <Text style={styles.closeButtonText}>×</Text>
                   </TouchableOpacity>
@@ -234,14 +283,9 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                         {renderMessage({ item })}
                       </React.Fragment>
                     ))}
-                    {isLoading && (
-                      <TypingIndicator
-                        dotColor={c.inkSoft}
-                        borderColor={c.line}
-                        bgColor={c.background}
-                      />
-                    )}
                   </ScrollView>
+
+                  {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
                   <View style={styles.inputContainer}>
                     <TextInput
@@ -252,9 +296,10 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                       onChangeText={setCurrentInput}
                       onSubmitEditing={handleSendMessage}
                       returnKeyType="send"
-                      editable={!isLoading}
+                      maxLength={500}
+                      editable={!isSubmitting}
                     />
-                    <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton} disabled={isLoading}>
+                    <TouchableOpacity onPress={handleSendMessage} style={styles.sendButton} disabled={isSubmitting}>
                       <Text style={styles.sendButtonText}>→</Text>
                     </TouchableOpacity>
                   </View>
@@ -327,6 +372,13 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       alignItems: 'center',
       gap: 12,
     },
+    errorText: {
+      color: '#B84848',
+      fontSize: 12,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
+      fontFamily: 'NotoSerifKR-Regular',
+    },
     modalTitle: {
       fontSize: 20,
       fontFamily: 'NotoSerifKR-Regular',
@@ -346,25 +398,24 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       lineHeight: 26,
       fontFamily: 'Pretendard-SemiBold',
     },
-    clearButton: {
-      width: 28,
-      height: 28,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1,
-      borderColor: c.line,
-    },
-    clearButtonText: {
-      fontSize: 16,
-      color: c.inkSoft,
-      lineHeight: 22,
-    },
     chatList: {
       flex: 1,
       paddingHorizontal: 16,
     },
     chatListContent: {
       paddingVertical: 16,
+    },
+    statusRow: {
+      alignSelf: 'flex-start',
+      flexDirection: 'row',
+      marginLeft: 12,
+      marginVertical: 8,
+    },
+    statusText: {
+      color: c.text,
+      fontFamily: 'NotoSerifKR-Regular',
+      fontSize: 11,
+      lineHeight: 16,
     },
     messageBubble: {
       maxWidth: '85%',
@@ -402,6 +453,8 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     bookCardScroll: {
       marginTop: 10,
       marginHorizontal: -12,
+      height: 205,
+      flexGrow: 0,
     },
     bookCardScrollContent: {
       paddingHorizontal: 12,

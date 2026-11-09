@@ -19,7 +19,7 @@
    - 로그인/JWT 발급, 카카오 검색 프록시, 서재 상태 변경, 리뷰 발행, SSE 알림, AI 검색 요청 등을 처리합니다.
 
 2. **Spring Boot → FastAPI**  
-   - `/api/ai/search` 요청을 WebClient로 FastAPI에 전달하고, AI 추천에 필요한 모든 유저의 서재 데이터를 `/api/library/all`에서 노출합니다.
+   - AI 검색 작업을 PostgreSQL에 저장하고 최대 2건만 FastAPI로 전달합니다. AI 추천에 필요한 모든 유저의 서재 데이터는 `/api/library/all`에서 노출합니다.
 
 3. **FastAPI → PostgreSQL + pgvector**  
    - 카카오 검색 결과를 받아 Gemini 태깅, SentenceTransformer 임베딩으로 `book_corpus` 테이블을 구성하고, 자연어 쿼리/유사도/저자 기반 검색을 제공합니다.
@@ -128,7 +128,8 @@ docker compose up --build
 | Spring | `POST /api/library/{bookId}?status=READING`, `GET /api/library`, `GET /api/library/all` | 개인/전체 서재 관리 및 추천용 데이터 |
 | Spring | `POST /api/books/{bookId}/review`, `POST /api/books/review/{id}/like`, `GET /api/books/{bookId}/reviews` | 리뷰/좋아요/조회 |
 | Spring | `GET /api/notifications/stream`, `GET /api/notifications` | SSE 알림 스트림 및 목록 |
-| Spring → FastAPI | `POST /api/ai/search` | WebClient로 FastAPI 호출 |
+| Spring | `POST /api/ai/jobs`, `GET /api/ai/jobs/{id}`, `GET /api/ai/jobs/recent` | 로그인 사용자별 AI 검색 접수·상태·24시간 결과 조회 |
+| Spring → FastAPI | `POST /api/ai/search` | 기존 동기 응답 형식 유지, 비동기 WebClient로 FastAPI 호출 |
 | FastAPI | `POST /api/books/fetch-and-filter`, `POST /api/books/embed-single` | 백그라운드 데이터 빌드 |
 | FastAPI | `POST /api/ai/search` | 자연어 + 벡터 검색 |
 | FastAPI | `GET /recommendations/{userId}` | 협업 필터링 추천 |
@@ -138,6 +139,8 @@ docker compose up --build
 ## 개발 팁
 
 - FastAPI에서 SentenceTransformer가 로딩되므로 모델/환경 변수를 바꿀 때는 서버 재시작이 필요합니다.
+- AI 검색은 한 Spring 인스턴스에서 실행 2건과 대기 10건으로 제한합니다. 대기열이 가득 차면 `503`과 `Retry-After: 5`를 반환합니다. 재시작 시 대기 작업은 재개하고 실행 중이던 작업은 실패로 표시합니다.
+- 앱은 AI 검색 상태를 3초마다 확인하고 화면을 다시 열면 최근 24시간 작업을 복원합니다. 접수 요청의 `Idempotency-Key`를 재사용하면 중복 작업을 만들지 않습니다.
 - AI 빌더는 Gemini API를 두 번 호출(빠른 모델 + 상세 모델)하므로 호출 제한을 고려하세요.
 - SSE 연결은 1시간 타임아웃으로 유지됩니다. 앱에서 로그아웃 시 EventSource를 닫아야 리소스 누수가 없습니다.
 - Android 에뮬레이터는 `10.0.2.2`, iOS 시뮬레이터는 `localhost`를 사용합니다. 실제 기기는 로컬 IP 또는 터널을 사용하세요.
@@ -153,7 +156,7 @@ docker compose up --build
 - 수동 확인
   - `GET http://localhost:8080/api/books/test` → Spring 작동 여부
   - `GET http://localhost:8000/test-spring-connection` → FastAPI ↔ Spring 통신 검사
-  - 앱에서 AI 챗 질문 → FastAPI `/api/ai/search` 로그와 응답 확인
+  - 앱에서 AI 챗 질문 → `대기 중 → AI 사서가 서재에서 책을 찾는 중 → 완료/실패` 확인
   - 리뷰 좋아요 → SSE 알림 도착 여부 확인
 
 세 서비스를 동시에 실행하면 회원가입 후 책 검색, 서재 등록, 리뷰 작성, AI 추천 대화, 알림 수신까지 전체 흐름을 체험할 수 있습니다.

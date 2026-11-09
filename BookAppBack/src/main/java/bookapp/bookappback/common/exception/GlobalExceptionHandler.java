@@ -1,5 +1,6 @@
 package bookapp.bookappback.common.exception;
 
+import bookapp.bookappback.ai.service.AiSearchCapacityException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,9 @@ public class GlobalExceptionHandler {
                 ex.getCode(),
                 ex.getMessage()
         );
-        return ResponseEntity.status(ex.getStatus()).body(error);
+        var response = ResponseEntity.status(ex.getStatus());
+        if (ex instanceof AiSearchCapacityException) response.header("Retry-After", "5");
+        return response.body(error);
     }
 
     // IllegalArgumentException 등 일반 예외 처리

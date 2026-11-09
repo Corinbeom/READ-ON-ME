@@ -75,10 +75,32 @@ api.interceptors.request.use(async (config) => {
 
 // 전역 알림을 띄우지 않을 경로 (화면/슬라이스에서 직접 처리하는 엔드포인트)
 const silentPaths = [
+  '/api/ai/jobs',
   '/api/users/profile',
   '/api/users/signin',
   '/api/users/signup',
 ];
+
+export interface AiSearchJob {
+  id: string;
+  query: string;
+  status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+  results: any[] | null;
+  error_code: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  expires_at: string;
+}
+
+interface AiJobResponse<T> { success: boolean; message: string; data: T }
+
+export const aiJobApi = {
+  submit: (query: string, key: string) =>
+    api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, { headers: { 'Idempotency-Key': key } }),
+  recent: () => api.get<AiJobResponse<AiSearchJob[]>>('/api/ai/jobs/recent'),
+  get: (id: string) => api.get<AiJobResponse<AiSearchJob>>(`/api/ai/jobs/${id}`),
+};
 
 // ✅ 전역 인터셉터 — 모든 API 오류를 한 곳에서 처리
 api.interceptors.response.use(

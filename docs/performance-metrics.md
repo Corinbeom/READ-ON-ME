@@ -36,27 +36,31 @@ python tools/bench/bench_cache_search.py --query "미움받을용기" -n 80 -c 1
 
 #### B. AI 검색(End-to-End)
 
-Spring `/api/ai/search`는 내부적으로 FastAPI를 호출하므로, 전체 E2E 지연을 확인할 수 있습니다.
+Spring `/api/ai/search`는 내부적으로 FastAPI를 호출합니다. 실제 LLM을 호출하는 측정은 비용이 발생하므로 3회만 순차로 실행해 응답 시간을 기록합니다.
 
 ```bash
-python tools/bench/bench_http.py --method POST --url "http://localhost:8080/api/ai/search" --json "{\"query\":\"스릴러 소설 추천해줘\"}" -n 30 -c 3
+python tools/bench/bench_http.py --method POST --url "http://localhost:8080/api/ai/search" --json "{\"query\":\"스릴러 소설 추천해줘\"}" -n 3 -c 1
 ```
 
-#### B-1. (권장) E2E vs Direct 3회 반복 + 범위 + 에러율
+#### B-1. E2E vs Direct (추가 LLM 호출이 필요한 경우에만)
 
 ```bash
-python3 tools/bench/bench_ai_search.py --query "스릴러 소설 추천해줘" -n 30 -c 3 --runs 3
+python3 tools/bench/bench_ai_search.py --query "스릴러 소설 추천해줘" -n 1 -c 1 --runs 3
 ```
 
 #### C. FastAPI 직접 호출
 
 ```bash
-python tools/bench/bench_http.py --method POST --url "http://localhost:8000/api/ai/search" --json "{\"query\":\"힐링 에세이 추천\"}" -n 30 -c 3
+python tools/bench/bench_http.py --method POST --url "http://localhost:8000/api/ai/search" --json "{\"query\":\"힐링 에세이 추천\"}" -n 3 -c 1
 ```
+
+### 2026-11-09 로컬 기준값
+
+Spring `/api/ai/search`에 같은 질문을 순차로 3회 보낸 결과 모두 HTTP 200이었고, 응답 시간은 5.88초, 3.64초, 3.53초였습니다. 첫 요청은 모델/연결 준비 시간이 포함될 수 있습니다. 표본이 3건뿐이므로 이 값으로 p95나 운영 처리량을 추정하지 않습니다. 짧은 동일 질문 캐시는 실제 사용 패턴을 더 측정한 뒤 결정합니다.
 
 ### 팁
 
 - AI 컨테이너는 최초 실행 시 모델 다운로드/로딩으로 지연이 커질 수 있으니 **warmup 이후 측정**
-- 동시성(c)을 너무 크게 올리면 로컬 환경에서 병목이 발생할 수 있어, `c=3~10`부터 시작 추천
+- 동시 실행 상한과 대기열 테스트는 실제 LLM 대신 지연 응답을 반환하는 모의 FastAPI로 실행합니다. 실제 API에 동시 요청을 대량으로 보내지 않습니다.
 
 
