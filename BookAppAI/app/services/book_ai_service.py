@@ -30,6 +30,7 @@ from app.services.text_utils import (
     format_authors,
     get_proxy_search_terms,
     is_genre_match,
+    is_search_candidate,
     should_skip_book,
 )
 
@@ -45,6 +46,7 @@ KAKAO_API_URL = "https://dapi.kakao.com/v3/search/book"
 SIMILARITY_THRESHOLD = 0.65
 AI_SEARCH_THRESHOLD = 0.65
 AI_SIMILARITY_THRESHOLD = 0.45  # similar/mood 쿼리 — reranker가 품질 보완하므로 여유 있게 설정
+AI_FALLBACK_THRESHOLD = 0.4
 AI_SEARCH_LIMIT = int(os.getenv("AI_SEARCH_LIMIT", "40"))
 AI_SEARCH_RESULT_LIMIT = int(os.getenv("AI_SEARCH_RESULT_LIMIT", "5"))
 AUTHOR_SEARCH_THRESHOLD = float(os.getenv("AUTHOR_SEARCH_THRESHOLD", "0.5"))
@@ -506,7 +508,7 @@ async def search_by_natural_language(query: str, db: AsyncSession):
             )
         """
     base_query = f"""
-        SELECT id, title, contents, isbn, authors, publisher, thumbnail,
+        SELECT id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags,
                1 - (embedding <=> :query_embedding) AS similarity
         FROM book_corpus
         WHERE (1 - (embedding <=> :query_embedding) > :threshold)
@@ -526,19 +528,9 @@ async def search_by_natural_language(query: str, db: AsyncSession):
 
     raw_results = [dict(row) for row in result.mappings()]
 
-    filtered = []
-    filtered_out_count = 0
-    for row in raw_results:
-        title = row.get("title", "")
-        contents = row.get("contents", "")
-        authors = row.get("authors", "")
-        if contains_exclusion_terms(title, contents, authors):
-            filtered_out_count += 1
-            continue
-        if len(contents.strip()) < 30:  # 설명 없는 책은 임베딩 품질이 낮아 제외
-            filtered_out_count += 1
-            continue
-        filtered.append(row)
+    filtered = [row for row in raw_results if is_search_candidate(row, intent.genre, intent.domain)]
+    filtered_out_count = len(raw_results) - len(filtered)
+    initial_filtered_count = len(filtered)
 
     if intent.focus_author:
         exact_matches = []
@@ -562,26 +554,24 @@ async def search_by_natural_language(query: str, db: AsyncSession):
             f"[AUTHOR RERANK] Prioritized {len(exact_matches)} exact author matches for '{intent.focus_author}'."
         )
 
-    # threshold 조건을 만족하는 결과가 없을 경우: 임계값 없이 Top-N으로 재조회
-    if not filtered and intent.query_type in {"similar", "mood"}:
-        print(f"[FALLBACK] No results above threshold={current_threshold:.2f} — retrying without threshold.")
-        fallback_no_threshold = text("""
-            SELECT id, title, contents, isbn, authors, publisher, thumbnail,
+    # 기본 검색이 비었을 때만 낮은 유사도 범위에서 후보를 다시 찾는다.
+    fallback_count = 0
+    if not filtered:
+        fallback_stmt = text("""
+            SELECT id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags,
                    1 - (embedding <=> :query_embedding) AS similarity
             FROM book_corpus
+            WHERE 1 - (embedding <=> :query_embedding) > :fallback_threshold
             ORDER BY embedding <=> :query_embedding
             LIMIT :limit
         """)
         fallback_result = await db.execute(
-            fallback_no_threshold,
-            {"query_embedding": str(list(query_embedding)), "limit": AI_SEARCH_LIMIT},
+            fallback_stmt,
+            {"query_embedding": str(list(query_embedding)), "fallback_threshold": AI_FALLBACK_THRESHOLD, "limit": AI_SEARCH_LIMIT},
         )
-        for row in fallback_result.mappings():
-            row_dict = dict(row)
-            if not contains_exclusion_terms(
-                row_dict.get("title", ""), row_dict.get("contents", ""), row_dict.get("authors", "")
-            ):
-                filtered.append(row_dict)
+        fallback_rows = [dict(row) for row in fallback_result.mappings()]
+        filtered = [row for row in fallback_rows if is_search_candidate(row, intent.genre, intent.domain)]
+        fallback_count = len(fallback_rows)
 
     # 에디션 중복 제거: (정규화 제목, 첫 저자) 기준으로 가장 높은 유사도 항목만 유지
     before_dedup = len(filtered)
@@ -592,21 +582,11 @@ async def search_by_natural_language(query: str, db: AsyncSession):
     # Re-ranking: Gemini로 Top N → 최적 5권 선별 + 추천 이유 생성
     search_results = await rerank_with_gemini(query, filtered)
 
-    # Reranker가 부족하게 반환한 경우 원본 순서(벡터 유사도)로 나머지 보충
-    if len(search_results) < AI_SEARCH_RESULT_LIMIT and not intent.focus_author:
-        seen_isbns = {r.get("isbn") for r in search_results}
-        for candidate in filtered:
-            if len(search_results) >= AI_SEARCH_RESULT_LIMIT:
-                break
-            if candidate.get("isbn") not in seen_isbns:
-                search_results.append(candidate)
-                seen_isbns.add(candidate.get("isbn"))
-
     if intent.focus_author and len(search_results) < AI_SEARCH_RESULT_LIMIT:
         remaining = AI_SEARCH_RESULT_LIMIT - len(search_results)
         fallback_stmt = text(
             """
-            SELECT id, title, contents, isbn, authors, publisher, thumbnail,
+            SELECT id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags,
                    0.0 AS similarity
             FROM book_corpus
             WHERE REPLACE(authors, ' ', '') ILIKE :author_pattern
@@ -625,6 +605,8 @@ async def search_by_natural_language(query: str, db: AsyncSession):
         fallback_results = []
         for row in fallback_rows.mappings():
             row_dict = dict(row)
+            if not is_search_candidate(row_dict, intent.genre, intent.domain):
+                continue
             isbn = row_dict.get("isbn")
             if isbn and isbn in seen_isbns:
                 continue
@@ -642,6 +624,16 @@ async def search_by_natural_language(query: str, db: AsyncSession):
         f"[{intent.query_type.upper()}] Returning {len(search_results)} results for query: '{query}' "
         f"(limited to top {AI_SEARCH_RESULT_LIMIT})"
     )
+    logger.info(
+        "AI search stages type=%s initial=%d filtered=%d fallback=%d deduplicated=%d returned=%d",
+        intent.query_type, len(raw_results), initial_filtered_count,
+        fallback_count, len(filtered), len(search_results),
+    )
+    if not search_results:
+        logger.warning(
+            "AI search returned no books type=%s initial=%d filtered=%d fallback=%d fallback_filtered=%d",
+            intent.query_type, len(raw_results), initial_filtered_count, fallback_count, len(filtered),
+        )
     for i, r in enumerate(search_results[:3], 1):
         similarity = r.get("similarity")
         similarity_text = f"{similarity:.3f}" if similarity is not None else "N/A"

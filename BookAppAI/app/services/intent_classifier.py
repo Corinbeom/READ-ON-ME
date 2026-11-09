@@ -1,6 +1,9 @@
 import re
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable, Coroutine, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 # Type alias for pluggable async LLM hooks. The callable receives the raw query
@@ -40,6 +43,8 @@ AUTHOR_KEYWORDS = ["작가", "저자", "필명"]
 AUTHOR_INVALID_TOKENS = {"분위기", "느낌", "감성", "무드", "주제", "테마", "내용", "비슷", "같은", "유사"}
 
 DOMAIN_KEYWORDS = {
+    "자기계발": "자기계발",
+    "자기개발": "자기계발",
     "창업": "비즈니스",
     "스타트업": "비즈니스",
     "기업": "비즈니스",
@@ -49,7 +54,6 @@ DOMAIN_KEYWORDS = {
     "주식": "금융",
     "경제": "금융",
     "정치": "정치",
-    "힐링": "에세이",
     "회고": "에세이",
     "심리": "심리",
     "철학": "철학",
@@ -71,6 +75,7 @@ GENRE_KEYWORDS = {
 }
 
 TONE_KEYWORDS = {
+    "힐링": "힐링",
     "감성": "감성",
     "따뜻": "힐링",
     "잔잔": "힐링",
@@ -91,7 +96,7 @@ PURPOSE_KEYWORDS = {
 QUERY_TYPE_KEYWORDS = {
     "author": AUTHOR_KEYWORDS,
     "similar": ["같은", "비슷한"],
-    "mood": ["분위기", "느낌", "감성", "무드"],
+    "mood": ["분위기", "느낌", "감성", "무드", "힐링"],
     "domain": ["관련", "분야", "도메인"],
 }
 
@@ -124,7 +129,7 @@ class IntentAnalyzer:
                 if isinstance(llm_result, dict):
                     metadata.merge(llm_result)
             except Exception as exc:  # pragma: no cover - defensive
-                print(f"[IntentAnalyzer] LLM callback failed: {exc}")
+                logger.warning("Intent analyzer LLM fallback error=%s", type(exc).__name__)
 
         return metadata
 

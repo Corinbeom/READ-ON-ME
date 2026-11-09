@@ -11,11 +11,15 @@ from __future__ import annotations
 
 import os
 import time
+import logging
 from typing import Optional
 
 import httpx
 
+logger = logging.getLogger(__name__)
+
 from app.services.intent_classifier import IntentMetadata
+from app.services import llm_cooldown
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1")
@@ -38,6 +42,8 @@ async def rewrite_query(query: str, intent: IntentMetadata) -> Optional[str]:
     cached_value, cached_at = _rewrite_cache.get(query, (None, 0.0))
     if time.time() - cached_at < REWRITE_CACHE_TTL:
         return cached_value
+    if not llm_cooldown.available():
+        return None
 
     intent_parts = []
     if intent.genre:        intent_parts.append(f"장르: {intent.genre}")
@@ -67,18 +73,23 @@ async def rewrite_query(query: str, intent: IntentMetadata) -> Optional[str]:
         async with httpx.AsyncClient(timeout=REWRITE_TIMEOUT) as client:
             resp = await client.post(url, params={"key": GEMINI_API_KEY}, json=payload)
             if resp.status_code == 429:
-                print("[QueryRewriter] Rate limit — 템플릿 폴백")
+                logger.warning("Query rewrite rate limited; using template prompt")
+                llm_cooldown.rate_limited()
+                _rewrite_cache[query] = (None, time.time())
                 return None
             resp.raise_for_status()
             text = (
                 resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
             )
             if text:
-                print(f"[QueryRewriter] '{query}' → '{text[:80]}...'")
+                logger.info("Query rewrite completed")
                 _rewrite_cache[query] = (text, time.time())
                 return text
     except Exception as exc:
-        print(f"[QueryRewriter] 실패, 템플릿 폴백: {exc}")
+        status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+        if status == 429:
+            llm_cooldown.rate_limited()
+        logger.warning("Query rewrite fallback error=%s status=%s", type(exc).__name__, status)
 
     _rewrite_cache[query] = (None, time.time())  # 실패도 캐시 (429 반복 방지)
     return None

@@ -78,6 +78,10 @@ def is_genre_match(target_keyword: str, primary_keyword: Optional[str]) -> bool:
 EXCLUSION_STRICT_TERMS = [
     "수능",
     "모의고사",
+    "임용시험",
+    "임용고시",
+    "교원임용",
+    "ncs",
     "기출",
     "시험대비",
     "정답지",
@@ -174,6 +178,31 @@ def contains_exclusion_terms(*chunks: str) -> bool:
     ):
         return True
     return False
+
+
+def is_search_candidate(book: dict, genre: Optional[str] = None, domain: Optional[str] = None) -> bool:
+    title = book.get("title") or ""
+    contents = book.get("contents") or ""
+    authors = format_authors(book.get("authors"))
+    if contains_exclusion_terms(title, contents, authors) or len(contents.strip()) < 30:
+        return False
+
+    tags = book.get("tags")
+    labels = [book.get("keyword"), *(tags if isinstance(tags, list) else [])]
+    labels = [label for label in labels if isinstance(label, str) and label and label != "user_added"]
+    if genre:
+        if genre == "소설" and "필사" in title:
+            return False
+        if labels:
+            if not any(is_genre_match(genre, label) for label in labels):
+                return False
+        elif genre.lower() not in f"{title} {contents}".lower():
+            return False
+    if domain == "자기계발":
+        relevance_text = " ".join([title, contents, *labels]).lower()
+        if not any(term in relevance_text for term in ("자기계발", "자기개발", "동기부여", "습관", "목표", "성장", "성공", "변화")):
+            return False
+    return True
 
 
 def should_skip_book(keyword: str, book: dict) -> bool:

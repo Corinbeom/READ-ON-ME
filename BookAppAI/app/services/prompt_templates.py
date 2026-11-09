@@ -34,8 +34,15 @@ class PromptTemplateBuilder:
             return AUTHOR_TEMPLATE.format(author=intent.focus_author)
 
         if intent.query_type == "mood" and intent.tone:
+            details = []
+            if intent.genre:
+                details.append(f"장르: {intent.genre}")
+            if intent.domain:
+                details.append(f"분야: {intent.domain}")
             constraint_clause = self._constraint_clause(intent)
-            extra = f" {constraint_clause}" if constraint_clause else ""
+            if constraint_clause:
+                details.append(constraint_clause)
+            extra = " ".join(details)
             return MOOD_TEMPLATE.format(tone=intent.tone, extra=extra)
 
         if intent.query_type == "similar":
@@ -45,7 +52,8 @@ class PromptTemplateBuilder:
             purpose_clause = intent.purpose or "관심 있는"
             constraint_clause = self._constraint_clause(intent)
             prompt = DOMAIN_TEMPLATE.format(domain=intent.domain, purpose_clause=purpose_clause)
-            return f"{prompt} {constraint_clause}".strip()
+            genre_clause = f"장르: {intent.genre}" if intent.genre else ""
+            return " ".join(part for part in (prompt, genre_clause, constraint_clause) if part)
 
         requirements = self._build_requirement_list(intent, original_query)
         return DEFAULT_TEMPLATE.format(requirements="; ".join(requirements))

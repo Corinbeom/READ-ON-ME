@@ -1,8 +1,12 @@
 import json
+import logging
 import os
 from typing import Any, Dict, List, Optional
 
 import httpx
+from app.services import llm_cooldown
+
+logger = logging.getLogger(__name__)
 
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -53,7 +57,7 @@ class GeminiTagger:
     async def classify_book(
         self, title: str, contents: str, authors: str
     ) -> Optional[Dict[str, Any]]:
-        if not self.enabled:
+        if not self.enabled or not llm_cooldown.available():
             return None
 
         prompt = PROMPT_TEMPLATE.format(
@@ -78,11 +82,13 @@ class GeminiTagger:
                 response.raise_for_status()
                 return self._parse_response(response.json())
         except httpx.HTTPError as exc:
-            body = exc.response.text if exc.response is not None else "No response body"
-            print(f"[GeminiTagger] API call failed: {exc} | Body: {body}")
+            status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+            if status == 429:
+                llm_cooldown.rate_limited()
+            logger.warning("Gemini tagging fallback error=%s status=%s", type(exc).__name__, status)
             return None
         except json.JSONDecodeError as exc:
-            print(f"[GeminiTagger] Failed to parse response JSON: {exc}")
+            logger.warning("Gemini tagging response was not valid JSON: %s", type(exc).__name__)
             return None
 
     def _parse_response(self, response_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -101,7 +107,7 @@ class GeminiTagger:
         try:
             parsed = json.loads(cleaned)
         except json.JSONDecodeError:
-            print("[GeminiTagger] Failed to parse JSON response.")
+            logger.warning("Gemini tagging output was not valid JSON")
             return None
 
         primary = parsed.get("primary_keyword")

@@ -10,9 +10,13 @@ Gemini를 이용한 검색 결과 재순위화.
 from __future__ import annotations
 
 import os
+import logging
 from typing import Any, Dict, List
 
 import httpx
+from app.services import llm_cooldown
+
+logger = logging.getLogger(__name__)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1")
@@ -21,6 +25,34 @@ RERANK_TIMEOUT = 30.0
 
 RERANK_CANDIDATE_LIMIT = 10   # Gemini에 넘길 후보 수 (프롬프트 크기 제어)
 FINAL_RESULT_LIMIT = 5        # 최종 반환 수
+
+
+def _parse_selection(raw: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    result = []
+    seen_indices: set[int] = set()
+    seen_isbns: set[str] = set()
+    for line in raw.splitlines():
+        number, separator, reason = line.strip().partition("|")
+        if not separator:
+            continue
+        try:
+            index = int(number.strip()) - 1
+        except ValueError:
+            continue
+        if not 0 <= index < len(candidates) or index in seen_indices:
+            continue
+        book = dict(candidates[index])
+        isbn = book.get("isbn")
+        if isbn and isbn in seen_isbns:
+            continue
+        book["reason"] = reason.strip()
+        result.append(book)
+        seen_indices.add(index)
+        if isbn:
+            seen_isbns.add(isbn)
+        if len(result) >= FINAL_RESULT_LIMIT:
+            break
+    return result
 
 
 async def rerank_with_gemini(
@@ -33,7 +65,7 @@ async def rerank_with_gemini(
     """
     fallback = candidates[:FINAL_RESULT_LIMIT]
 
-    if not GEMINI_API_KEY or not candidates:
+    if not GEMINI_API_KEY or not candidates or not llm_cooldown.available():
         return fallback
 
     top = candidates[:RERANK_CANDIDATE_LIMIT]
@@ -70,30 +102,16 @@ async def rerank_with_gemini(
             resp.raise_for_status()
             raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
-        print(f"[Reranker] 원본 응답: {raw!r}")
-
-        result = []
-        for line in raw.splitlines():
-            line = line.strip()
-            if "|" not in line:
-                continue
-            parts = line.split("|", 1)
-            try:
-                idx = int(parts[0].strip()) - 1  # 0-based
-            except ValueError:
-                continue
-            if 0 <= idx < len(top):
-                book = dict(top[idx])
-                book["reason"] = parts[1].strip() if len(parts) > 1 else ""
-                result.append(book)
-            if len(result) >= FINAL_RESULT_LIMIT:
-                break
+        result = _parse_selection(raw, top)
 
         if result:
-            print(f"[Reranker] '{query}' → {len(result)}권 재순위화 완료")
+            logger.info("Reranker selected %d books", len(result))
             return result
 
     except Exception as exc:
-        print(f"[Reranker] 실패, 원본 순서 사용: {exc}")
+        status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+        if status == 429:
+            llm_cooldown.rate_limited()
+        logger.warning("Reranker fallback error=%s status=%s", type(exc).__name__, status)
 
     return fallback

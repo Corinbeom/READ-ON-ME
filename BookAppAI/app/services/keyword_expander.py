@@ -1,12 +1,16 @@
-from typing import Any, Callable, Coroutine, List, Optional, Set
+import logging
+from typing import Any, Callable, Coroutine, List, Optional
 
 from app.services.intent_classifier import IntentMetadata
+
+logger = logging.getLogger(__name__)
 
 
 LLMKeywordCallback = Callable[[IntentMetadata], Coroutine[Any, Any, List[str]]]
 
 
 SYNONYM_MAP = {
+    "자기계발": ["자기개발", "동기부여", "성장", "습관", "목표"],
     "비즈니스": ["창업", "스타트업", "기업가정신", "business"],
     "금융": ["재테크", "투자", "finance", "주식"],
     "에세이": ["힐링", "산문", "essay"],
@@ -38,30 +42,40 @@ class KeywordExpander:
 
     async def expand(self, intent: IntentMetadata) -> List[str]:
         seeds = self._collect_seed_terms(intent)
-        expanded: Set[str] = set()
+        expanded: List[str] = []
+        seen: set[str] = set()
+
+        def add(term: str) -> None:
+            normalized = term.strip()
+            key = normalized.casefold()
+            if key and key not in seen:
+                expanded.append(normalized)
+                seen.add(key)
 
         for seed in seeds:
-            expanded.add(seed)
+            add(seed)
             mapped = SYNONYM_MAP.get(seed.lower())
             if mapped:
-                expanded.update(mapped)
+                for term in mapped:
+                    add(term)
 
         if self.llm_callback:
             try:
                 llm_terms = await self.llm_callback(intent)
-                expanded.update(llm_terms)
+                for term in llm_terms:
+                    add(term)
             except Exception as exc:  # pragma: no cover - defensive
-                print(f"[KeywordExpander] LLM callback failed: {exc}")
+                logger.warning("Keyword expansion LLM fallback error=%s", type(exc).__name__)
 
-        return [term for term in expanded if term]
+        return expanded
 
-    def _collect_seed_terms(self, intent: IntentMetadata) -> Set[str]:
-        seeds: Set[str] = set()
-        seen_lower: Set[str] = set()
+    def _collect_seed_terms(self, intent: IntentMetadata) -> List[str]:
+        seeds: List[str] = []
+        seen_lower: set[str] = set()
 
         for value in [
-            intent.domain,
             intent.genre,
+            intent.domain,
             intent.purpose,
             intent.tone,
             *intent.constraints,
@@ -70,7 +84,7 @@ class KeywordExpander:
                 normalized = value.lower()
                 if normalized in seen_lower:
                     continue
-                seeds.add(value)
+                seeds.append(value)
                 seen_lower.add(normalized)
 
         # Allow raw keywords to pass through for downstream usage.
@@ -78,7 +92,7 @@ class KeywordExpander:
             normalized = keyword.lower()
             if normalized in seen_lower:
                 continue
-            seeds.add(keyword)
+            seeds.append(keyword)
             seen_lower.add(normalized)
 
         return seeds
