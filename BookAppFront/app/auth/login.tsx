@@ -7,7 +7,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  useColorScheme as useSystemColorScheme, // Rename to avoid conflict
   Dimensions,
   Text,
 } from 'react-native';
@@ -123,7 +122,7 @@ export default function LoginScreen() {
       } else {
         Alert.alert('로그인 실패', '이메일 또는 비밀번호를 확인해주세요.');
       }
-    } catch (error) {
+    } catch {
       Alert.alert('오류', '로그인에 실패했습니다.');
     } finally {
       setLoading(false);

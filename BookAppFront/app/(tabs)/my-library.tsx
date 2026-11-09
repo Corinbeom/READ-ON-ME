@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/src/store';
@@ -262,7 +262,7 @@ export default function MyLibraryScreen() {
                     { left: '73%', top: 8,   rotate: '-10deg' , size: 11, color: c.inkFaint }, // rank 10
                     { left: '22%', top: 4,   rotate: '4deg'   , size: 11, color: c.inkFaint }, // rank 11
                     { left: '42%', top: 198, rotate: '-4deg'  , size: 10, color: c.inkFaint }, // rank 12
-                  ];
+                  ] as const;
 
                   return (
                     <View style={{ height: 220, marginTop: 4 }}>

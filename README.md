@@ -79,6 +79,7 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 - 테스트: `pytest`
+- 테스트 의존성: `pip install -r requirements-test.txt`
 - 데이터 빌드: `POST /api/books/fetch-and-filter` (키워드 배열 전달)
 - 단일 도서 임베딩: `POST /api/books/embed-single`
 - AI 검색: `POST /api/ai/search`
@@ -94,6 +95,7 @@ npx expo start
 
 - `i` / `a` / `w`로 iOS, Android, Web 실행
 - 린트: `npm run lint`
+- 타입 검사: `npm run typecheck`
 - 실제 기기 사용 시 `src/services/api.ts`의 호스트 주소를 로컬 네트워크 IP로 조정하세요.
 
 ### 4. (선택) Docker 이미지
@@ -144,9 +146,10 @@ docker compose up --build
 
 ## 테스트 & 검증
 
-- **Spring Boot**: `./gradlew test`
-- **FastAPI**: `pytest`
-- **React Native**: `npm run lint`
+- **Spring Boot** (`BookAppBack/`): `./gradlew test --rerun-tasks`
+- **FastAPI** (`BookAppAI/`): `pip install -r requirements-test.txt` 후 `python -m pytest -q`
+- **React Native** (`BookAppFront/`): `npm run lint -- --max-warnings 0`, `npm run typecheck`
+- GitHub Actions는 PR과 `main` 푸시에서 위 자동 검사를 실행합니다. 외부 API 키는 필요하지 않습니다.
 - 수동 확인
   - `GET http://localhost:8080/api/books/test` → Spring 작동 여부
   - `GET http://localhost:8000/test-spring-connection` → FastAPI ↔ Spring 통신 검사

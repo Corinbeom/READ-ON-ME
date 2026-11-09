@@ -64,7 +64,7 @@ function TypingIndicator({ dotColor = '#888', borderColor = '#cccccc44', bgColor
     const a3 = anim(dot3, 360);
     a1.start(); a2.start(); a3.start();
     return () => { a1.stop(); a2.stop(); a3.stop(); };
-  }, []);
+  }, [dot1, dot2, dot3]);
 
   const dotStyle = (dot: Animated.Value) => ({
     width: 7,
@@ -139,41 +139,6 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
       setChatHistory((prev) => [
         ...prev,
         { id: String(Date.now() + 1), type: 'ai', text: "추천을 가져오는 데 실패했어요." },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRecommendAgain = async () => {
-    if (!isAuthenticated) {
-      customAlert('알림', 'AI 추천을 사용하려면 로그인이 필요합니다.');
-      return;
-    }
-    const lastUserQuery = chatHistory.filter(msg => msg.type === 'user').pop()?.text;
-    if (!lastUserQuery) {
-      customAlert('알림', '이전 검색어가 없습니다. 새로운 질문을 해주세요.');
-      return;
-    }
-
-    setChatHistory((prev) => [...prev, { id: String(Date.now()), type: 'user', text: '다시 추천해줘' }]);
-    setIsLoading(true);
-
-    try {
-      const response = await api.post('/api/ai/search', { query: lastUserQuery });
-      const aiResponse: ChatMessage = {
-        id: String(Date.now() + 1),
-        type: 'ai',
-        text: response.data.length > 0 ? "다른 책들을 찾아봤어요." : "다른 추천을 찾지 못했어요.",
-        results: response.data,
-      };
-      setChatHistory((prev) => [...prev, aiResponse]);
-    } catch (error) {
-      console.error('AI re-recommendation failed:', error);
-      customAlert('오류', '다시 추천을 받는 중 오류가 발생했습니다.');
-      setChatHistory((prev) => [
-        ...prev,
-        { id: String(Date.now() + 1), type: 'ai', text: "다시 추천을 가져오는 데 실패했어요." },
       ]);
     } finally {
       setIsLoading(false);

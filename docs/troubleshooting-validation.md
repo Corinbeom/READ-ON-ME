@@ -14,7 +14,8 @@
 
 ```bash
 cd BookAppAI
-pytest -q
+pip install -r requirements-test.txt
+python -m pytest -q
 ```
 
 #### 측정(선택)
@@ -32,14 +33,8 @@ pytest -q
 
 ```bash
 cd BookAppAI
-pytest -q
-```
-
-#### 도커로 테스트 실행(권장)
-
-```bash
-docker compose build ai
-docker compose run --rm --entrypoint python ai -m pytest -q
+pip install -r requirements-test.txt
+python -m pytest -q
 ```
 
 #### 측정(선택)

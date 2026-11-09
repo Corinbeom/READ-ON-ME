@@ -28,7 +28,7 @@ function SessionRestorer() {
       }
     };
     restoreSession();
-  }, []);
+  }, [dispatch]);
   return null;
 }
 

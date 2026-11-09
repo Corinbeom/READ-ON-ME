@@ -13,6 +13,11 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
 import { bookApi, recommendationApi } from '@/src/services/api';
 import { Book } from '@/src/types/book';
+import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
+import BookCarousel from '@/components/BookCarousel';
+import AiChatModal from '@/components/AiChatModal';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Colors } from '@/constants/Colors';
 
 interface LibraryBook {
   ranking: string;
@@ -37,12 +42,6 @@ const mapLibraryBookToBook = (item: LibraryBook, index: number): Book => ({
   isbn13: item.isbn13 || '',
   contents: '', url: '', isbn10: '', datetime: '', price: 0, sale_price: 0, status: '',
 });
-import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
-import BookCarousel from '@/components/BookCarousel';
-import AiChatModal from '@/components/AiChatModal';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { Colors } from '@/constants/Colors';
-
 const AI_PROMPTS = [
   '스릴러 소설 추천해줘',
   '잠 못 드는 밤에 읽을 책',
@@ -69,51 +68,61 @@ export default function HomeScreen() {
 
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { unreadCount } = useSelector((state: RootState) => state.notifications);
+  const birthYear = user?.birth_year;
+  const userId = user?.id;
 
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getHomeScreenStyles(colorScheme);
   const c = Colors[colorScheme];
   const hasUnreadNotifications = unreadCount > 0;
 
-  const fetchNaruBooks = async () => {
-    setNaruLoading(true);
-    try {
-      const ageGroup = user?.birth_year ? calcAgeGroup(user.birth_year) : undefined;
-      const response = await bookApi.getPopularBooksFromLibrary(ageGroup);
-      const mapped = (response.data as LibraryBook[]).map(mapLibraryBookToBook);
-      setNaruBooks(mapped);
-    } catch (error) {
-      console.error('인기 책 조회 실패:', error);
-    } finally {
-      setNaruLoading(false);
-    }
-  };
+  useEffect(() => {
+    let active = true;
+    const fetchNaruBooks = async () => {
+      setNaruLoading(true);
+      try {
+        const ageGroup = birthYear ? calcAgeGroup(birthYear) : undefined;
+        const response = await bookApi.getPopularBooksFromLibrary(ageGroup);
+        if (active) setNaruBooks((response.data as LibraryBook[]).map(mapLibraryBookToBook));
+      } catch (error) {
+        console.error('인기 책 조회 실패:', error);
+      } finally {
+        if (active) setNaruLoading(false);
+      }
+    };
+    void fetchNaruBooks();
+    return () => { active = false; };
+  }, [birthYear]);
 
-  const fetchRecommendations = async () => {
-    if (!isAuthenticated || !user?.id) {
-      if (recommendedBooks.length > 0) setRecommendedBooks([]);
+  useEffect(() => {
+    if (!isAuthenticated || !userId) {
+      setRecommendedBooks([]);
+      setRecommendationsLoading(false);
       return;
     }
-    setRecommendationsLoading(true);
-    try {
-      const response = await recommendationApi.getRecommendations();
-      const { type, bookIds } = response.data;
-      setRecommendationType(type);
-      if (bookIds && bookIds.length > 0) {
-        const booksResponse = await bookApi.getBooksByIds(bookIds);
-        setRecommendedBooks(booksResponse.data);
-      } else {
-        setRecommendedBooks([]);
-      }
-    } catch (error) {
-      console.error('[추천 로직] 추천 책 조회 실패:', error);
-    } finally {
-      setRecommendationsLoading(false);
-    }
-  };
 
-  useEffect(() => { fetchNaruBooks(); }, [isAuthenticated]);
-  useEffect(() => { fetchRecommendations(); }, [isAuthenticated, user]);
+    let active = true;
+    const fetchRecommendations = async () => {
+      setRecommendationsLoading(true);
+      try {
+        const response = await recommendationApi.getRecommendations();
+        const { type, bookIds } = response.data;
+        if (active) setRecommendationType(type);
+        if (bookIds && bookIds.length > 0) {
+          const booksResponse = await bookApi.getBooksByIds(bookIds);
+          if (active) setRecommendedBooks(booksResponse.data);
+        } else if (active) {
+          setRecommendedBooks([]);
+        }
+      } catch (error) {
+        console.error('[추천 로직] 추천 책 조회 실패:', error);
+      } finally {
+        if (active) setRecommendationsLoading(false);
+      }
+    };
+    void fetchRecommendations();
+    return () => { active = false; };
+  }, [isAuthenticated, userId]);
 
   // 타이핑 → 대기 → 지우기 → 다음 프롬프트 사이클
   useEffect(() => {
@@ -199,7 +208,7 @@ export default function HomeScreen() {
         activeOpacity={0.7}
       >
         <Text style={styles.aiLabel}>AI 사서</Text>
-        <Text style={styles.aiQuote}>"</Text>
+        <Text style={styles.aiQuote}>{'"'}</Text>
         <Text style={styles.aiPromptText}>
           어떤 책을 찾고 계신가요?{'\n'}
           <Text>{typedText}</Text>

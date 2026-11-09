@@ -1,7 +1,7 @@
 
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   Image,
@@ -34,7 +34,6 @@ const REVIEW_MAX_LENGTH = 500;
 
 export default function BookDetailScreen() {
   const { isbn } = useLocalSearchParams<{ isbn?: string }>();
-  const router = useRouter();
   const dispatch = useDispatch<AppDispatch>();
 
   const colorScheme = useColorScheme() ?? 'dark';
@@ -46,7 +45,6 @@ export default function BookDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<BookDto | null>(null);
-  const [otherEditions, setOtherEditions] = useState<BookDto[]>([]);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [sort, setSort] = useState('latest');
@@ -66,7 +64,7 @@ export default function BookDetailScreen() {
       setLoading(false);
       return;
     }
-    fetchBookDetailsAndEditions(normalizedIsbn);
+    fetchBookDetails(normalizedIsbn);
   }, [normalizedIsbn]);
 
   useEffect(() => {
@@ -96,17 +94,13 @@ export default function BookDetailScreen() {
     fetchUserBookStatus();
   }, [isAuthenticated, book]);
 
-  const fetchBookDetailsAndEditions = async (currentIsbn: string) => {
+  const fetchBookDetails = async (currentIsbn: string) => {
     setLoading(true);
     setError(null);
     try {
       const res = await bookApi.getBookDetail(currentIsbn);
       if (res.data) {
         setBook(res.data);
-        const editionRes = await bookApi.getBookEditions(currentIsbn);
-        if (editionRes.data) {
-          setOtherEditions(editionRes.data);
-        }
       } else {
         throw new Error('책 정보를 찾을 수 없습니다.');
       }

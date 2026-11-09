@@ -32,3 +32,23 @@ def test_should_skip_book_allows_normal_book():
     assert should_skip_book("소설", book) is False
 
 
+@pytest.mark.parametrize("missing_field", ["title", "authors"])
+def test_should_skip_short_book_without_identifying_metadata(missing_field):
+    book = {
+        "title": "어린 왕자",
+        "contents": "사막에서 만난 어린 왕자 이야기",
+        "authors": ["생텍쥐페리"],
+    }
+    book[missing_field] = "" if missing_field == "title" else []
+    assert should_skip_book("소설", book) is True
+
+
+def test_should_skip_book_exclusion_overrides_complete_metadata():
+    book = {
+        "title": "수능 국어 기출",
+        "contents": "올해 시험을 위한 기출 문제",
+        "authors": ["편집부"],
+    }
+    assert should_skip_book("소설", book) is True
+
+

@@ -94,7 +94,9 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     setErrors({});
-    const isValid = ['nickname', 'email', 'password', 'confirmPassword'].every(f => validateField(f, { nickname, email, password, confirmPassword }[f]));
+    const values = { nickname, email, password, confirmPassword };
+    const fields = ['nickname', 'email', 'password', 'confirmPassword'] as const;
+    const isValid = fields.every(field => validateField(field, values[field]));
     if (!isValid) return;
 
     // 선택한 나이대 → 대표 출생연도 (나이대 중간값 사용)

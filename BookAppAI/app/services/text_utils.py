@@ -187,8 +187,12 @@ def should_skip_book(keyword: str, book: dict) -> bool:
     if contains_exclusion_terms(title, contents):
         return True
 
-    # 설명이 30자 미만이면 제목만으로 임베딩 → 품질 낮아 스킵
-    if len(_normalize_text(contents)) < 30:
+    normalized_contents = _normalize_text(contents)
+    if not normalized_contents:
+        return True
+
+    # 짧은 소개글은 제목과 저자가 있을 때만 도서 식별 정보로 보완한다.
+    if len(normalized_contents) < 30 and (not _normalize_text(title) or not authors):
         return True
 
     return False
