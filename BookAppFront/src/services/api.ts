@@ -81,11 +81,21 @@ const silentPaths = [
   '/api/users/signup',
 ];
 
+export interface AiSearchBook {
+  isbn: string;
+  title: string;
+  authors?: string | string[] | null;
+  thumbnail?: string | null;
+  reason?: string | null;
+  reason_evidence?: string | null;
+  ranking_status?: 'GEMINI' | 'FALLBACK';
+}
+
 export interface AiSearchJob {
   id: string;
   query: string;
   status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
-  results: any[] | null;
+  results: AiSearchBook[] | null;
   error_code: string | null;
   created_at: string;
   started_at: string | null;

@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Image,
   TouchableWithoutFeedback,
   Keyboard,
   Dimensions,
@@ -20,7 +19,8 @@ import {
 } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { aiJobApi, AiSearchJob } from '../src/services/api';
+import { aiJobApi, type AiSearchBook, type AiSearchJob } from '../src/services/api';
+import AiRecommendationCards from './AiRecommendationCards';
 import customAlert from '../src/utils/alert';
 import { useRouter } from 'expo-router';
 import { useSelector } from 'react-redux';
@@ -38,7 +38,7 @@ interface ChatMessage {
   id: string;
   type: 'user' | 'ai' | 'status';
   text: string;
-  results?: any[];
+  results?: AiSearchBook[];
 }
 
 const INITIAL_CHAT_MESSAGE: ChatMessage = {
@@ -216,44 +216,17 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
     }
     const hasBooks = item.results && item.results.length > 0;
     return (
-      <View style={[
-        styles.messageBubble,
-        item.type === 'user' ? styles.userBubble : styles.aiBubble,
-        hasBooks && styles.aiBubbleWide,
-      ]}>
-        <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
-        {hasBooks && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.bookCardScroll}
-            contentContainerStyle={styles.bookCardScrollContent}
-          >
-            {item.results!.slice(0, 5).map((book: any) => (
-              <TouchableOpacity
-                key={book.isbn}
-                style={styles.bookCard}
-                onPress={() => navigateToDetail(book.isbn)}
-                activeOpacity={0.7}
-              >
-                <Image
-                  source={{ uri: book.thumbnail }}
-                  style={styles.bookCardCover}
-                  resizeMode="cover"
-                />
-                <Text style={styles.bookCardTitle} numberOfLines={2}>{book.title}</Text>
-                {book.authors ? (
-                  <Text style={styles.bookCardAuthor} numberOfLines={1}>{book.authors}</Text>
-                ) : null}
-                {book.ranking_status === 'GEMINI' && typeof book.reason === 'string' && book.reason.trim()
-                  && typeof book.reason_evidence === 'string' && book.reason_evidence.trim() ? (
-                  <Text style={styles.bookCardReason} numberOfLines={3}>{book.reason}</Text>
-                ) : null}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-      </View>
+      <>
+        <View style={[
+          styles.messageBubble,
+          item.type === 'user' ? styles.userBubble : styles.aiBubble,
+        ]}>
+          <Text style={item.type === 'user' ? styles.userText : styles.aiText}>{item.text}</Text>
+        </View>
+        {hasBooks ? (
+          <AiRecommendationCards books={item.results!} onPressBook={navigateToDetail} />
+        ) : null}
+      </>
     );
   };
 
@@ -442,10 +415,6 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       borderWidth: 1,
       borderColor: c.line,
     },
-    aiBubbleWide: {
-      maxWidth: '96%',
-      maxHeight: SCREEN_HEIGHT * 0.55,
-    },
     userText: {
       color: c.background,
       fontFamily: 'NotoSerifKR-Regular',
@@ -457,46 +426,6 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       fontFamily: 'NotoSerifKR-Regular',
       fontSize: 14,
       lineHeight: 20,
-    },
-    bookCardScroll: {
-      marginTop: 10,
-      marginHorizontal: -12,
-      height: 250,
-      flexGrow: 0,
-    },
-    bookCardScrollContent: {
-      paddingHorizontal: 12,
-      gap: 8,
-    },
-    bookCard: {
-      width: 124,
-    },
-    bookCardCover: {
-      width: 124,
-      height: 135,
-      backgroundColor: c.surface2,
-      marginBottom: 6,
-    },
-    bookCardTitle: {
-      fontSize: 11,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      lineHeight: 16,
-      marginBottom: 2,
-    },
-    bookCardAuthor: {
-      fontSize: 10,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.inkSoft,
-      lineHeight: 14,
-      marginBottom: 3,
-    },
-    bookCardReason: {
-      fontSize: 10,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.inkSoft,
-      lineHeight: 15,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
     },
     inputContainer: {
       flexDirection: 'row',
