@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   Dimensions,
   Animated,
   AccessibilityInfo,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
   TextStyle,
   ViewStyle,
 } from 'react-native';
@@ -28,6 +30,11 @@ import { isAxiosError } from 'axios';
 import { RootState } from '@/src/store';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
+const NEAR_BOTTOM_THRESHOLD = 80;
+
+type NewResponseKind = 'results' | 'status' | null;
+
+const isTerminalJob = (job: AiSearchJob) => job.status === 'SUCCEEDED' || job.status === 'FAILED';
 
 interface AiChatModalProps {
   isVisible: boolean;
@@ -115,13 +122,69 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const [currentInput, setCurrentInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState('');
+  const [newResponseKind, setNewResponseKind] = useState<NewResponseKind>(null);
   const pendingSubmission = useRef<{ query: string; key: string } | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const jobsRef = useRef<AiSearchJob[]>([]);
+  const nearBottomRef = useRef(true);
+  const scrollInitializedRef = useRef(false);
+  const userScrolledRef = useRef(false);
+  const visibleRef = useRef(isVisible);
+  const pendingScrollRef = useRef<{ animated: boolean } | null>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollInFlightRef = useRef(false);
+
+  const flushPendingScroll = useCallback(() => {
+    const request = pendingScrollRef.current;
+    if (!request) return;
+    pendingScrollRef.current = null;
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = null;
+    if (!visibleRef.current) return;
+    scrollViewRef.current?.scrollToEnd({ animated: request.animated });
+    scrollInitializedRef.current = true;
+    nearBottomRef.current = true;
+    setNewResponseKind(null);
+  }, []);
+
+  const requestScrollToEnd = useCallback((animated: boolean) => {
+    pendingScrollRef.current = { animated };
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(flushPendingScroll, 80);
+  }, [flushPendingScroll]);
+
+  const handleChatScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (!scrollInitializedRef.current && !userScrolledRef.current) return;
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    nearBottomRef.current = distanceFromBottom <= NEAR_BOTTOM_THRESHOLD;
+    if (nearBottomRef.current) setNewResponseKind(null);
+  };
 
   useEffect(() => {
+    jobsRef.current = [];
     setJobs([]);
+    setNewResponseKind(null);
     pendingSubmission.current = null;
   }, [user?.id]);
+
+  useEffect(() => {
+    visibleRef.current = isVisible;
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = null;
+    pendingScrollRef.current = null;
+    if (isVisible) {
+      nearBottomRef.current = true;
+      scrollInitializedRef.current = false;
+      userScrolledRef.current = false;
+      requestScrollToEnd(false);
+    } else {
+      setNewResponseKind(null);
+    }
+    return () => {
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    };
+  }, [isVisible, requestScrollToEnd]);
 
   const chatHistory: ChatMessage[] = [INITIAL_CHAT_MESSAGE, ...[...jobs].reverse().flatMap((job): ChatMessage[] => [
     { id: `${job.id}-user`, type: 'user', text: job.query },
@@ -147,34 +210,56 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
     let active = true;
     aiJobApi.recent().then((response) => {
       if (active) {
-        setJobs((previous) => {
-          const serverJobs = response.data.data;
-          const known = new Set(serverJobs.map((job) => job.id));
-          return [...serverJobs, ...previous.filter((job) => !known.has(job.id))];
-        });
+        const serverJobs = response.data.data;
+        const known = new Set(serverJobs.map((job) => job.id));
+        const nextJobs = [...serverJobs, ...jobsRef.current.filter((job) => !known.has(job.id))];
+        jobsRef.current = nextJobs;
+        setJobs(nextJobs);
+        if (!userScrolledRef.current) requestScrollToEnd(false);
         setErrorText('');
       }
     }).catch(() => { if (active) setErrorText('최근 검색을 불러오지 못했어요. 잠시 후 다시 열어 주세요.'); });
     return () => { active = false; };
-  }, [isVisible, isAuthenticated, user?.id]);
+  }, [isVisible, isAuthenticated, user?.id, requestScrollToEnd]);
 
+  const hasPendingJob = jobs.some((job) => job.status === 'QUEUED' || job.status === 'RUNNING');
   useEffect(() => {
-    if (!isVisible || !isAuthenticated || !jobs.some((job) => job.status === 'QUEUED' || job.status === 'RUNNING')) return;
+    if (!isVisible || !isAuthenticated || !hasPendingJob) return;
     let active = true;
     const timer = setInterval(() => {
+      if (pollInFlightRef.current) return;
+      pollInFlightRef.current = true;
       aiJobApi.recent().then((response) => {
-        if (active) { setJobs(response.data.data); setErrorText(''); }
-      }).catch(() => { if (active) setErrorText('검색 상태를 확인하지 못했어요. 연결을 확인해 주세요.'); });
+        if (!active) return;
+        const nextJobs = response.data.data;
+        const previousJobs = jobsRef.current;
+        const previousById = new Map(previousJobs.map((job) => [job.id, job]));
+        const changed = nextJobs.length !== previousJobs.length || nextJobs.some((job) => {
+          const previous = previousById.get(job.id);
+          return !previous || previous.status !== job.status || previous.error_code !== job.error_code
+            || (previous.results?.length ?? 0) !== (job.results?.length ?? 0);
+        });
+        const newTerminal = nextJobs.find((job) => {
+          const previous = previousById.get(job.id);
+          return isTerminalJob(job) && (!previous || !isTerminalJob(previous));
+        });
+        jobsRef.current = nextJobs;
+        if (changed) {
+          setJobs(nextJobs);
+          if (nearBottomRef.current) {
+            // Capture the position before the new content changes the scroll distance.
+            // A drag that starts before this runs cancels the pending scroll.
+            requestScrollToEnd(true);
+          } else if (newTerminal) {
+            setNewResponseKind(newTerminal.status === 'SUCCEEDED' && newTerminal.results?.length ? 'results' : 'status');
+          }
+        }
+        setErrorText('');
+      }).catch(() => { if (active) setErrorText('검색 상태를 확인하지 못했어요. 연결을 확인해 주세요.'); })
+        .finally(() => { pollInFlightRef.current = false; });
     }, 3000);
     return () => { active = false; clearInterval(timer); };
-  }, [isVisible, isAuthenticated, jobs]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [jobs]);
+  }, [isVisible, isAuthenticated, hasPendingJob, requestScrollToEnd]);
 
   const handleSendMessage = async () => {
     if (!isAuthenticated) {
@@ -192,7 +277,10 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
 
     try {
       const response = await aiJobApi.submit(submission.query, submission.key);
-      setJobs((previous) => [response.data.data, ...previous.filter((job) => job.id !== response.data.data.id)]);
+      const nextJobs = [response.data.data, ...jobsRef.current.filter((job) => job.id !== response.data.data.id)];
+      jobsRef.current = nextJobs;
+      setJobs(nextJobs);
+      requestScrollToEnd(true);
       setCurrentInput('');
       pendingSubmission.current = null;
     } catch (error) {
@@ -258,6 +346,17 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                     style={styles.chatList}
                     contentContainerStyle={styles.chatListContent}
                     keyboardShouldPersistTaps="handled"
+                    onScroll={handleChatScroll}
+                    onScrollBeginDrag={() => {
+                      userScrolledRef.current = true;
+                      scrollInitializedRef.current = true;
+                      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+                      scrollTimerRef.current = null;
+                      pendingScrollRef.current = null;
+                    }}
+                    onContentSizeChange={flushPendingScroll}
+                    onLayout={flushPendingScroll}
+                    scrollEventThrottle={16}
                   >
                     {chatHistory.map((item) => (
                       <React.Fragment key={item.id}>
@@ -267,6 +366,21 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                   </ScrollView>
 
                   {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
+
+                  {newResponseKind ? (
+                    <View style={styles.newResponseRow}>
+                      <TouchableOpacity
+                        style={styles.newResponseButton}
+                        onPress={() => requestScrollToEnd(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={newResponseKind === 'results' ? '새 결과 보기' : '검색 상태 보기'}
+                      >
+                        <Text style={styles.newResponseText}>
+                          {newResponseKind === 'results' ? '새 결과 보기 ↓' : '검색 상태 보기 ↓'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
 
                   <View style={styles.inputContainer}>
                     <TextInput
@@ -359,6 +473,23 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       paddingHorizontal: 16,
       paddingBottom: 8,
       fontFamily: 'NotoSerifKR-Regular',
+    },
+    newResponseRow: {
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    newResponseButton: {
+      minHeight: 44,
+      paddingHorizontal: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: c.text,
+    },
+    newResponseText: {
+      color: c.background,
+      fontFamily: 'Pretendard-SemiBold',
+      fontSize: 12,
+      lineHeight: 18,
     },
     modalTitle: {
       fontSize: 20,
