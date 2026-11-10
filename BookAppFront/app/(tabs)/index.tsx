@@ -15,7 +15,7 @@ import { bookApi, recommendationApi } from '@/src/services/api';
 import { Book } from '@/src/types/book';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
-import AiChatModal from '@/components/AiChatModal';
+import BookmarkMascot from '@/components/BookmarkMascot';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
@@ -58,7 +58,6 @@ export default function HomeScreen() {
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationType, setRecommendationType] = useState<string>('personalized');
   const [modalVisible, setModalVisible] = useState(false);
-  const [isAiChatModalVisible, setIsAiChatModalVisible] = useState(false);
 
   // ── 타이핑 애니메이션 ──────────────────────────────────
   const [typedText, setTypedText]     = useState('');
@@ -204,17 +203,23 @@ export default function HomeScreen() {
       {/* ── AI Prompt Section ── */}
       <TouchableOpacity
         style={styles.aiSection}
-        onPress={() => setIsAiChatModalVisible(true)}
+        onPress={() => router.push('/ai-books')}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="AI 사서와 책 고르기"
       >
-        <Text style={styles.aiLabel}>AI 사서</Text>
-        <Text style={styles.aiQuote}>{'"'}</Text>
-        <Text style={styles.aiPromptText}>
-          어떤 책을 찾고 계신가요?{'\n'}
-          <Text>{typedText}</Text>
-          <Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
-        </Text>
-        <Text style={styles.aiSubText}>탭하여 AI에게 추천받기 →</Text>
+        <View style={styles.aiContent}>
+          <View style={styles.aiCopy}>
+            <Text style={styles.aiLabel}>AI 사서</Text>
+            <Text style={styles.aiPromptText}>
+              오늘 읽을 한 권을 골라볼까요?{'\n'}
+              <Text>{typedText}</Text>
+              <Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
+            </Text>
+            <Text style={styles.aiSubText}>책을 찾고, 비교하고, 한 권 고르기 →</Text>
+          </View>
+          <BookmarkMascot state="idle" size={68} compact />
+        </View>
       </TouchableOpacity>
 
       {/* ── 인기 책 (도서관 정보나루) ── */}
@@ -289,11 +294,6 @@ export default function HomeScreen() {
           </View>
         </View>
       </Modal>
-
-      <AiChatModal
-        isVisible={isAiChatModalVisible}
-        onClose={() => setIsAiChatModalVisible(false)}
-      />
 
       <View style={{ height: 40 }} />
     </ScrollView>

@@ -103,9 +103,17 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
     aiSection: {
       marginHorizontal: 22,
       marginTop: 28,
-      paddingBottom: 20,
+      paddingBottom: 22,
       borderBottomWidth: 1,
       borderBottomColor: c.line,
+    },
+    aiContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    aiCopy: {
+      flex: 1,
     },
     aiLabel: {
       fontSize: 10,
@@ -115,20 +123,11 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       fontFamily: 'Pretendard-SemiBold',
       marginBottom: 10,
     },
-    aiQuote: {
-      fontSize: 22,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.inkFaint,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-      lineHeight: 28,
-    },
     aiPromptText: {
-      fontSize: 17,
+      fontSize: 16,
       fontFamily: 'NotoSerifKR-Regular',
       color: c.text,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-      lineHeight: 26,
-      marginTop: 6,
+      lineHeight: 24,
     },
     aiSubText: {
       fontSize: 12,
