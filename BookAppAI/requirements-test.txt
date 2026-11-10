@@ -1,3 +1,9 @@
 pytest==9.0.3
 pytest-asyncio==1.4.1.post1
 httpx==0.28.1
+fastapi
+python-dotenv
+SQLAlchemy[asyncio]
+alembic
+pgvector
+numpy<2
