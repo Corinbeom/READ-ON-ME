@@ -51,7 +51,7 @@ interface ChatMessage {
 const INITIAL_CHAT_MESSAGE: ChatMessage = {
   id: '1',
   type: 'ai',
-  text: "안녕하세요! 어떤 책을 추천해 드릴까요?",
+  text: '찾고 싶은 책의 분위기, 주제, 장르를 한 번에 알려주세요.',
 };
 
 function ShimmerStatusText({ text, style, containerStyle, active }: {
@@ -332,7 +332,10 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
             <View style={styles.modalContent}>
               {/* ── Header ── */}
               <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>AI 사서</Text>
+                <View style={styles.modalTitleGroup}>
+                  <Text style={styles.modalTitle}>AI 사서</Text>
+                  <Text style={styles.modalSubtitle}>이전 질문과 연결되지 않아요</Text>
+                </View>
                 <View style={styles.headerActions}>
                   <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                     <Text style={styles.closeButtonText}>×</Text>
@@ -374,8 +377,9 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                   <View style={styles.inputContainer} onLayout={(event) => setInputHeight(event.nativeEvent.layout.height)}>
                     <TextInput
                       style={styles.textInput}
-                      placeholder="어떤 책을 찾으세요?"
+                      placeholder="원하는 책의 조건을 적어주세요"
                       placeholderTextColor={c.inkFaint}
+                      accessibilityHint="이전 질문은 반영되지 않아요. 원하는 조건을 함께 적어주세요."
                       value={currentInput}
                       onChangeText={setCurrentInput}
                       onSubmitEditing={handleSendMessage}
@@ -512,6 +516,15 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       color: c.text,
       fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
       letterSpacing: -0.3,
+    },
+    modalTitleGroup: {
+      gap: 3,
+    },
+    modalSubtitle: {
+      color: c.inkSoft,
+      fontFamily: 'Pretendard-SemiBold',
+      fontSize: 11,
+      lineHeight: 16,
     },
     closeButton: {
       width: 28,
