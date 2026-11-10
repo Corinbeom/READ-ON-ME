@@ -75,7 +75,7 @@ class AiSearchJobServiceTest {
     void dispatchNeverExceedsTwoAndPersistsResults() throws Exception {
         var active = new AtomicInteger();
         var maximum = new AtomicInteger();
-        when(searchService.search(anyString())).thenAnswer(invocation -> Mono.defer(() -> {
+        when(searchService.search(anyString(), anyString())).thenAnswer(invocation -> Mono.defer(() -> {
             int count = active.incrementAndGet();
             maximum.accumulateAndGet(count, Math::max);
             return Mono.delay(Duration.ofMillis(150))
@@ -101,7 +101,7 @@ class AiSearchJobServiceTest {
 
     @Test
     void failureAndRestartAreVisibleToOwner() throws Exception {
-        when(searchService.search(anyString())).thenReturn(Mono.error(new TimeoutException("slow")));
+        when(searchService.search(anyString(), anyString())).thenReturn(Mono.error(new TimeoutException("slow")));
         var failed = service.submit(1L, "느린 책", "timeout-key");
         ReflectionTestUtils.setField(service, "dispatchEnabled", true);
         service.dispatch();
@@ -151,7 +151,7 @@ class AiSearchJobServiceTest {
             first.dispose();
             second.dispose();
         }
-        when(searchService.search(anyString())).thenReturn(Mono.just(List.of("book")));
+        when(searchService.search(anyString(), anyString())).thenReturn(Mono.just(List.of("book")));
         service.dispatch();
         awaitSucceeded(1);
         ReflectionTestUtils.setField(service, "dispatchEnabled", false);

@@ -9,8 +9,8 @@ DEFAULT_TEMPLATE = (
 )
 
 AUTHOR_TEMPLATE = (
-    "{author} 작가가 집필한 대표적인 작품과 문학적 분위기가 비슷한 책을 알려줘. "
-    "동일 작가의 다른 장르도 함께 고려해."
+    "{author} 작가가 직접 집필한 책을 추천해줘. "
+    "다른 작가의 책은 제외해."
 )
 
 MOOD_TEMPLATE = "독자가 '{tone}' 감성을 느낄 수 있는 책을 소개해줘. {extra}"
@@ -53,7 +53,7 @@ class PromptTemplateBuilder:
             constraint_clause = self._constraint_clause(intent)
             prompt = DOMAIN_TEMPLATE.format(domain=intent.domain, purpose_clause=purpose_clause)
             genre_clause = f"장르: {intent.genre}" if intent.genre else ""
-            return " ".join(part for part in (prompt, genre_clause, constraint_clause) if part)
+            return " ".join(part for part in (f"사용자 요청: {original_query.strip()}.", prompt, genre_clause, constraint_clause) if part)
 
         requirements = self._build_requirement_list(intent, original_query)
         return DEFAULT_TEMPLATE.format(requirements="; ".join(requirements))

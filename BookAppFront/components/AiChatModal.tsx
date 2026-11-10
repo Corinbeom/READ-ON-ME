@@ -133,7 +133,11 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
           ? '서버가 다시 시작되어 검색이 중단됐어요. 다시 요청해 주세요.'
           : job.error_code === 'TIMEOUT' ? '검색 시간이 초과됐어요. 다시 요청해 주세요.'
           : '책을 찾는 중 문제가 생겼어요. 다시 요청해 주세요.')
-        : job.results?.length ? '질문에 맞는 책을 찾아봤어요.' : '추천할 만한 책을 찾지 못했어요.',
+        : job.results?.length
+          ? job.results.some((book) => book.ranking_status === 'FALLBACK')
+            ? 'AI 재정렬이 어려워 검색 결과를 기준으로 책을 골랐어요.'
+            : '질문에 맞는 책을 찾아봤어요.'
+          : '추천할 만한 책을 찾지 못했어요.',
       results: job.status === 'SUCCEEDED' ? job.results ?? [] : undefined,
     },
   ])];
@@ -240,6 +244,10 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                 <Text style={styles.bookCardTitle} numberOfLines={2}>{book.title}</Text>
                 {book.authors ? (
                   <Text style={styles.bookCardAuthor} numberOfLines={1}>{book.authors}</Text>
+                ) : null}
+                {book.ranking_status === 'GEMINI' && typeof book.reason === 'string' && book.reason.trim()
+                  && typeof book.reason_evidence === 'string' && book.reason_evidence.trim() ? (
+                  <Text style={styles.bookCardReason} numberOfLines={3}>{book.reason}</Text>
                 ) : null}
               </TouchableOpacity>
             ))}
@@ -453,7 +461,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     bookCardScroll: {
       marginTop: 10,
       marginHorizontal: -12,
-      height: 205,
+      height: 250,
       flexGrow: 0,
     },
     bookCardScrollContent: {
@@ -461,10 +469,10 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       gap: 8,
     },
     bookCard: {
-      width: 96,
+      width: 124,
     },
     bookCardCover: {
-      width: 96,
+      width: 124,
       height: 135,
       backgroundColor: c.surface2,
       marginBottom: 6,

@@ -123,7 +123,7 @@ public class AiSearchJobService {
             }
             UUID jobId = job.getId();
             try {
-                searchService.search(job.getQuery())
+                searchService.search(job.getQuery(), jobId.toString())
                         .publishOn(Schedulers.boundedElastic())
                         .subscribe(
                                 results -> finish(jobId, results, null),

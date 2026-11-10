@@ -1,12 +1,16 @@
+import asyncio
 import logging
 import os
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Optional, Union
 
 import httpx
 import numpy as np
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 from sqlalchemy.sql import text
 
@@ -18,11 +22,13 @@ from app.models.book_corpus import BookCorpus
 from app.schemas import SingleBookRequest
 from app.services.book_classifier import BookClassifier
 from app.services.gemini_tagger import GeminiTagger
-from app.services.intent_classifier import IntentAnalyzer, IntentMetadata
+from app.services.intent_classifier import IntentAnalyzer
 from app.services.keyword_expander import KeywordExpander
 from app.services.prompt_templates import PromptTemplateBuilder
-from app.services.query_rewriter import rewrite_query
+from app.services.reference_search import find_reference_anchor, has_theme_evidence
 from app.services.reranker import rerank_with_gemini
+from app.services.search_retrieval import retrieve_candidates
+from app.services.tagging_jobs import enqueue_tagging_jobs
 from app.services.text_utils import (
     build_book_text,
     build_keyword_prompt,
@@ -34,35 +40,39 @@ from app.services.text_utils import (
     should_skip_book,
 )
 
-from sentence_transformers import SentenceTransformer
-import torch
-
-
 # --- Configuration ---
 # prod 환경 검증은 lifespan의 validate_prod_config()가 담당
 KAKAO_API_KEY = os.getenv("KAKAO_API_KEY", "")
 
 KAKAO_API_URL = "https://dapi.kakao.com/v3/search/book"
 SIMILARITY_THRESHOLD = 0.65
-AI_SEARCH_THRESHOLD = 0.65
-AI_SIMILARITY_THRESHOLD = 0.45  # similar/mood 쿼리 — reranker가 품질 보완하므로 여유 있게 설정
-AI_FALLBACK_THRESHOLD = 0.4
-AI_SEARCH_LIMIT = int(os.getenv("AI_SEARCH_LIMIT", "40"))
 AI_SEARCH_RESULT_LIMIT = int(os.getenv("AI_SEARCH_RESULT_LIMIT", "5"))
-AUTHOR_SEARCH_THRESHOLD = float(os.getenv("AUTHOR_SEARCH_THRESHOLD", "0.5"))
 SIMILARITY_FILTER_ENABLED = os.getenv("SIMILARITY_FILTER_ENABLED", "true").lower() == "true"
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "jhgan/ko-sroberta-multitask")
 HYBRID_KEYWORD_LIMIT = int(os.getenv("HYBRID_KEYWORD_LIMIT", "15"))
-GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL", "gemini-2.0-flash-lite")
-GEMINI_DETAILED_MODEL = os.getenv("GEMINI_DETAILED_MODEL", "gemini-2.5-flash")
-RETAG_TRIGGER_SIZE = int(os.getenv("RETAG_TRIGGER_SIZE", "1"))
+GEMINI_FAST_MODEL = os.getenv("GEMINI_FAST_MODEL", "gemini-3.5-flash-lite")
+GEMINI_DETAILED_MODEL = os.getenv("GEMINI_DETAILED_MODEL", "gemini-3.5-flash-lite")
 
-# --- Hugging Face Model Loading ---
-# Check if GPU is available and use it, otherwise use CPU
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"Using device: {device}")
-print(f"Loading embedding model: {EMBEDDING_MODEL_NAME}")
-embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device=device)
+embedding_model = None
+_embedding_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="book-embedding")
+
+
+def _load_embedding_model() -> None:
+    global embedding_model
+    from sentence_transformers import SentenceTransformer
+    import torch
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    logger.info("Loading embedding model=%s device=%s", EMBEDDING_MODEL_NAME, device)
+    embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device=device)
+
+
+async def init_embedding_model() -> None:
+    await asyncio.get_running_loop().run_in_executor(_embedding_executor, _load_embedding_model)
+
+
+def shutdown_embedding_model() -> None:
+    _embedding_executor.shutdown(wait=False, cancel_futures=True)
 
 intent_analyzer = IntentAnalyzer()
 keyword_expander = KeywordExpander()
@@ -74,87 +84,6 @@ book_classifier_detailed = BookClassifier(
     intent_analyzer=intent_analyzer,
     llm_tagger=gemini_tagger_detailed,
 )
-
-class TaggingRetryManager:
-    """
-    LLM 태깅 실패 목록을 관리하고 재시도를 조율하는 클래스.
-
-    기존 전역 변수(FAILED_TAGGING_REGISTRY, RETAG_IN_PROGRESS) 방식은
-    FastAPI의 비동기 동시 처리 환경에서 Race Condition이 발생할 수 있다.
-    asyncio.Lock()으로 공유 상태 접근을 직렬화하여 이를 해결한다.
-    """
-
-    def __init__(self):
-        self._registry: set[str] = set()
-        self._in_progress: bool = False
-        self._lock = asyncio.Lock()
-
-    async def record_fallback(self, identifier: Optional[str], source: str) -> None:
-        if not identifier:
-            return
-        async with self._lock:
-            if identifier in self._registry:
-                return
-            self._registry.add(identifier)
-            print(f"[TAGGING FALLBACK] {identifier} tagged via {source}. Added to retry registry.")
-            should_trigger = len(self._registry) >= RETAG_TRIGGER_SIZE and not self._in_progress
-
-        if should_trigger:
-            print(f"[TAGGING RETRY] Trigger size reached. Scheduling re-tag task.")
-            asyncio.create_task(self._retry())
-
-    async def _retry(self) -> None:
-        async with self._lock:
-            if self._in_progress or not self._registry:
-                return
-            self._in_progress = True
-            retry_targets = list(self._registry)
-            self._registry.clear()
-
-        try:
-            print(f"[TAGGING RETRY] Retagging {len(retry_targets)} books with detailed model.")
-            from app.database import async_session
-            from sqlalchemy import select as sa_select
-
-            async with async_session() as session:
-                for isbn in retry_targets:
-                    try:
-                        result = await session.execute(sa_select(BookCorpus).where(BookCorpus.isbn == isbn))
-                        book = result.scalars().first()
-                        if not book:
-                            continue
-                        classification = await book_classifier_detailed.classify(
-                            book.title or "",
-                            book.contents or "",
-                            book.authors or "",
-                        )
-                        keyword_value, tags = _merge_tags(classification.primary_keyword, classification.tags)
-                        book.keyword = keyword_value
-                        book.tags = tags
-                        session.add(book)
-                        print(f"[TAGGING RETRY] Updated {isbn} -> {keyword_value}")
-                    except Exception as exc:
-                        print(f"[TAGGING RETRY] Failed to retag ISBN {isbn}: {exc}")
-                await session.commit()
-        except Exception as exc:
-            print(f"[TAGGING RETRY] Session error: {exc}")
-        finally:
-            async with self._lock:
-                self._in_progress = False
-
-
-import asyncio
-
-tagging_retry_manager = TaggingRetryManager()
-
-
-def _resolve_similarity_threshold(intent: IntentMetadata) -> float:
-    if intent.query_type == "author":
-        return AUTHOR_SEARCH_THRESHOLD
-    if intent.query_type in {"similar", "mood"}:
-        return AI_SIMILARITY_THRESHOLD
-    return AI_SEARCH_THRESHOLD
-
 
 def _limit_keywords(keywords: List[str]) -> List[str]:
     if not keywords:
@@ -180,11 +109,15 @@ def _merge_tags(primary_label: Optional[str], classification_tags: List[str], fa
 async def get_embedding(text: str):
     """Generates embedding for a given text using Hugging Face SentenceTransformer."""
     try:
-        # SentenceTransformer's encode method returns numpy array by default
-        embedding = embedding_model.encode(text, convert_to_numpy=True)
-        return embedding.tolist()  # Convert to list for pgvector compatibility
-    except Exception as e:
-        print(f"Error getting embedding for text: '{text}' - {e}")
+        if embedding_model is None:
+            raise RuntimeError("Embedding model is not ready")
+        embedding = await asyncio.get_running_loop().run_in_executor(
+            _embedding_executor,
+            lambda: embedding_model.encode(text, convert_to_numpy=True),
+        )
+        return embedding.tolist()
+    except Exception as exc:
+        logger.error("Embedding failed error=%s", type(exc).__name__)
         return None
 
 
@@ -271,9 +204,9 @@ def _deduplicate_results(results: list) -> list:
             _normalize_first_author(row.get('authors', '')),
         )
         existing = seen.get(key)
-        if existing is None or (row.get('similarity') or 0) > (existing.get('similarity') or 0):
+        if existing is None or (row.get('retrieval_score') or 0) > (existing.get('retrieval_score') or 0):
             seen[key] = row
-    return list(seen.values())
+    return sorted(seen.values(), key=lambda row: (-(row.get("retrieval_score") or 0), row.get("isbn") or ""))
 
 
 async def check_if_similar_in_corpus(db: AsyncSession, title: str, authors: str) -> bool:
@@ -301,6 +234,25 @@ async def check_if_similar_in_corpus(db: AsyncSession, title: str, authors: str)
         if _normalize_title(row.title) == norm_title:
             return True
     return False
+
+
+async def find_similar_corpus_edition(db: AsyncSession, title: str, authors: str) -> BookCorpus | None:
+    norm_title = _normalize_title(title)
+    norm_author = _normalize_first_author(authors)
+    if not norm_title or not norm_author:
+        return None
+    first_author = re.split(r'[,/·]', authors)[0].strip()
+    statement = text("""
+        SELECT id, title, authors FROM book_corpus
+        WHERE authors ILIKE :author
+        ORDER BY created_at DESC NULLS LAST, id DESC
+        LIMIT 200
+    """)
+    rows = (await db.execute(statement, {"author": f"%{first_author[:12]}%"})).fetchall()
+    for row in rows:
+        if _normalize_title(row.title) == norm_title and _normalize_first_author(row.authors) == norm_author:
+            return await db.get(BookCorpus, row.id)
+    return None
 
 
 # --- Main Orchestrators & Search ---
@@ -341,7 +293,7 @@ async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
                     isbn = book.get("isbn")
                     if isbn and len(isbn.split()) > 1:
                         isbn = isbn.split()[1]
-                    else:
+                    elif not isbn or len(isbn.split()) != 1 or len(isbn) != 13 or not isbn.isdigit():
                         continue
 
                     if should_skip_book(keyword, book):
@@ -349,11 +301,14 @@ async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
                         continue
 
                     if await check_if_isbn_exists(db, isbn):
+                        await db.rollback()
                         continue
 
-                    if await check_if_similar_in_corpus(db, book.get("title", ""), book.get("authors", "")):
+                    if await check_if_similar_in_corpus(db, book.get("title", ""), format_authors(book.get("authors"))):
                         print(f"[DEDUP] Skipping duplicate edition: '{book.get('title')}'")
+                        await db.rollback()
                         continue
+                    await db.rollback()
 
                     book_text = build_book_text(
                         book.get("title", ""),
@@ -369,9 +324,6 @@ async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
                         book.get("contents", ""),
                         format_authors(book.get("authors")),
                     )
-                    if not classification.used_llm:
-                        await tagging_retry_manager.record_fallback(isbn, "fast_tagger_fallback")
-
                     # 장르 검증: Gemini 분류 결과가 목표 장르와 불일치하면 제외
                     if not is_genre_match(keyword, classification.primary_keyword):
                         print(
@@ -408,6 +360,15 @@ async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
                             tags=tags,
                         )
                         db.add(new_book)
+                        try:
+                            await db.flush()
+                            if not classification.used_llm:
+                                await enqueue_tagging_jobs(db, [isbn], commit=False)
+                            await db.commit()
+                        except IntegrityError:
+                            await db.rollback()
+                            logger.info("Skipped concurrent duplicate corpus ISBN")
+                            continue
                         total_saved_count += 1
                         print(
                             f"Saved book: {book.get('title')} (Similarity: {similarity:.4f}) "
@@ -416,7 +377,6 @@ async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
                     else:
                         print(f"Discarded book: {book.get('title')} (Similarity below threshold: {similarity:.4f})")
 
-    await db.commit()
     average_similarity = (total_similarity / processed_books_count) if processed_books_count > 0 else 0
     return {
         "processed_keywords": len(keywords),
@@ -426,33 +386,43 @@ async def _process_keywords_with_db(keywords: list[str], db: AsyncSession):
 
 
 async def embed_single_book(book_data: SingleBookRequest):
-    """Embeds a single book and saves it to the corpus if it doesn't exist."""
+    """Return only after the book is persisted or a duplicate is confirmed."""
     async with _db.async_session() as db:
-        await _embed_single_book_with_db(book_data, db)
+        return await _embed_single_book_with_db(book_data, db)
 
 
 async def _embed_single_book_with_db(book_data: SingleBookRequest, db: AsyncSession):
     print(f"Processing single book with ISBN: {book_data.isbn}")
     if await check_if_isbn_exists(db, book_data.isbn):
         print(f"Book with ISBN {book_data.isbn} already exists in corpus. Skipping.")
-        return
+        return "already_exists"
 
-    if await check_if_similar_in_corpus(db, book_data.title, book_data.authors):
-        print(f"[DEDUP] Skipping duplicate edition for single book: '{book_data.title}'")
-        return
+    similar = await find_similar_corpus_edition(db, book_data.title, format_authors(book_data.authors))
+    if similar:
+        db.add(BookCorpus(
+            title=book_data.title,
+            contents=book_data.contents,
+            isbn=book_data.isbn,
+            authors=format_authors(book_data.authors),
+            publisher=book_data.publisher,
+            thumbnail=book_data.thumbnail,
+            keyword=similar.keyword,
+            similarity_score=similar.similarity_score,
+            embedding=similar.embedding,
+            tags=list(similar.tags) if isinstance(similar.tags, list) else [],
+        ))
+        await db.commit()
+        return "reused_edition"
 
     book_text = build_book_text(book_data.title, book_data.contents or "", book_data.authors)
     book_embedding = await get_embedding(book_text)
     if not book_embedding:
-        print(f"Could not generate embedding for book: {book_data.title}. Skipping.")
-        return
+        raise HTTPException(status_code=503, detail="Book embedding is unavailable")
     classification = await book_classifier_detailed.classify(
         book_data.title,
         book_data.contents or "",
         format_authors(book_data.authors),
     )
-    if not classification.used_llm:
-        await tagging_retry_manager.record_fallback(book_data.isbn, "detailed_tagger_fallback")
     keyword_value, tags = _merge_tags(classification.primary_keyword, classification.tags)
     new_corpus_entry = BookCorpus(
         title=book_data.title,
@@ -467,176 +437,62 @@ async def _embed_single_book_with_db(book_data: SingleBookRequest, db: AsyncSess
         tags=tags,
     )
     db.add(new_corpus_entry)
+    await db.flush()
+    if not classification.used_llm:
+        await enqueue_tagging_jobs(db, [book_data.isbn], commit=False)
     await db.commit()
     print(f"Successfully saved single book to corpus: {book_data.title}")
+    return "saved"
 
 
-async def search_by_natural_language(query: str, db: AsyncSession):
-    """Performs vector + hybrid keyword search with intent-aware prompts."""
-    print(f"Performing AI search for query: {query}")
-
+async def search_by_natural_language(query: str, db: AsyncSession, request_id: str | None = None):
+    """Retrieve bounded candidates, enforce explicit constraints, then rank up to five books."""
+    started = time.perf_counter()
     intent = await intent_analyzer.analyze(query)
-    expanded_keywords = await keyword_expander.expand(intent)
-    hybrid_keywords = _limit_keywords(expanded_keywords)
-    prompt_text = prompt_builder.build(intent, query)
-    current_threshold = _resolve_similarity_threshold(intent)
-
-    print(f"[Intent] {intent}")
-    print(f"[Prompt] {prompt_text}")
-    if hybrid_keywords:
-        print(f"[Hybrid keywords] {hybrid_keywords}")
-
-    # Query Rewriting: Gemini로 임베딩 최적화 — 실패 시 template prompt 폴백
-    rewritten = await rewrite_query(query, intent)
-    embedding_text = rewritten if rewritten else prompt_text
-
-    query_embedding = await get_embedding(embedding_text)
+    keywords = _limit_keywords(await keyword_expander.expand(intent))
+    intent_ms = (time.perf_counter() - started) * 1000
+    reference = None
+    if intent.query_type == "author_similar" and intent.reference_author:
+        reference = await find_reference_anchor(db, intent.reference_author)
+        if reference is None:
+            logger.info("search_no_reference type=author_similar")
+            return []
+        query_embedding = reference.embedding
+        keywords = _limit_keywords([*reference.theme_keywords, *keywords])
+    else:
+        query_embedding = await get_embedding(prompt_builder.build(intent, query))
     if not query_embedding:
-        raise HTTPException(status_code=500, detail="Could not generate embedding for the search query.")
+        raise HTTPException(status_code=503, detail="Search embedding is unavailable")
 
-    keyword_clause = ""
-    if hybrid_keywords:
-        keyword_clause = """
-            OR keyword = ANY(:keyword_list)
-            OR (
-                tags IS NOT NULL
-                AND EXISTS (
-                    SELECT 1
-                    FROM jsonb_array_elements_text(tags) AS tag(value)
-                    WHERE tag.value = ANY(:keyword_list)
-                )
-            )
-        """
-    base_query = f"""
-        SELECT id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags,
-               1 - (embedding <=> :query_embedding) AS similarity
-        FROM book_corpus
-        WHERE (1 - (embedding <=> :query_embedding) > :threshold)
-        {keyword_clause}
-        ORDER BY similarity DESC
-        LIMIT :limit
-    """
-    params = {
-        "query_embedding": str(list(query_embedding)),
-        "threshold": current_threshold,
-        "limit": AI_SEARCH_LIMIT,
-    }
-    if hybrid_keywords:
-        params["keyword_list"] = hybrid_keywords
-    stmt = text(base_query)
-    result = await db.execute(stmt, params)
-
-    raw_results = [dict(row) for row in result.mappings()]
-
-    filtered = [row for row in raw_results if is_search_candidate(row, intent.genre, intent.domain)]
-    filtered_out_count = len(raw_results) - len(filtered)
-    initial_filtered_count = len(filtered)
-
-    if intent.focus_author:
-        exact_matches = []
-        fuzzy_matches = []
-        normalized_author = intent.focus_author.replace(" ", "")
-        for row in filtered:
-            authors = (row.get("authors") or "").replace(" ", "")
-            if normalized_author and normalized_author in authors:
-                exact_matches.append(row)
-            else:
-                fuzzy_matches.append(row)
-        filtered = exact_matches + fuzzy_matches
-
-    if filtered_out_count:
-        print(
-            f"[NOISE FILTER] Removed {filtered_out_count} items likely to be exam/prep materials "
-            f"for query '{query}'."
-        )
-    if intent.focus_author:
-        print(
-            f"[AUTHOR RERANK] Prioritized {len(exact_matches)} exact author matches for '{intent.focus_author}'."
-        )
-
-    # 기본 검색이 비었을 때만 낮은 유사도 범위에서 후보를 다시 찾는다.
-    fallback_count = 0
-    if not filtered:
-        fallback_stmt = text("""
-            SELECT id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags,
-                   1 - (embedding <=> :query_embedding) AS similarity
-            FROM book_corpus
-            WHERE 1 - (embedding <=> :query_embedding) > :fallback_threshold
-            ORDER BY embedding <=> :query_embedding
-            LIMIT :limit
-        """)
-        fallback_result = await db.execute(
-            fallback_stmt,
-            {"query_embedding": str(list(query_embedding)), "fallback_threshold": AI_FALLBACK_THRESHOLD, "limit": AI_SEARCH_LIMIT},
-        )
-        fallback_rows = [dict(row) for row in fallback_result.mappings()]
-        filtered = [row for row in fallback_rows if is_search_candidate(row, intent.genre, intent.domain)]
-        fallback_count = len(fallback_rows)
-
-    # 에디션 중복 제거: (정규화 제목, 첫 저자) 기준으로 가장 높은 유사도 항목만 유지
-    before_dedup = len(filtered)
+    embed_ms = (time.perf_counter() - started) * 1000 - intent_ms
+    candidates, counts = await retrieve_candidates(
+        db, query_embedding, intent, keywords,
+        exclude_author=reference.author if reference else None,
+    )
+    filtered = [
+        book for book in candidates
+        if is_search_candidate(book, intent.genre, intent.domain, intent.requested_form)
+    ]
+    if reference and reference.theme_keywords:
+        filtered = [book for book in filtered if has_theme_evidence(book, reference.theme_keywords)]
     filtered = _deduplicate_results(filtered)
-    if len(filtered) < before_dedup:
-        print(f"[DEDUP] Removed {before_dedup - len(filtered)} duplicate editions for query '{query}'.")
+    retrieval_ms = (time.perf_counter() - started) * 1000 - intent_ms - embed_ms
+    rerank_query = query
+    if reference:
+        rerank_query += f" 기준 작품: {', '.join(reference.titles[:3])}. 핵심 주제: {', '.join(reference.theme_keywords[:5])}. 다른 작가의 책 중에서 골라줘."
+    results = (await rerank_with_gemini(rerank_query, filtered))[:AI_SEARCH_RESULT_LIMIT]
 
-    # Re-ranking: Gemini로 Top N → 최적 5권 선별 + 추천 이유 생성
-    search_results = await rerank_with_gemini(query, filtered)
-
-    if intent.focus_author and len(search_results) < AI_SEARCH_RESULT_LIMIT:
-        remaining = AI_SEARCH_RESULT_LIMIT - len(search_results)
-        fallback_stmt = text(
-            """
-            SELECT id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags,
-                   0.0 AS similarity
-            FROM book_corpus
-            WHERE REPLACE(authors, ' ', '') ILIKE :author_pattern
-            ORDER BY created_at DESC
-            LIMIT :limit
-        """
-        )
-        fallback_rows = await db.execute(
-            fallback_stmt,
-            {
-                "author_pattern": f"%{intent.focus_author.replace(' ', '')}%",
-                "limit": remaining,
-            },
-        )
-        seen_isbns = {row.get("isbn") for row in search_results if row.get("isbn")}
-        fallback_results = []
-        for row in fallback_rows.mappings():
-            row_dict = dict(row)
-            if not is_search_candidate(row_dict, intent.genre, intent.domain):
-                continue
-            isbn = row_dict.get("isbn")
-            if isbn and isbn in seen_isbns:
-                continue
-            seen_isbns.add(isbn)
-            fallback_results.append(row_dict)
-        if fallback_results:
-            print(
-                f"[AUTHOR FALLBACK] Added {len(fallback_results)} direct author matches "
-                f"to complement semantic search for '{intent.focus_author}'."
-            )
-            search_results.extend(fallback_results)
-            search_results = search_results[:AI_SEARCH_RESULT_LIMIT]
-
-    print(
-        f"[{intent.query_type.upper()}] Returning {len(search_results)} results for query: '{query}' "
-        f"(limited to top {AI_SEARCH_RESULT_LIMIT})"
-    )
+    elapsed_ms = (time.perf_counter() - started) * 1000
+    rerank_ms = elapsed_ms - intent_ms - embed_ms - retrieval_ms
     logger.info(
-        "AI search stages type=%s initial=%d filtered=%d fallback=%d deduplicated=%d returned=%d",
-        intent.query_type, len(raw_results), initial_filtered_count,
-        fallback_count, len(filtered), len(search_results),
+        "search_completed request_id=%s type=%s form=%s vector=%d keyword=%d title=%d author=%d merged=%d filtered=%d returned=%d intent_ms=%.1f embed_ms=%.1f retrieval_ms=%.1f rerank_ms=%.1f latency_ms=%.1f",
+        (request_id or "-")[:64], intent.query_type, intent.requested_form, counts.vector, counts.keyword, counts.title, counts.author,
+        counts.merged, len(filtered), len(results), intent_ms, embed_ms, retrieval_ms, rerank_ms, elapsed_ms,
     )
-    if not search_results:
+    if not results:
         logger.warning(
-            "AI search returned no books type=%s initial=%d filtered=%d fallback=%d fallback_filtered=%d",
-            intent.query_type, len(raw_results), initial_filtered_count, fallback_count, len(filtered),
+            "search_empty type=%s vector=%d keyword=%d title=%d author=%d merged=%d filtered=%d",
+            intent.query_type, counts.vector, counts.keyword, counts.title, counts.author,
+            counts.merged, len(filtered),
         )
-    for i, r in enumerate(search_results[:3], 1):
-        similarity = r.get("similarity")
-        similarity_text = f"{similarity:.3f}" if similarity is not None else "N/A"
-        print(f"{i}. {r.get('title')} (sim: {similarity_text})")
-
-    return search_results
+    return results

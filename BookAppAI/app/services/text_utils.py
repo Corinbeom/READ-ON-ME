@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import List, Optional, Union
 
 # ---------------------------------------------------------------------------
@@ -105,6 +106,9 @@ EXCLUSION_STRICT_TERMS = [
     "기초 연구",
     "연구총서",
     "학술총서",
+    "학습전략 프로그램",
+    "학습 내용 체계적으로",
+    "필수 영단어",
 ]
 
 EXCLUSION_COMBO_LEADS = [
@@ -180,11 +184,138 @@ def contains_exclusion_terms(*chunks: str) -> bool:
     return False
 
 
-def is_search_candidate(book: dict, genre: Optional[str] = None, domain: Optional[str] = None) -> bool:
+DOMAIN_EVIDENCE: dict[str, tuple[str, ...]] = {
+    "비즈니스": ("창업", "스타트업", "사업", "비즈니스", "기업", "경영", "사장", "마케팅", "브랜드"),
+    "금융": ("경제", "금융", "투자", "재테크", "주식", "증권", "etf", "부동산", "자산", "재무"),
+    "심리": ("심리", "마음", "정신", "감정", "인지", "상담", "치료", "우울"),
+    "철학": ("철학", "사유", "존재", "윤리", "인문", "사상"),
+    "정치": ("정치", "민주주의", "국회", "정권", "정부", "대통령", "선거", "의회", "전체주의", "권력"),
+    "에세이": ("에세이", "산문", "수필", "회고", "일기"),
+}
+
+FICTION_LABELS = {
+    "소설", "문학", "sf", "판타지", "로맨스", "스릴러", "미스터리", "추리",
+    "디스토피아", "정치 소설", "정치소설", "우화",
+}
+NONFICTION_LABELS = {
+    "논픽션", "회고록", "전기", "역사", "과학", "사회", "인문학", "경제",
+    "금융", "정치", "철학", "심리", "심리학", "비즈니스", "자기계발",
+}
+NARROW_GENRE_EVIDENCE: dict[str, tuple[str, ...]] = {
+    "sf": ("sf", "공상과학", "과학소설", "과학 소설", "사이언스 픽션"),
+    "판타지": ("판타지", "마법", "이세계", "환상 세계"),
+    "로맨스": ("로맨스", "연애", "연인", "사랑 이야기", "사랑에 빠", "할리퀸"),
+    "스릴러": ("스릴러", "서스펜스", "연쇄살인", "추적", "범죄 소설"),
+    "미스터리": ("미스터리", "추리", "탐정", "수사", "살인사건"),
+    "디스토피아": ("디스토피아", "전체주의", "감시 사회", "감시사회", "통제 사회"),
+}
+GENRE_ABOUT_TITLE = re.compile(
+    r"(?:소설|문학|에세이|판타지|로맨스|sf).{0,14}"
+    r"(?:읽기|작법|글쓰기|비평|연구|가이드|마스터플랜|이론|분석|역사|탄생|상상력|무엇인가|어떻게|시대정신|전회|사변|도감)",
+    re.IGNORECASE,
+)
+STUDY_OR_COLLECTION_TITLE = re.compile(
+    r"(?:정보관리사|자격증|학습전략 프로그램|필독서 세트|작법서|작가 마스터플랜|장르 글쓰기|아이템 도감)",
+    re.IGNORECASE,
+)
+NEW_FICTION_OR_POETRY = re.compile(
+    r"(?:첫|신작|새로운|[두세네다섯여섯일곱여덟아홉열0-9]+\s*번째).{0,8}"
+    r"(?:장편소설|단편소설|소설집|시집)",
+    re.IGNORECASE,
+)
+GENRE_META_INTRO = ("평론집", "비평서", "개론서", "작법서", "연구서", "작품 분석")
+
+PRACTICAL_TITLE_TERMS = (
+    "대화법", "사용법", "활용법", "실무", "워크북", "가이드", "입문서", "교과서",
+    "매뉴얼", "노하우", "작법", "비법", "자기계발기술", "기획세트",
+)
+NARRATIVE_INTRO_TERMS = ("장편소설", "단편소설", "소설집", "동화", "회고록", "자전적", "실화", "주인공", "서사")
+PRACTICAL_INTRO_TERMS = (
+    "자기계발서", "실용서", "대화법", "방법을 소개", "방법을 알려", "방법을 제시",
+    "단계별", "상황별", "실전 가이드", "활용법", "노하우", "워크북", "실무서", "입문서",
+    "예비창업자", "창업을 준비하는 학생",
+)
+
+
+def infer_book_form(title: str, contents: str) -> str:
+    """분명한 형식 신호만 사용한다. 불명확한 책은 재정렬 단계에 남긴다."""
+    title_text = title.casefold()
+    intro = contents[:500].casefold()
+    if _has_any(title_text, PRACTICAL_TITLE_TERMS):
+        return "PRACTICAL"
+    if _has_any(intro, NARRATIVE_INTRO_TERMS):
+        return "STORY"
+    if _has_any(intro, PRACTICAL_INTRO_TERMS):
+        return "PRACTICAL"
+    return "UNKNOWN"
+
+
+def _has_any(text: str, terms: tuple[str, ...]) -> bool:
+    return any(term in text for term in terms)
+
+
+def _genre_matches(genre: str, title: str, contents: str, labels: list[str]) -> bool:
+    genre = genre.casefold()
+    title = title.casefold()
+    intro = contents[:500].casefold()
+    evidence = f"{title} {intro}"
+    label_set = {label.casefold() for label in labels}
+
+    if GENRE_ABOUT_TITLE.search(title) or STUDY_OR_COLLECTION_TITLE.search(title):
+        return False
+    if genre in {"sf", "판타지", "로맨스", "스릴러", "미스터리", "디스토피아", "소설"}:
+        if _has_any(intro[:180], GENRE_META_INTRO):
+            return False
+    if genre == "sf" and "세계추리 sf문학" in title:
+        return False
+    if genre == "에세이":
+        if NEW_FICTION_OR_POETRY.search(intro):
+            return False
+        return bool(label_set & {"에세이", "산문", "수필", "회고록"}) or _has_any(evidence, ("에세이", "산문", "수필", "회고록"))
+    if genre == "논픽션":
+        if label_set & (FICTION_LABELS - {"문학"}) or _has_any(evidence, ("장편소설", "단편소설", "소설집", "판타지 소설")):
+            return False
+        return bool(label_set & NONFICTION_LABELS) or _has_any(evidence, ("논픽션", "실화", "회고록", "전기"))
+
+    fiction_evidence = bool(label_set & FICTION_LABELS) or _has_any(evidence, ("소설", "서사", "단편", "장편", "우화"))
+    if "시집" in intro and not _has_any(evidence, ("장편소설", "단편소설", "소설집")):
+        return False
+    if genre == "소설":
+        return fiction_evidence
+    if genre == "정치 소설":
+        political_labels = {"정치 소설", "정치소설", "전체주의", "사회 비판"}
+        return fiction_evidence and (
+            _has_any(evidence, DOMAIN_EVIDENCE["정치"]) or bool(label_set & political_labels)
+        )
+    if genre in NARROW_GENRE_EVIDENCE:
+        if genre == "로맨스" and _has_any(evidence, ("로맨스 스캠", "로맨스 사기")):
+            return False
+        if genre == "스릴러" and "힐링" in label_set and _has_any(intro, ("따뜻", "유머러스")):
+            return False
+        if genre == "로맨스":
+            # A stray romance tag on psychology or fraud books is not a novel.
+            independent_fiction = bool(label_set & {"소설", "문학", "판타지", "스릴러", "미스터리", "우화"}) or _has_any(
+                evidence, ("소설", "단편", "장편", "주인공")
+            )
+            return independent_fiction and _has_any(evidence, NARROW_GENRE_EVIDENCE[genre])
+        return fiction_evidence and (
+            _has_any(evidence, NARROW_GENRE_EVIDENCE[genre]) or genre in label_set
+        )
+    if genre.endswith(" 소설"):
+        return fiction_evidence and genre[:-3].strip() in evidence
+    return genre in evidence
+
+
+def is_search_candidate(
+    book: dict, genre: Optional[str] = None, domain: Optional[str] = None,
+    requested_form: str = "ANY",
+) -> bool:
     title = book.get("title") or ""
     contents = book.get("contents") or ""
     authors = format_authors(book.get("authors"))
     if contains_exclusion_terms(title, contents, authors) or len(contents.strip()) < 30:
+        return False
+    if requested_form == "STORY" and infer_book_form(title, contents) == "PRACTICAL":
         return False
 
     tags = book.get("tags")
@@ -193,12 +324,23 @@ def is_search_candidate(book: dict, genre: Optional[str] = None, domain: Optiona
     if genre:
         if genre == "소설" and "필사" in title:
             return False
-        if labels:
-            if not any(is_genre_match(genre, label) for label in labels):
-                return False
-        elif genre.lower() not in f"{title} {contents}".lower():
+        if not _genre_matches(genre, title, contents, labels):
+            return False
+    if domain and ("시집" in labels or "시집" in contents[:500]) and genre != "시":
+        return False
+    if domain in DOMAIN_EVIDENCE:
+        topic_text = f"{title} {contents[:500]}".casefold()
+        if not _has_any(topic_text, DOMAIN_EVIDENCE[domain]):
+            return False
+        if domain == "정치" and not (
+            _has_any(title.casefold(), DOMAIN_EVIDENCE["정치"])
+            or any(label.casefold() in {"정치", "정치 소설", "정치소설", "전체주의"} for label in labels)
+            or sum(term in topic_text for term in DOMAIN_EVIDENCE["정치"]) >= 2
+        ):
             return False
     if domain == "자기계발":
+        if any(term in contents for term in ("이론서", "이론적 기초", "내용을 학습할 수 있습니다")):
+            return False
         relevance_text = " ".join([title, contents, *labels]).lower()
         if not any(term in relevance_text for term in ("자기계발", "자기개발", "동기부여", "습관", "목표", "성장", "성공", "변화")):
             return False

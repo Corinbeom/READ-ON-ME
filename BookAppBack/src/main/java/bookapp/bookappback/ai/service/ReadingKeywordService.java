@@ -24,11 +24,13 @@ public class ReadingKeywordService {
 
     private final WebClient webClient;
     private final UserBookStatusService userBookStatusService;
+    private final String internalToken;
 
     public ReadingKeywordService(
             WebClient.Builder webClientBuilder,
             @Value("${ai.base-url}") String aiBaseUrl,
-            UserBookStatusService userBookStatusService
+            UserBookStatusService userBookStatusService,
+            @Value("${internal.api.token:}") String internalToken
     ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3_000)
@@ -40,6 +42,7 @@ public class ReadingKeywordService {
                 .build();
 
         this.userBookStatusService = userBookStatusService;
+        this.internalToken = internalToken;
     }
 
     /**
@@ -65,6 +68,9 @@ public class ReadingKeywordService {
         try {
             Map<String, Object> result = webClient.post()
                     .uri("/api/user/reading-tags")
+                    .headers(headers -> {
+                        if (internalToken != null && !internalToken.isBlank()) headers.set("X-Internal-Token", internalToken);
+                    })
                     .bodyValue(requestDto)
                     .retrieve()
                     .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})

@@ -106,6 +106,20 @@ def test_prompt_builder_domain_template_includes_constraints():
     assert "비즈니스" in prompt
     assert "입문" in prompt
     assert "제약: 최근, 한국" in prompt
+    assert "창업 입문자를 위한 책" in prompt
+
+
+def test_domain_prompt_keeps_motivation_request():
+    query = "동기부여를 얻을 수 있는 자기계발책을 추천해줘"
+    intent = IntentMetadata(raw_query=query, domain="자기계발")
+    assert query in PromptTemplateBuilder().build(intent, query)
+
+
+def test_exact_author_prompt_does_not_request_other_authors():
+    intent = IntentMetadata(raw_query="김영하 작가의 소설", query_type="author", focus_author="김영하")
+    prompt = PromptTemplateBuilder().build(intent, intent.raw_query)
+    assert "직접 집필" in prompt
+    assert "다른 작가의 책은 제외" in prompt
 
 
 @pytest.mark.asyncio

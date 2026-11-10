@@ -76,7 +76,7 @@ services:
       # 운영에서 SQL 로깅이 필요하면 true로
       SQL_ECHO: ${AI_SQL_ECHO:-false}
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       - postgres
     restart: unless-stopped

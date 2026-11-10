@@ -30,6 +30,7 @@ public class DataLoader implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final WebClient.Builder webClientBuilder;
     private final String aiBaseUrl;
+    private final String internalToken;
 
     public DataLoader(
             KakaoBookService kakaoBookService,
@@ -37,7 +38,8 @@ public class DataLoader implements CommandLineRunner {
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             WebClient.Builder webClientBuilder,
-            @Value("${ai.base-url}") String aiBaseUrl
+            @Value("${ai.base-url}") String aiBaseUrl,
+            @Value("${internal.api.token:}") String internalToken
     ) {
         this.kakaoBookService = kakaoBookService;
         this.bookRepository = bookRepository;
@@ -45,6 +47,7 @@ public class DataLoader implements CommandLineRunner {
         this.passwordEncoder = passwordEncoder;
         this.webClientBuilder = webClientBuilder;
         this.aiBaseUrl = aiBaseUrl;
+        this.internalToken = internalToken;
     }
 
     @Override
@@ -109,6 +112,9 @@ public class DataLoader implements CommandLineRunner {
 
         webClient.post()
                 .uri("/api/books/fetch-and-filter")
+                .headers(headers -> {
+                    if (internalToken != null && !internalToken.isBlank()) headers.set("X-Internal-Token", internalToken);
+                })
                 .bodyValue(Map.of("keywords", keywords))
                 .retrieve()
                 .bodyToMono(String.class)
@@ -133,6 +139,9 @@ public class DataLoader implements CommandLineRunner {
 
             client.post()
                     .uri("/api/books/embed-single")
+                    .headers(headers -> {
+                        if (internalToken != null && !internalToken.isBlank()) headers.set("X-Internal-Token", internalToken);
+                    })
                     .bodyValue(body)
                     .retrieve()
                     .bodyToMono(String.class)

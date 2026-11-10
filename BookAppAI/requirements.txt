@@ -4,12 +4,12 @@ httpx
 pydantic
 python-dotenv
 SQLAlchemy
+alembic
 asyncpg
 pgvector
 numpy<2
 
 psycopg2-binary
-python-dotenv
 sentence-transformers
 torch==2.2.2
 transformers==4.38.2

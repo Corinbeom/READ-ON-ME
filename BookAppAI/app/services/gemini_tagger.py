@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_DEFAULT_MODEL = os.getenv("GEMINI_CLASSIFIER_MODEL", "gemini-2.5-flash")
+GEMINI_DEFAULT_MODEL = os.getenv("GEMINI_CLASSIFIER_MODEL", "gemini-3.5-flash-lite")
 GEMINI_API_BASE = os.getenv(
     "GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1"
 )
@@ -53,11 +53,17 @@ class GeminiTagger:
         self.base_url = base_url or GEMINI_API_BASE
         self.timeout = timeout or GEMINI_TIMEOUT
         self.enabled = bool(self.api_key and self.model)
+        self.last_error_code: str | None = None
 
     async def classify_book(
         self, title: str, contents: str, authors: str
     ) -> Optional[Dict[str, Any]]:
-        if not self.enabled or not llm_cooldown.available():
+        self.last_error_code = None
+        if not self.enabled:
+            self.last_error_code = "NO_API_KEY"
+            return None
+        if not llm_cooldown.available():
+            self.last_error_code = "RATE_LIMIT"
             return None
 
         prompt = PROMPT_TEMPLATE.format(
@@ -80,14 +86,25 @@ class GeminiTagger:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(url, params=params, json=payload)
                 response.raise_for_status()
-                return self._parse_response(response.json())
+                result = self._parse_response(response.json())
+                if result is None:
+                    self.last_error_code = "INVALID_RESPONSE"
+                return result
         except httpx.HTTPError as exc:
             status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
             if status == 429:
                 llm_cooldown.rate_limited()
+                self.last_error_code = "RATE_LIMIT"
+            elif status in (401, 403):
+                self.last_error_code = "AUTH_ERROR"
+            elif isinstance(exc, httpx.TimeoutException):
+                self.last_error_code = "TIMEOUT"
+            else:
+                self.last_error_code = "UPSTREAM_ERROR"
             logger.warning("Gemini tagging fallback error=%s status=%s", type(exc).__name__, status)
             return None
         except json.JSONDecodeError as exc:
+            self.last_error_code = "INVALID_RESPONSE"
             logger.warning("Gemini tagging response was not valid JSON: %s", type(exc).__name__)
             return None
 
@@ -108,6 +125,9 @@ class GeminiTagger:
             parsed = json.loads(cleaned)
         except json.JSONDecodeError:
             logger.warning("Gemini tagging output was not valid JSON")
+            return None
+        if not isinstance(parsed, dict):
+            logger.warning("Gemini tagging output was not a JSON object")
             return None
 
         primary = parsed.get("primary_keyword")

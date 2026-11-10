@@ -20,6 +20,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.Duration;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,18 +33,21 @@ public class BookService {
     private final UserBookStatusRepository userBookStatusRepository;
 
     private final String aiBaseUrl;
+    private final String internalToken;
 
     @Autowired
     public BookService(BookRepository bookRepository,
                        KakaoSearchCacheService kakaoSearchCacheService,
                        WebClient.Builder webClientBuilder,
                        UserBookStatusRepository userBookStatusRepository,
-                       @org.springframework.beans.factory.annotation.Value("${ai.base-url}") String aiBaseUrl) {
+                       @org.springframework.beans.factory.annotation.Value("${ai.base-url}") String aiBaseUrl,
+                       @org.springframework.beans.factory.annotation.Value("${internal.api.token:}") String internalToken) {
         this.bookRepository = bookRepository;
         this.kakaoSearchCacheService = kakaoSearchCacheService;
         this.webClientBuilder = webClientBuilder;
         this.userBookStatusRepository = userBookStatusRepository;
         this.aiBaseUrl = aiBaseUrl;
+        this.internalToken = internalToken;
     }
 
 
@@ -162,9 +166,13 @@ public class BookService {
 
         webClient.post()
                 .uri("/api/books/embed-single")
+                .headers(headers -> {
+                    if (internalToken != null && !internalToken.isBlank()) headers.set("X-Internal-Token", internalToken);
+                })
                 .bodyValue(bookData)
                 .retrieve()
                 .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(45))
                 .flatMap(response -> Mono.fromRunnable(() -> {
                     log.info("임베딩 성공 [isbn={}]", book.getIsbn13());
                     bookRepository.markAsEmbedded(book.getIsbn13());

@@ -1,25 +1,45 @@
+import asyncio
 import httpx
 import os
 import time
 import logging
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from contextlib import asynccontextmanager
+from pathlib import Path
+from alembic import command
+from alembic.config import Config
 
 from app.routers import data_builder, recommendation
+from app.services import book_ai_service
+from app.services.tagging_jobs import recover_interrupted_jobs, run_worker
+from app.security import require_internal_token
 import app.database as _db
-from app.database import Base
 from app.config import validate_prod_config
 from .recommendation_service import get_recommendations
+
+def upgrade_database() -> None:
+    config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+    command.upgrade(config, "head")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_prod_config()  # 먼저 검증 — DATABASE_URL 포함
+    await asyncio.to_thread(upgrade_database)
     _db.init_db()           # 검증 통과 후 엔진 생성
-    async with _db.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
+    await book_ai_service.init_embedding_model()
+    await recover_interrupted_jobs()
+    worker_stop = asyncio.Event()
+    worker = asyncio.create_task(run_worker(worker_stop))
+    try:
+        yield
+    finally:
+        worker_stop.set()
+        await worker
+        book_ai_service.shutdown_embedding_model()
+        await _db.engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
 
@@ -75,7 +95,7 @@ async def test_spring_connection():
         except httpx.RequestError as exc:
             return {"error": f"Spring Boot 서버에 연결하는 중 오류 발생: {exc}"}
 
-@app.get("/recommendations/{user_id}", response_model=List[int])
+@app.get("/recommendations/{user_id}", response_model=List[int], dependencies=[Depends(require_internal_token)])
 async def recommend_books(user_id: int):
     """
     특정 사용자에게 도서를 추천합니다.

@@ -6,7 +6,9 @@
 
 - **KAKAO_API_KEY**: 카카오 도서 검색 API 키 (Spring/AI 모두 사용)
 - **GEMINI_API_KEY**: Gemini 태깅/분류용 키 (AI 사용)
-- **INTERNAL_API_TOKEN**: Spring ↔ AI 내부 통신용 토큰 (예: `/api/library/all` 보호)
+- **INTERNAL_API_TOKEN**: Spring ↔ AI 내부 통신용 토큰. Spring의 `/api/library/all`과 FastAPI의 검색·데이터 구축·독서 태그·협업 추천 API에 동일하게 설정합니다.
+
+Gemini 태깅과 검색 재정렬의 기본 모델은 `gemini-3.5-flash-lite`입니다. 필요하면 AI 서비스의 `GEMINI_FAST_MODEL`, `GEMINI_DETAILED_MODEL`, `GEMINI_CLASSIFIER_MODEL`로 각각 변경할 수 있습니다. 모델을 바꾼 뒤에는 AI 서버를 재시작해야 합니다.
 
 ### 권장(운영/보안)
 
@@ -39,7 +41,11 @@ docker compose up --build
 ```
 
 Spring: `http://localhost:8080`  
-FastAPI: `http://localhost:8000`
+FastAPI: `http://localhost:8000` (Docker 호스트에서는 `127.0.0.1`에만 바인딩)
+
+### DB 마이그레이션과 재태깅
+
+FastAPI 시작 시 Alembic이 `book_corpus`와 `book_tagging_jobs` 스키마를 확인합니다. 기존 데이터는 유지되며 새 DB에는 `vector` 확장을 생성할 권한이 필요합니다. 태깅 실패 기록은 DB에 남습니다. 일반 오류는 최대 3회, 429 호출 제한은 긴 간격으로 계속 재시도합니다. 인증 오류를 해결한 뒤에는 AI 서버를 재시작하고 `BookAppAI`에서 `python -m tools.queue_retag --retry-failed --limit 20`으로 미리 보고 `--apply`로 다시 등록하세요. 기존 `user_added` 도서의 소량 재태깅은 `--retry-failed` 없이 같은 명령을 사용합니다.
 
 ### 주의: pgvector 확장(vector 타입) 초기화
 

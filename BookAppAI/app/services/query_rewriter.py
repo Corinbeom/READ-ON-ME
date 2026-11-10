@@ -23,7 +23,7 @@ from app.services import llm_cooldown
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_BASE = os.getenv("GEMINI_API_BASE", "https://generativelanguage.googleapis.com/v1")
-REWRITE_MODEL = os.getenv("GEMINI_DETAILED_MODEL", "gemini-2.5-flash")
+REWRITE_MODEL = os.getenv("GEMINI_DETAILED_MODEL", "gemini-3.5-flash-lite")
 REWRITE_TIMEOUT = 15.0
 REWRITE_CACHE_TTL = 300  # 5분 캐시
 

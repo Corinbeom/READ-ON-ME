@@ -21,7 +21,9 @@ class IntentMetadata:
     purpose: Optional[str] = None
     tone: Optional[str] = None
     query_type: str = "general"
+    requested_form: str = "ANY"
     focus_author: Optional[str] = None
+    reference_author: Optional[str] = None
     constraints: List[str] = field(default_factory=list)
     keywords: List[str] = field(default_factory=list)
 
@@ -39,6 +41,7 @@ class IntentMetadata:
 
 
 AUTHOR_PATTERN = re.compile(r"([\w\s·가-힣]+?)\s*(?:작가)?\s*의\s*(?:책|작품|소설)")
+REFERENCE_AUTHOR_PATTERN = re.compile(r"([가-힣A-Za-z·]+(?:\s+[가-힣A-Za-z·]+){0,2})\s*작가가\s*쓴\s*책")
 AUTHOR_KEYWORDS = ["작가", "저자", "필명"]
 AUTHOR_INVALID_TOKENS = {"분위기", "느낌", "감성", "무드", "주제", "테마", "내용", "비슷", "같은", "유사"}
 
@@ -100,6 +103,9 @@ QUERY_TYPE_KEYWORDS = {
     "domain": ["관련", "분야", "도메인"],
 }
 
+PRACTICAL_FORM_TERMS = ("방법", "가이드", "실전", "입문", "기초", "배우", "공부", "대화법", "비법", "노하우")
+STORY_FORM_TERMS = ("이야기", "스토리", "서사", "동화", "소설", "회고록", "실화")
+
 CONSTRAINT_KEYWORDS = ["최근", "신간", "짧은", "두꺼운", "한국", "번역", "입문", "심화"]
 
 ADDITIONAL_KEYWORD_MAP = {
@@ -142,15 +148,30 @@ class IntentAnalyzer:
 
         constraints = [kw for kw in CONSTRAINT_KEYWORDS if kw in query]
         focus_author = self._extract_author(query)
+        is_similarity_request = any(token in query for token in ("유사", "비슷", "같은"))
+        reference_match = REFERENCE_AUTHOR_PATTERN.search(query)
+        reference_author = (reference_match.group(1).strip() if reference_match else focus_author) if is_similarity_request else None
 
         # similar/mood 키워드가 있으면 author보다 우선 (ex. "인간 실격이랑 비슷한 책")
         query_type = "general"
-        if any(token in query for token in QUERY_TYPE_KEYWORDS["similar"]):
+        if reference_author:
+            query_type = "author_similar"
+        elif any(token in query for token in QUERY_TYPE_KEYWORDS["similar"]):
             query_type = "similar"
         elif any(token in query for token in QUERY_TYPE_KEYWORDS["mood"]):
             query_type = "mood"
         elif focus_author:
             query_type = "author"
+
+        if any(term in lower for term in PRACTICAL_FORM_TERMS):
+            requested_form = "PRACTICAL"
+        elif any(term in lower for term in STORY_FORM_TERMS) or (
+            query_type in {"mood", "author_similar"} and not genre
+            and any(term in lower for term in QUERY_TYPE_KEYWORDS["mood"])
+        ):
+            requested_form = "STORY"
+        else:
+            requested_form = "ANY"
 
         keywords = []
         if domain:
@@ -173,7 +194,9 @@ class IntentAnalyzer:
             tone=tone,
             purpose=purpose,
             query_type=query_type,
+            requested_form=requested_form,
             focus_author=focus_author,
+            reference_author=reference_author,
             constraints=constraints,
             keywords=keywords,
         )
