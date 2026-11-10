@@ -335,7 +335,7 @@ export default function AiBookSelectionScreen() {
               <BookmarkMascot state="idle" size={82} compact />
               <View style={styles.resultIntroText}>
                 <Text style={styles.eyebrow}>RECOMMENDATIONS</Text>
-                <Text style={styles.title}>마음에 드는 한 권을 골라요</Text>
+                <Text style={styles.title}>한 권을 골라요</Text>
               </View>
             </View>
             <Text style={styles.description}>두 권을 고르면 추천 이유를 비교할 수 있어요. 바로 한 권을 결정해도 좋아요.</Text>
