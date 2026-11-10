@@ -123,6 +123,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorText, setErrorText] = useState('');
   const [newResponseKind, setNewResponseKind] = useState<NewResponseKind>(null);
+  const [inputHeight, setInputHeight] = useState(67);
   const pendingSubmission = useRef<{ query: string; key: string } | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const jobsRef = useRef<AiSearchJob[]>([]);
@@ -340,11 +341,14 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
               </View>
 
               {isAuthenticated ? (
-                <>
+                <View style={styles.chatArea}>
                   <ScrollView
                     ref={scrollViewRef}
                     style={styles.chatList}
-                    contentContainerStyle={styles.chatListContent}
+                    contentContainerStyle={[
+                      styles.chatListContent,
+                      newResponseKind ? styles.chatListContentWithFloatingButton : null,
+                    ]}
                     keyboardShouldPersistTaps="handled"
                     onScroll={handleChatScroll}
                     onScrollBeginDrag={() => {
@@ -367,22 +371,7 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
 
                   {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
-                  {newResponseKind ? (
-                    <View style={styles.newResponseRow}>
-                      <TouchableOpacity
-                        style={styles.newResponseButton}
-                        onPress={() => requestScrollToEnd(true)}
-                        accessibilityRole="button"
-                        accessibilityLabel={newResponseKind === 'results' ? '새 결과 보기' : '검색 상태 보기'}
-                      >
-                        <Text style={styles.newResponseText}>
-                          {newResponseKind === 'results' ? '새 결과 보기 ↓' : '검색 상태 보기 ↓'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-
-                  <View style={styles.inputContainer}>
+                  <View style={styles.inputContainer} onLayout={(event) => setInputHeight(event.nativeEvent.layout.height)}>
                     <TextInput
                       style={styles.textInput}
                       placeholder="어떤 책을 찾으세요?"
@@ -398,7 +387,21 @@ export default function AiChatModal({ isVisible, onClose }: AiChatModalProps) {
                       <Text style={styles.sendButtonText}>→</Text>
                     </TouchableOpacity>
                   </View>
-                </>
+                  {newResponseKind ? (
+                    <View style={[styles.newResponseRow, { bottom: inputHeight + 8 }]} pointerEvents="box-none">
+                      <TouchableOpacity
+                        style={styles.newResponseButton}
+                        onPress={() => requestScrollToEnd(true)}
+                        accessibilityRole="button"
+                        accessibilityLabel={newResponseKind === 'results' ? '새 결과 보기' : '검색 상태 보기'}
+                      >
+                        <Text style={styles.newResponseText}>
+                          {newResponseKind === 'results' ? '새 결과 보기 ↓' : '검색 상태 보기 ↓'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
               ) : (
                 <View style={styles.authPromptContainer}>
                   <Text style={styles.authPromptTitle}>로그인이 필요해요</Text>
@@ -474,9 +477,15 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       paddingBottom: 8,
       fontFamily: 'NotoSerifKR-Regular',
     },
+    chatArea: {
+      flex: 1,
+    },
     newResponseRow: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
       alignItems: 'center',
-      paddingVertical: 8,
+      zIndex: 1,
     },
     newResponseButton: {
       minHeight: 44,
@@ -484,6 +493,12 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: c.text,
+      borderRadius: 22,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.18,
+      shadowRadius: 6,
+      elevation: 4,
     },
     newResponseText: {
       color: c.background,
@@ -516,6 +531,9 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     },
     chatListContent: {
       paddingVertical: 16,
+    },
+    chatListContentWithFloatingButton: {
+      paddingBottom: 68,
     },
     statusRow: {
       alignSelf: 'flex-start',
