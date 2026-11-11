@@ -14,6 +14,8 @@ def test_isbn_normalization_and_preflight_rejects_noise():
     assert normalize_isbn("0000000000") == "9780000000002"
     assert normalize_isbn("9780000000000") is None
     assert normalize_isbn("9771228648008") is None  # ISSN-based magazine barcode, not a book ISBN
+    assert preflight_candidate(_book(isbn="9771228648008")) == ("REJECTED", "PERIODICAL")
+    assert preflight_candidate(_book(isbn="1400000274965")) == ("REJECTED", "INVALID_ISBN")
     assert preflight_candidate(_book(title="수능문학 문제집")) == ("REJECTED", "EDUCATIONAL_MATERIAL")
     assert preflight_candidate(_book(title="문학 시리즈 세트(전3권)")) == ("REJECTED", "MULTI_BOOK_SET")
     assert preflight_candidate(_book(title="멋진 신세계", contents="과학이 발달한 사회의 미래를 그린 소설로 평가받는 작품입니다.")) is None

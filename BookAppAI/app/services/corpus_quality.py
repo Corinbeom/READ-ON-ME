@@ -29,7 +29,10 @@ def normalize_isbn(value: str | None) -> str | None:
 
 def preflight_candidate(book: dict[str, Any]) -> tuple[str, str] | None:
     """Return (status, reason) for a candidate that must not be classified."""
-    if not normalize_isbn(str(book.get("isbn") or "")):
+    raw_isbn = str(book.get("isbn") or "")
+    if not normalize_isbn(raw_isbn):
+        if re.search(r"(?<!\d)977\d{10}(?!\d)", raw_isbn):
+            return "REJECTED", "PERIODICAL"
         return "REJECTED", "INVALID_ISBN"
     title = _normalized_text(str(book.get("title") or ""))
     authors = format_authors(book.get("authors"))

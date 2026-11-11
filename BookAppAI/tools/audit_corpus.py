@@ -14,7 +14,7 @@ from app.services.corpus_quality import preflight_candidate, validate_classifica
 from app.services.gemini_tagger import GeminiTagger
 
 
-CLEAR_REJECT_REASONS = {"MULTI_BOOK_SET", "EDUCATIONAL_MATERIAL"}
+CLEAR_REJECT_REASONS = {"MULTI_BOOK_SET", "EDUCATIONAL_MATERIAL", "PERIODICAL"}
 
 
 async def audit(limit: int, after_id: int, output: Path, with_ai: bool, apply_ids: set[int], delay: float) -> None:

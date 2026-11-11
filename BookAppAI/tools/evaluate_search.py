@@ -58,11 +58,14 @@ async def run(url: str, cases: list[dict], limit: int, delay: float, output: Pat
                 ],
                 "books": [{
                     "isbn": book.get("isbn"), "title": book.get("title"), "authors": book.get("authors"),
+                    "contents_excerpt": _normalized_text(book.get("contents") or "")[:240],
                     "ranking_status": book.get("ranking_status"), "reason": book.get("reason"),
                     "reason_evidence": book.get("reason_evidence"),
                     "grounded_reason": _grounded_reason(book),
+                    "human_relevance_1_to_5": None,
+                    "human_note": None,
                 } for book in books],
-                "human_relevance_1_to_5": None,
+                "human_query_note": None,
             })
             if index + 1 < limit:
                 await asyncio.sleep(delay)

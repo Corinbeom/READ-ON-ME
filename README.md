@@ -82,7 +82,9 @@ uvicorn app.main:app --reload --port 8000
 - 테스트 의존성: `pip install -r requirements-test.txt`
 - 데이터 빌드: `POST /api/books/fetch-and-filter`에 `{"keywords":["문학"]}` 전달 → `202`와 `run_id` 반환. 진행 상태는 `GET /api/books/ingestion-runs/{run_id}`로 확인합니다. 동시에 다른 배치를 요청하면 `409`와 실행 중인 ID를 반환합니다. 배치의 `DONE`은 카카오 후보 탐색 종료를 뜻하며, 개별 책의 처리는 응답의 `candidate_counts`로 확인합니다. 같은 ISBN도 새 배치에서는 새 키워드 기준으로 재평가할 수 있습니다.
 - 단일 도서 접수: `POST /api/books/embed-single` → `202`와 `job_id` 반환. `GET /api/books/ingestion-jobs/{job_id}`에서 `INDEXED`, `REJECTED`, `HOLD`, `FAILED` 등 최종 상태를 확인합니다. `202`는 코퍼스 반영 완료를 뜻하지 않습니다. 같은 ISBN이라도 카카오 배치와 사용자 서재의 검수 작업은 별도로 기록하며, 서재 도서에는 배치 검색어의 주제 유사도 필터를 적용하지 않습니다.
-- 기존 코퍼스 점검: `python -m tools.audit_corpus --limit 1000 --output /tmp/corpus-audit.jsonl`로 변경 없이 보고서를 생성합니다. 검토한 명확한 교재·세트만 `--apply-ids 12,34`처럼 한 번에 최대 20권씩 제외할 수 있습니다.
+- 기존 코퍼스 점검: `python -m tools.audit_corpus --limit 1000 --output /tmp/corpus-audit.jsonl`로 변경 없이 보고서를 생성합니다. 검토한 명확한 교재·세트·`977` 정기간행물만 `--apply-ids 12,34`처럼 한 번에 최대 20권씩 제외할 수 있습니다.
+- 로컬 `LEGACY` 코퍼스의 1차 제외 내역과 복구 기준은 [검증 기록](BookAppAI/evaluation/legacy_corpus_cleanup_2026-11-11.md)에 있습니다. 다른 DB에는 자동 적용되지 않습니다.
+- 12개 대표 질의의 추천 품질 기준선과 사람 평가 절차는 [평가 기록](BookAppAI/evaluation/search_quality_review_2026-11-11.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용)
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)
@@ -150,7 +152,7 @@ docker compose up --build
 - AI 검색은 규칙 기반 의도 분석 뒤 벡터 30건과 키워드 20건을 합치고, 세부 장르를 명시한 경우 제목이 일치하는 후보를 최대 20건 더 확인합니다. 주제·장르의 근거를 제목과 책 소개에서 검증하고 장르 해설서·학습 자료·여러 권 묶음 세트를 제외하므로 결과가 5권보다 적을 수 있습니다. Gemini 장애 시 이야기형 요청의 대체 결과는 책 소개에 서사 근거가 있는 후보만 반환합니다. 명시한 저자는 정확히 일치하는 책으로 제한합니다. 저자 작품과 비슷한 책 요청은 코퍼스의 해당 저자 작품을 기준으로 다른 저자의 책을 찾습니다. 기준 작품이 없으면 빈 결과를 반환합니다.
 - 이야기·분위기를 원하는 질문에서는 책 소개에 드러난 실용서 신호를 확인해 명확한 가이드만 제외합니다. 형식이 불분명한 책은 후보에 남깁니다. 상위 후보 10권의 책 중심 소개를 Gemini에 전달하고 재정렬을 최대 1회 호출합니다. 추천 이유는 모델이 인용한 문구가 전달한 소개에 실제로 있는 경우에만 표시합니다. 모델이 적합한 후보가 없다고 판단하면 빈 결과를 반환합니다. 호출 또는 응답 검증이 실패하면 이야기형 요청은 서사 근거가 있는 후보만, 다른 요청은 기존 순서의 후보를 최대 5권까지 이유 없이 반환하고 `ranking_status=FALLBACK`을 표시합니다.
 - 검색에 쓰는 SentenceTransformer 추론은 단일 작업자로 직렬화합니다. 코퍼스 수집은 PostgreSQL 작업 큐에서 한 번에 한 후보씩 처리합니다. 일반 일시 오류는 최대 3회, API 호출 제한은 긴 간격으로 계속 재시도하며 Gemini 쿨다운 중에는 새 작업을 처리하지 않습니다. 기존 `book_tagging_jobs` 재태깅 워커는 별도로 동작합니다. Spring 시작 시 코퍼스를 자동 수집하지 않으며, 사용자가 서재에 새 책을 저장하면 AI 수집 작업에 접수합니다. 수집 품질 검사 결과와 관계없이 서재 저장은 유지됩니다.
-- `BookAppAI/evaluation/golden_queries.json`의 40개 질의는 의도 분석 회귀 테스트에 쓰입니다. `quality_cases.json`은 알려진 오추천 사례와 실용서·저자 유사성 대조 질의를 담습니다. 평가 스크립트는 금지 제목, 이야기형 질문의 실용서 혼입, 추천 이유 근거 여부를 기록합니다. `grounded_reason`이 `null`이면 추천 이유가 없고 `false`이면 이유가 있지만 근거를 확인하지 못한 것입니다. 실제 관련성 점수는 결과의 `human_relevance_1_to_5`에 직접 기록해야 합니다.
+- `BookAppAI/evaluation/golden_queries.json`의 40개 질의는 의도 분석 회귀 테스트에 쓰입니다. `quality_cases.json`은 알려진 오추천 사례와 실용서·저자 유사성 대조 질의를 담습니다. 평가 스크립트는 금지 제목, 이야기형 질문의 실용서 혼입, 추천 이유 근거 여부를 기록합니다. `grounded_reason`이 `null`이면 추천 이유가 없고 `false`이면 이유가 있지만 근거를 확인하지 못한 것입니다. 실제 관련성 점수는 결과의 **각 책**에 있는 `human_relevance_1_to_5`에 직접 기록합니다. 결과 파일의 `contents_excerpt`와 추천 이유를 함께 보고 판단하세요.
 - SSE 연결은 1시간 타임아웃으로 유지됩니다. 앱에서 로그아웃 시 EventSource를 닫아야 리소스 누수가 없습니다.
 - Android 에뮬레이터는 `10.0.2.2`, iOS 시뮬레이터는 `localhost`를 사용합니다. 실제 기기는 로컬 IP 또는 터널을 사용하세요.
 
