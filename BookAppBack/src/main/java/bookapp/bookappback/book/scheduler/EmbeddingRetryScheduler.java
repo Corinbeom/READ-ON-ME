@@ -11,8 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * embedded=false인 책을 주기적으로 재시도하는 스케줄러.
- * AI 서비스 다운 등으로 임베딩에 실패한 책을 복구한다.
+ * 아직 AI의 영속 작업 큐에 접수되지 않은 책을 소량씩 재전송한다.
  */
 @Slf4j
 @Component
@@ -21,16 +20,22 @@ public class EmbeddingRetryScheduler {
 
     private final BookRepository bookRepository;
     private final BookService bookService;
+    private long lastVisitedBookId = 0;
 
     // 10분마다 실행
     @Scheduled(fixedDelay = 600_000)
     public void retryFailedEmbeddings() {
-        List<Book> pending = bookRepository.findAllByEmbeddedFalse();
+        List<Book> pending = bookRepository.findTop10ByEmbeddedFalseAndIdGreaterThanOrderByIdAsc(lastVisitedBookId);
+        if (pending.isEmpty() && lastVisitedBookId != 0) {
+            lastVisitedBookId = 0;
+            pending = bookRepository.findTop10ByEmbeddedFalseOrderByIdAsc();
+        }
         if (pending.isEmpty()) return;
 
-        log.info("임베딩 재시도 대상: {}권", pending.size());
+        log.info("AI 코퍼스 작업 재접수 대상: {}권", pending.size());
         for (Book book : pending) {
-            bookService.triggerSingleBookEmbedding(book);
+            bookService.submitCorpusIngestion(book);
+            lastVisitedBookId = book.getId();
         }
     }
 }

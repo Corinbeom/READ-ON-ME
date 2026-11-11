@@ -28,16 +28,17 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     // 저자 이름 포함 검색
     List<Book> findByAuthorsContaining(String author);
 
-    // AI 임베딩이 완료되지 않은 책 조회 (재시도 스케줄러용)
-    List<Book> findAllByEmbeddedFalse();
+    // 물리 컬럼 embedded는 기존 스키마와의 호환을 위해 유지한다. true는 AI 작업 접수 완료를 뜻한다.
+    List<Book> findTop10ByEmbeddedFalseOrderByIdAsc();
+    List<Book> findTop10ByEmbeddedFalseAndIdGreaterThanOrderByIdAsc(Long id);
 
     // 최근 등록된 N권 조회 (인기 도서 폴백용)
     @Query(value = "SELECT * FROM books ORDER BY created_at DESC LIMIT :limit", nativeQuery = true)
     List<Book> findTopNByOrderByCreatedAtDesc(@Param("limit") int limit);
 
-    // AI 임베딩 완료 상태 업데이트 — Reactor 스레드에서 안전하게 호출하기 위해 직접 UPDATE 쿼리 사용
+    // 영속 AI 작업 접수 상태 업데이트 — Reactor 스레드에서 안전하게 직접 UPDATE
     @Modifying
     @Transactional
     @Query("UPDATE Book b SET b.embedded = true WHERE b.isbn13 = :isbn13")
-    void markAsEmbedded(@Param("isbn13") String isbn13);
+    void markCorpusJobSubmitted(@Param("isbn13") String isbn13);
 }

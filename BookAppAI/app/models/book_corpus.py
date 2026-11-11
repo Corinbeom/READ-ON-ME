@@ -18,3 +18,7 @@ class BookCorpus(Base):
     embedding = Column(Vector(768), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     tags = Column(JSONB, default=list)
+    recommendation_status = Column(String(20), nullable=False, default="LEGACY")
+    source = Column(String(30), nullable=True)
+    classification_version = Column(String(100), nullable=True)
+    validated_at = Column(DateTime(timezone=True), nullable=True)

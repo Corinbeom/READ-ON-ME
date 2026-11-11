@@ -1,48 +1,49 @@
-import asyncio
 from collections import Counter
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Header
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.book_corpus import BookCorpus
-from app.services import book_ai_service
+from app.services import book_ai_service, corpus_ingestion
 from app.security import require_internal_token
 from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest
 
 router = APIRouter()
-_data_build_lock = asyncio.Lock()
-
-
-async def _run_data_build(keywords: list[str]) -> None:
-    try:
-        await book_ai_service.process_keywords(keywords)
-    finally:
-        _data_build_lock.release()
-
 # --- Endpoints ---
 
-@router.post("/api/books/fetch-and-filter", dependencies=[Depends(require_internal_token)])
-async def fetch_and_filter_books(request: KeywordRequest, background_tasks: BackgroundTasks):
-    """
-    Triggers the AI book data building process in the background.
-    """
-    if not request.keywords:
-        raise HTTPException(status_code=400, detail="Keywords list cannot be empty.")
-    if _data_build_lock.locked():
-        raise HTTPException(status_code=409, detail="Data build is already running", headers={"Retry-After": "30"})
-    await _data_build_lock.acquire()
-    background_tasks.add_task(_run_data_build, request.keywords)
-
-    return {"message": "AI book data building process started in the background."}
+@router.post("/api/books/fetch-and-filter", status_code=202, dependencies=[Depends(require_internal_token)])
+async def fetch_and_filter_books(request: KeywordRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        job = await corpus_ingestion.create_batch_job(db, request.keywords)
+    except corpus_ingestion.BatchAlreadyRunning as exc:
+        raise HTTPException(status_code=409, detail={"active_run_id": exc.run_id}, headers={"Retry-After": "30"}) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"run_id": job.id, "status": job.status}
 
 
-@router.post("/api/books/embed-single", dependencies=[Depends(require_internal_token)])
-async def embed_single_book(request: SingleBookRequest):
-    """
-    A successful response means the book was saved or deliberately deduplicated.
-    """
-    status = await book_ai_service.embed_single_book(request)
-    return {"message": "Single book embedding completed.", "status": status}
+@router.get("/api/books/ingestion-runs/{run_id}", dependencies=[Depends(require_internal_token)])
+async def ingestion_run_status(run_id: str, db: AsyncSession = Depends(get_db)):
+    job = await corpus_ingestion.get_job(db, run_id)
+    if not job or job["type"] != "BATCH":
+        raise HTTPException(status_code=404, detail="Ingestion run not found")
+    return job
+
+
+@router.get("/api/books/ingestion-jobs/{job_id}", dependencies=[Depends(require_internal_token)])
+async def ingestion_job_status(job_id: str, db: AsyncSession = Depends(get_db)):
+    job = await corpus_ingestion.get_job(db, job_id)
+    if not job or job["type"] != "BOOK":
+        raise HTTPException(status_code=404, detail="Ingestion job not found")
+    return job
+
+
+@router.post("/api/books/embed-single", status_code=202, dependencies=[Depends(require_internal_token)])
+async def embed_single_book(request: SingleBookRequest, db: AsyncSession = Depends(get_db)):
+    status, job = await corpus_ingestion.enqueue_book(db, request.model_dump(), source="USER_LIBRARY")
+    if status == "INVALID_ISBN":
+        raise HTTPException(status_code=422, detail="A valid ISBN-10 or ISBN-13 is required")
+    return {"status": status, "job_id": job.id if job else None}
 
 
 @router.post("/api/ai/search", dependencies=[Depends(require_internal_token)])

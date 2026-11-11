@@ -10,6 +10,10 @@
 
 Gemini 태깅과 검색 재정렬의 기본 모델은 `gemini-3.5-flash-lite`입니다. 필요하면 AI 서비스의 `GEMINI_FAST_MODEL`, `GEMINI_DETAILED_MODEL`, `GEMINI_CLASSIFIER_MODEL`로 각각 변경할 수 있습니다. 모델을 바꾼 뒤에는 AI 서버를 재시작해야 합니다.
 
+AI 코퍼스 수집의 `CORPUS_SIMILARITY_THRESHOLD` 기본값은 `0.45`입니다. 카카오 키워드 후보가 주제 프롬프트와 이 값보다 낮은 유사도를 보이면 Gemini 분류 전에 제외합니다. 사용자 서재에서 추가한 책에는 이 키워드 필터를 적용하지 않습니다. 데이터 수집은 서버 시작 시 자동 실행되지 않으며 내부 토큰으로 보호된 `POST /api/books/fetch-and-filter`를 호출해야 합니다.
+
+`GEMINI_CLASSIFIER_MIN_INTERVAL_SECONDS` 기본값은 `6`입니다. 같은 AI 프로세스의 도서 분류 요청 사이에 최소 간격을 두어 호출량을 낮춥니다. 여러 AI 프로세스가 동시에 실행되는 경우 이 간격은 프로세스마다 적용됩니다.
+
 ### 권장(운영/보안)
 
 - **JWT_SECRET**: JWT 서명 키 (기본값은 예시이므로 반드시 변경 권장)
@@ -45,7 +49,7 @@ FastAPI: `http://localhost:8000` (Docker 호스트에서는 `127.0.0.1`에만 �
 
 ### DB 마이그레이션과 재태깅
 
-FastAPI 시작 시 Alembic이 `book_corpus`와 `book_tagging_jobs` 스키마를 확인합니다. 기존 데이터는 유지되며 새 DB에는 `vector` 확장을 생성할 권한이 필요합니다. 태깅 실패 기록은 DB에 남습니다. 일반 오류는 최대 3회, 429 호출 제한은 긴 간격으로 계속 재시도합니다. 인증 오류를 해결한 뒤에는 AI 서버를 재시작하고 `BookAppAI`에서 `python -m tools.queue_retag --retry-failed --limit 20`으로 미리 보고 `--apply`로 다시 등록하세요. 기존 `user_added` 도서의 소량 재태깅은 `--retry-failed` 없이 같은 명령을 사용합니다.
+FastAPI 시작 시 Alembic이 `book_corpus`, `book_tagging_jobs`, `corpus_ingestion_jobs` 스키마를 확인합니다. 기존 코퍼스는 `LEGACY`로 유지되어 검색되며 새 책만 새 검수 절차를 거칩니다. 새 DB에는 `vector` 확장을 생성할 권한이 필요합니다. 코퍼스 수집의 일반 일시 오류는 최대 3회 재시도하며, 호출 제한은 최대 6시간 간격으로 계속 재시도합니다. 인증 오류는 즉시 실패합니다. 기존 재태깅 작업은 별도 큐에 남습니다. 재태깅 인증 오류를 해결한 뒤에는 AI 서버를 재시작하고 `BookAppAI`에서 `python -m tools.queue_retag --retry-failed --limit 20`으로 미리 보고 `--apply`로 다시 등록하세요.
 
 ### 주의: pgvector 확장(vector 타입) 초기화
 

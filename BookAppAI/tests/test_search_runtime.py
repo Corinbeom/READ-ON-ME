@@ -4,10 +4,10 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
-from fastapi import HTTPException
 
 from app.main import app
-from app.routers import data_builder
+from app.database import get_db
+from app.services import corpus_ingestion
 from app.services import book_ai_service
 from app.services import query_rewriter
 from app.services.search_retrieval import RetrievalCounts
@@ -18,56 +18,68 @@ from app.services.reference_search import ReferenceAnchor
 async def test_search_requires_internal_token_in_production(monkeypatch):
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        denied = await client.post("/api/ai/search", json={"query": "책 추천"})
-        assert denied.status_code == 403
-        assert (await client.get("/recommendations/1")).status_code == 403
-        allowed = await client.post(
-            "/api/books/fetch-and-filter",
-            headers={"X-Internal-Token": "test-only-token"},
-            json={"keywords": []},
-        )
-        assert allowed.status_code == 400
+    async def fake_db():
+        yield object()
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            denied = await client.post("/api/ai/search", json={"query": "책 추천"})
+            assert denied.status_code == 403
+            assert (await client.get("/recommendations/1")).status_code == 403
+            allowed = await client.post(
+                "/api/books/fetch-and-filter",
+                headers={"X-Internal-Token": "test-only-token"},
+                json={"keywords": []},
+            )
+            assert allowed.status_code == 400
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
-async def test_embed_endpoint_waits_for_result_and_reports_failure(monkeypatch):
+async def test_embed_endpoint_accepts_durable_job(monkeypatch):
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
     request = {"title": "책", "isbn": "9780000000000", "authors": ["작가"]}
     calls = []
 
-    async def saved(book):
-        calls.append(book.isbn)
+    async def fake_db():
+        yield object()
+
+    async def saved(db, book, *, source):
+        calls.append((book["isbn"], source))
         await asyncio.sleep(0)
-        return "saved"
+        return "QUEUED", SimpleNamespace(id="book-job")
 
-    monkeypatch.setattr(book_ai_service, "embed_single_book", saved)
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-        response = await client.post(
-            "/api/books/embed-single", json=request, headers={"X-Internal-Token": "test-only-token"},
-        )
-        assert response.status_code == 200
-        assert response.json() == {"message": "Single book embedding completed.", "status": "saved"}
-        assert calls == [request["isbn"]]
-
-        async def failed(book):
-            raise HTTPException(status_code=503, detail="Book embedding is unavailable")
-
-        monkeypatch.setattr(book_ai_service, "embed_single_book", failed)
-        response = await client.post(
-            "/api/books/embed-single", json=request, headers={"X-Internal-Token": "test-only-token"},
-        )
-        assert response.status_code == 503
+    monkeypatch.setattr(corpus_ingestion, "enqueue_book", saved)
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            response = await client.post(
+                "/api/books/embed-single", json=request, headers={"X-Internal-Token": "test-only-token"},
+            )
+            assert response.status_code == 202
+            assert response.json() == {"status": "QUEUED", "job_id": "book-job"}
+            assert calls == [(request["isbn"], "USER_LIBRARY")]
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
-async def test_data_build_rejects_second_job_while_busy(monkeypatch):
+async def test_data_build_returns_durable_run_id(monkeypatch):
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-    await data_builder._data_build_lock.acquire()
+    async def fake_db():
+        yield object()
+
+    async def create_job(db, keywords):
+        assert keywords == ["소설"]
+        return SimpleNamespace(id="batch-job", status="PENDING")
+
+    monkeypatch.setattr(corpus_ingestion, "create_batch_job", create_job)
+    app.dependency_overrides[get_db] = fake_db
     try:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
@@ -75,10 +87,10 @@ async def test_data_build_rejects_second_job_while_busy(monkeypatch):
                 "/api/books/fetch-and-filter",
                 json={"keywords": ["소설"]}, headers={"X-Internal-Token": "test-only-token"},
             )
-        assert response.status_code == 409
-        assert response.headers["Retry-After"] == "30"
+        assert response.status_code == 202
+        assert response.json() == {"run_id": "batch-job", "status": "PENDING"}
     finally:
-        data_builder._data_build_lock.release()
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
@@ -181,60 +193,3 @@ async def test_reference_author_search_uses_anchor_and_excludes_author(monkeypat
         "조지 오웰 작가가 쓴 책과 유사한 분위기의 책을 추천해줘", object(),
     )
     assert [book["isbn"] for book in results] == ["1"]
-
-
-@pytest.mark.asyncio
-async def test_single_book_formats_author_before_dedup_and_fails_without_embedding(monkeypatch):
-    async def no_isbn(db, isbn):
-        return False
-
-    async def no_similar(db, title, authors):
-        assert authors == "조지 오웰"
-        return None
-
-    async def no_embedding(text):
-        return None
-
-    monkeypatch.setattr(book_ai_service, "check_if_isbn_exists", no_isbn)
-    monkeypatch.setattr(book_ai_service, "find_similar_corpus_edition", no_similar)
-    monkeypatch.setattr(book_ai_service, "get_embedding", no_embedding)
-    from app.schemas import SingleBookRequest
-    book = SingleBookRequest(title="1984", isbn="9780000000000", authors=["조지 오웰"])
-    with pytest.raises(HTTPException) as exc:
-        await book_ai_service._embed_single_book_with_db(book, object())
-    assert exc.value.status_code == 503
-
-
-@pytest.mark.asyncio
-async def test_duplicate_edition_gets_its_own_isbn_row_without_new_llm_call(monkeypatch):
-    async def no_isbn(db, isbn):
-        return False
-
-    async def similar(db, title, authors):
-        assert authors == "조지 오웰"
-        return SimpleNamespace(keyword="디스토피아", similarity_score=0.8, embedding=[0.1, 0.2], tags=["디스토피아"])
-
-    async def forbidden_embedding(text):
-        raise AssertionError("an existing edition should reuse its embedding")
-
-    class FakeDB:
-        def __init__(self):
-            self.saved = None
-            self.commits = 0
-
-        def add(self, book):
-            self.saved = book
-
-        async def commit(self):
-            self.commits += 1
-
-    monkeypatch.setattr(book_ai_service, "check_if_isbn_exists", no_isbn)
-    monkeypatch.setattr(book_ai_service, "find_similar_corpus_edition", similar)
-    monkeypatch.setattr(book_ai_service, "get_embedding", forbidden_embedding)
-    from app.schemas import SingleBookRequest
-    db = FakeDB()
-    book = SingleBookRequest(title="1984 (새 판본)", isbn="9780000000001", authors=["조지 오웰"])
-    assert await book_ai_service._embed_single_book_with_db(book, db) == "reused_edition"
-    assert db.saved.isbn == book.isbn
-    assert db.saved.embedding == [0.1, 0.2]
-    assert db.commits == 1

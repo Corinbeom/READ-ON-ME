@@ -14,6 +14,7 @@ from alembic.config import Config
 from app.routers import data_builder, recommendation
 from app.services import book_ai_service
 from app.services.tagging_jobs import recover_interrupted_jobs, run_worker
+from app.services.corpus_ingestion import run_worker as run_corpus_worker
 from app.security import require_internal_token
 import app.database as _db
 from app.config import validate_prod_config
@@ -33,11 +34,12 @@ async def lifespan(app: FastAPI):
     await recover_interrupted_jobs()
     worker_stop = asyncio.Event()
     worker = asyncio.create_task(run_worker(worker_stop))
+    corpus_worker = asyncio.create_task(run_corpus_worker(worker_stop))
     try:
         yield
     finally:
         worker_stop.set()
-        await worker
+        await asyncio.gather(worker, corpus_worker)
         book_ai_service.shutdown_embedding_model()
         await _db.engine.dispose()
 

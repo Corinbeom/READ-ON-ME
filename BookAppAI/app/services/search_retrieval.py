@@ -88,7 +88,8 @@ async def retrieve_candidates(
         vector_sql = text(f"""
             SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
             FROM book_corpus
-            {f'WHERE {exclusion}' if excluded_pattern else ''}
+            WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+              {f'AND {exclusion}' if excluded_pattern else ''}
             ORDER BY embedding <=> :embedding
             LIMIT :limit
         """)
@@ -104,7 +105,8 @@ async def retrieve_candidates(
             keyword_sql = text(f"""
                 SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
                 FROM book_corpus
-                WHERE (keyword = ANY(:keywords)
+                WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+                  AND (keyword = ANY(:keywords)
                    OR EXISTS (
                        SELECT 1 FROM jsonb_array_elements_text(tags) AS tag(value)
                        WHERE tag.value = ANY(:keywords)
@@ -125,7 +127,8 @@ async def retrieve_candidates(
             title_sql = text(f"""
                 SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
                 FROM book_corpus
-                WHERE ({title_condition})
+                WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+                  AND ({title_condition})
                   {f'AND {exclusion}' if excluded_pattern else ''}
                 ORDER BY similarity DESC
                 LIMIT :limit
@@ -146,7 +149,8 @@ async def retrieve_candidates(
         author_sql = text(f"""
             SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
             FROM book_corpus
-            WHERE REPLACE(authors, ' ', '') ILIKE :pattern ESCAPE '\\'
+            WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+              AND REPLACE(authors, ' ', '') ILIKE :pattern ESCAPE '\\'
             ORDER BY similarity DESC
             LIMIT :limit
         """)

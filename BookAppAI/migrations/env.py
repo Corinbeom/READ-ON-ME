@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.database import Base
 from app.models.book_corpus import BookCorpus
 from app.models.book_tagging_job import BookTaggingJob
+from app.models.corpus_ingestion_job import CorpusIngestionJob
 
 
 config = context.config

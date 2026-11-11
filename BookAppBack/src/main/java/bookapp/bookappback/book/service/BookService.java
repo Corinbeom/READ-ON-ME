@@ -111,8 +111,8 @@ public class BookService {
             Book bookToSave = Book.fromKakaoApiResponse(kakaoBook);
             Book savedBook = bookRepository.save(bookToSave);
 
-            // Trigger the embedding for the newly saved book
-            triggerSingleBookEmbedding(savedBook);
+            // Submit after the library book is stored; AI admission runs asynchronously.
+            submitCorpusIngestion(savedBook);
 
             return savedBook;
         } catch (Exception e) {
@@ -152,7 +152,7 @@ public class BookService {
         return bookRepository.findAllById(ids);
     }
 
-    public void triggerSingleBookEmbedding(Book book) {
+    public void submitCorpusIngestion(Book book) {
         WebClient webClient = webClientBuilder.baseUrl(aiBaseUrl).build();
 
         Map<String, Object> bookData = Map.of(
@@ -174,10 +174,10 @@ public class BookService {
                 .bodyToMono(String.class)
                 .timeout(Duration.ofSeconds(45))
                 .flatMap(response -> Mono.fromRunnable(() -> {
-                    log.info("임베딩 성공 [isbn={}]", book.getIsbn13());
-                    bookRepository.markAsEmbedded(book.getIsbn13());
+                    log.info("AI 코퍼스 작업 접수 [isbn={}]", book.getIsbn13());
+                    bookRepository.markCorpusJobSubmitted(book.getIsbn13());
                 }).subscribeOn(Schedulers.boundedElastic()).thenReturn(response))
-                .doOnError(error -> log.error("임베딩 실패 [isbn={}]: {} — 스케줄러가 재시도합니다", book.getIsbn13(), error.getMessage()))
+                .doOnError(error -> log.error("AI 코퍼스 작업 접수 실패 [isbn={}]: {} — 스케줄러가 재시도합니다", book.getIsbn13(), error.getMessage()))
                 .subscribe();
     }
 }

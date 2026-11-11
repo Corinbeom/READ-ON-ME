@@ -1,0 +1,260 @@
+{
+  "sampled_at": "2026-11-11",
+  "source": "Kakao Book API first page; ranks 1, 2, 4, 6 for each source term",
+  "label_status": "assistant_provisional_from_kakao_metadata",
+  "policy": "Single general-reader books relevant to the requested keyword; exclude multi-volume sets, exam textbooks, university coursebooks, and periodicals. Null means insufficient metadata or ambiguous packaging.",
+  "cases": [
+    {
+      "isbn": "9788937486074",
+      "title": "안나 카레니나 세트",
+      "source_term": "세계문학전집",
+      "requested_keyword": "문학",
+      "expected_eligible": false,
+      "expected_topic_match": true,
+      "reason": "여러 권 세트"
+    },
+    {
+      "isbn": "9788954625296",
+      "title": "대성당(문학동네 세계문학전집 10주년 기념 리커버 특별판)(세계문학전집 119...",
+      "source_term": "세계문학전집",
+      "requested_keyword": "문학",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "단일 단편집"
+    },
+    {
+      "isbn": "9788954640374",
+      "title": "셰익스피어 베스트 컬렉션 세트(세계문학전집)(전3권)",
+      "source_term": "세계문학전집",
+      "requested_keyword": "문학",
+      "expected_eligible": false,
+      "expected_topic_match": true,
+      "reason": "여러 권 세트"
+    },
+    {
+      "isbn": "9788954610742",
+      "title": "숨그네(문학동네 세계문학전집 10주년 기념 리커버 특별판)",
+      "source_term": "세계문학전집",
+      "requested_keyword": "문학",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "단일 장편소설"
+    },
+    {
+      "isbn": "9788965820475",
+      "title": "한국단편소설 40",
+      "source_term": "한국소설",
+      "requested_keyword": "소설",
+      "expected_eligible": null,
+      "expected_topic_match": true,
+      "reason": "문학 선집이지만 학습용 시리즈 여부가 모호함"
+    },
+    {
+      "isbn": "9788965823148",
+      "title": "중고생이 꼭 읽어야 할 한국단편소설 50",
+      "source_term": "한국소설",
+      "requested_keyword": "소설",
+      "expected_eligible": false,
+      "expected_topic_match": true,
+      "reason": "수능·내신용 작품 해설"
+    },
+    {
+      "isbn": "9788937473074",
+      "title": "한국이 싫어서",
+      "source_term": "한국소설",
+      "requested_keyword": "소설",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "단일 장편소설"
+    },
+    {
+      "isbn": "9771228648008",
+      "title": "한국소설(2026년 10월 327호)",
+      "source_term": "한국소설",
+      "requested_keyword": "소설",
+      "expected_eligible": false,
+      "expected_topic_match": true,
+      "reason": "월간지 ISSN"
+    },
+    {
+      "isbn": "9791187165507",
+      "title": "다윈이 자기계발서를 쓴다면",
+      "source_term": "자기계발서",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "일반 자기계발서"
+    },
+    {
+      "isbn": "9788961090902",
+      "title": "A형 자기계발서",
+      "source_term": "자기계발서",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "일반 독자용 자기계발서; 내용 신뢰성은 별도 문제"
+    },
+    {
+      "isbn": "9788996039754",
+      "title": "성공하는 아이들의 일곱 가지 지혜(초등생 자기계발서 2)",
+      "source_term": "자기계발서",
+      "requested_keyword": "자기계발",
+      "expected_eligible": null,
+      "expected_topic_match": true,
+      "reason": "소개가 없어 책 성격 확인 불가"
+    },
+    {
+      "isbn": "9791189353148",
+      "title": "내 인생의 마지막 자기계발서",
+      "source_term": "자기계발서",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "일반 자기계발서"
+    },
+    {
+      "isbn": "9788925574783",
+      "title": "나를 살리는 습관, 죽이는 습관",
+      "source_term": "습관",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "건강·생활 습관서"
+    },
+    {
+      "isbn": "9791162544631",
+      "title": "습관은 나의 힘",
+      "source_term": "습관",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "습관 형성 실용서"
+    },
+    {
+      "isbn": "9791158512378",
+      "title": "보도 섀퍼의 이기는 습관",
+      "source_term": "습관",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "성공 습관 실용서"
+    },
+    {
+      "isbn": "9791162540640",
+      "title": "아주 작은 습관의 힘(50만 부 기념 스페셜 에디션)",
+      "source_term": "습관",
+      "requested_keyword": "자기계발",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "습관 형성 실용서"
+    },
+    {
+      "isbn": "9791197332678",
+      "title": "벼랑 끝이지만 아직 떨어지진 않았어",
+      "source_term": "에세이",
+      "requested_keyword": "에세이",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "일반 에세이"
+    },
+    {
+      "isbn": "9791196617141",
+      "title": "열 번 잘해도 한 번 실수로 무너지는 게 관계다",
+      "source_term": "에세이",
+      "requested_keyword": "에세이",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "관계 에세이"
+    },
+    {
+      "isbn": "9791191891201",
+      "title": "잘될 수밖에 없는 너에게",
+      "source_term": "에세이",
+      "requested_keyword": "에세이",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "응원 에세이"
+    },
+    {
+      "isbn": "9788933872352",
+      "title": "사랑을 무게로 안 느끼게",
+      "source_term": "에세이",
+      "requested_keyword": "에세이",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "단일 산문집"
+    },
+    {
+      "isbn": "9788968240256",
+      "title": "생명과학 강의노트(3판)",
+      "source_term": "과학교양서",
+      "requested_keyword": "과학",
+      "expected_eligible": false,
+      "expected_topic_match": true,
+      "reason": "3판 강의노트; 교재 성격"
+    },
+    {
+      "isbn": "9788952724595",
+      "title": "과학의 세계(시공주니어 어린이 교양서 5)",
+      "source_term": "과학교양서",
+      "requested_keyword": "과학",
+      "expected_eligible": null,
+      "expected_topic_match": true,
+      "reason": "소개가 없어 책 성격 확인 불가"
+    },
+    {
+      "isbn": "9791176634342",
+      "title": "빛보다 느린 시간",
+      "source_term": "과학교양서",
+      "requested_keyword": "과학",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "일반 과학 교양서"
+    },
+    {
+      "isbn": "9791156644958",
+      "title": "인공지능 시대를 위한 컴퓨터 과학 개론",
+      "source_term": "과학교양서",
+      "requested_keyword": "과학",
+      "expected_eligible": false,
+      "expected_topic_match": true,
+      "reason": "소개에 대학 강의용 도서라고 명시"
+    },
+    {
+      "isbn": "9791196178611",
+      "title": "블랙홀의 사생활(지혜와 교양 11)",
+      "source_term": "역사교양",
+      "requested_keyword": "인문학",
+      "expected_eligible": true,
+      "expected_topic_match": false,
+      "reason": "과학사 책이며 인문학 검색어와 직접 관련 낮음"
+    },
+    {
+      "isbn": "9791189074883",
+      "title": "모두를 위한 한국미술사",
+      "source_term": "역사교양",
+      "requested_keyword": "인문학",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "한국미술사 교양서"
+    },
+    {
+      "isbn": "9788998443733",
+      "title": "한일의 역사갈등과 역사대화(대한민국역사박물관 한국현대사 교양 총서 11)",
+      "source_term": "역사교양",
+      "requested_keyword": "인문학",
+      "expected_eligible": true,
+      "expected_topic_match": true,
+      "reason": "현대사·역사 갈등 교양서"
+    },
+    {
+      "isbn": "9788987671390",
+      "title": "문화사란 무엇인가(역사도서관 교양3)",
+      "source_term": "역사교양",
+      "requested_keyword": "인문학",
+      "expected_eligible": null,
+      "expected_topic_match": true,
+      "reason": "소개가 없어 책 성격 확인 불가"
+    }
+  ]
+}

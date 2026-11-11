@@ -59,6 +59,7 @@ async def find_reference_anchor(db: AsyncSession, author: str) -> ReferenceAncho
         statement = (
             select(BookCorpus)
             .where(func.replace(BookCorpus.authors, " ", "").ilike(f"%{compact}%", escape="\\"))
+            .where(BookCorpus.recommendation_status.in_(["ACTIVE", "LEGACY"]))
             .order_by(BookCorpus.created_at.desc(), BookCorpus.isbn)
             .limit(50)
         )

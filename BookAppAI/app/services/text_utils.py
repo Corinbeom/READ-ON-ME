@@ -174,11 +174,15 @@ def build_keyword_prompt(keyword: str) -> str:
 
 
 def contains_exclusion_terms(*chunks: str) -> bool:
-    target_text = " ".join(_normalize_text(chunk).lower() for chunk in chunks if chunk is not None)
+    normalized = [_normalize_text(chunk).lower() for chunk in chunks if chunk is not None]
+    target_text = " ".join(normalized)
     if any(term in target_text for term in EXCLUSION_STRICT_TERMS):
         return True
-    if any(lead in target_text for lead in EXCLUSION_COMBO_LEADS) and any(
-        trailer in target_text for trailer in EXCLUSION_COMBO_TRAILERS
+    # Broad lead/trailer combinations are meaningful in a title, but ordinary
+    # descriptions can mention both words about an unrelated literary work.
+    title_text = normalized[0] if normalized else ""
+    if any(lead in title_text for lead in EXCLUSION_COMBO_LEADS) and any(
+        trailer in title_text for trailer in EXCLUSION_COMBO_TRAILERS
     ):
         return True
     return False
