@@ -1,6 +1,7 @@
 package bookapp.bookappback.book.service;
 
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
+import bookapp.bookappback.book.dto.KakaoBookDto;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
@@ -83,5 +84,25 @@ class BookServiceTest {
         assertThrows(BookExceptions.BookNotFoundException.class, () ->
                 bookService.getBookByIsbn("9999999999")
         );
+    }
+
+    @Test
+    void savesKakaoBookUnderValidatedIsbnInsteadOfInvalidThirteenDigitValue() {
+        BookService service = spy(new BookService(
+                bookRepository, kakaoSearchCacheService, webClientBuilder,
+                userBookStatusRepository, "http://localhost:8000", "test-token"));
+        doNothing().when(service).submitCorpusIngestion(any(Book.class));
+        when(bookRepository.findByIsbn13("9781127241347")).thenReturn(Optional.empty());
+        when(bookRepository.save(any(Book.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        KakaoBookDto dto = new KakaoBookDto();
+        dto.setTitle("플랫랜드");
+        dto.setIsbn("1127241346 1400000309490");
+
+        Book saved = service.saveBookToUserLibrary(dto);
+
+        assertEquals("9781127241347", saved.getIsbn13());
+        verify(bookRepository).findByIsbn13("9781127241347");
+        verify(bookRepository, never()).findByIsbn13("1400000309490");
+        verify(service).submitCorpusIngestion(saved);
     }
 }

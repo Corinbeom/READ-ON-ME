@@ -88,6 +88,7 @@ uvicorn app.main:app --reload --port 8000
 - 소량 배치의 실제 편입·검색 노출·한계는 [코퍼스 파일럿 기록](BookAppAI/evaluation/corpus_pilot_2026-11-11.md)에 있습니다.
 - 실제 `HOLD` 재처리와 정보나루 자동 보강 결과는 [보류 도서 검증 기록](BookAppAI/evaluation/corpus_hold_enrichment_2026-11-11.md)에 있습니다.
 - 기존 코퍼스가 검색 결과에 노출되는 방식과 로컬 `LEGACY` 3권 제외 근거는 [추천 노출 점검](BookAppAI/evaluation/legacy_search_audit_2026-11-11.md)에 있습니다.
+- 기존 코퍼스의 유효하지 않은 ISBN은 `cd BookAppAI && python -m tools.repair_legacy_isbn --ids <로컬 ID 목록>`으로 먼저 검증하고, 결과를 확인한 뒤에만 `--apply`로 교정합니다. 로컬 13권의 출처 대조와 복구 매핑은 [ISBN 교정 기록](BookAppAI/evaluation/legacy_isbn_repair_2026-11-11.md)에 있습니다.
 - 12개 대표 질의의 추천 품질 기준선과 사람 평가 절차는 [평가 기록](BookAppAI/evaluation/search_quality_review_2026-11-11.md)에 있습니다.
 - 일반 입문 검색에서 전문 교육용 책을 Gemini 후보와 대체 결과에서 제외한 검증은 [검색 품질 기록](BookAppAI/evaluation/fallback_quality_validation_2026-11-11.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용)

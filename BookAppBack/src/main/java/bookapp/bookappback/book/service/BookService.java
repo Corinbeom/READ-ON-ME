@@ -3,6 +3,7 @@ package bookapp.bookappback.book.service;
 import bookapp.bookappback.book.dto.KakaoBookDto;
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
 import bookapp.bookappback.book.entity.Book;
+import bookapp.bookappback.book.util.IsbnNormalizer;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.userbookstatus.entity.ReadingStatus;
@@ -100,8 +101,7 @@ public class BookService {
             if (rawIsbn == null || rawIsbn.isBlank()) {
                 throw new BookExceptions.ExternalApiException("ISBN 정보가 없습니다.");
             }
-            String[] isbns = rawIsbn.split(" ");
-            String isbn13 = isbns.length > 1 ? isbns[1] : isbns[0];
+            String isbn13 = IsbnNormalizer.toIsbn13(rawIsbn);
 
             Optional<Book> existingBook = bookRepository.findByIsbn13(isbn13);
             if (existingBook.isPresent()) {

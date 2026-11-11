@@ -1,6 +1,7 @@
 package bookapp.bookappback.book.entity;
 
 import bookapp.bookappback.book.dto.KakaoBookDto;
+import bookapp.bookappback.book.util.IsbnNormalizer;
 import bookapp.bookappback.review.entity.BookReview;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -78,9 +79,8 @@ public class Book {
 
     public static Book fromKakaoApiResponse(KakaoBookDto dto) {
         Book book = new Book();
-        String[] isbns = dto.getIsbn().split(" ");
-        book.setIsbn10(isbns.length > 0 ? isbns[0] : null);
-        book.setIsbn13(isbns.length > 1 ? isbns[1] : book.getIsbn10());
+        book.setIsbn10(IsbnNormalizer.validIsbn10(dto.getIsbn()));
+        book.setIsbn13(IsbnNormalizer.toIsbn13(dto.getIsbn()));
         book.setTitle(dto.getTitle());
         book.setGroupTitle(generateGroupTitle(dto.getTitle()));
         book.setContents(dto.getContents());
