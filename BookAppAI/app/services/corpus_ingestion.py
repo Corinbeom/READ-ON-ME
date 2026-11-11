@@ -17,6 +17,7 @@ import app.database as database
 from app.models.book_corpus import BookCorpus
 from app.models.corpus_ingestion_job import CorpusIngestionJob
 from app.services import llm_cooldown
+from app.services.corpus_metadata import fetch_naru_description
 from app.services.corpus_quality import normalize_isbn, preflight_candidate, validate_classification
 from app.services.gemini_tagger import GeminiTagger
 from app.services.text_utils import build_book_text, build_keyword_prompt, format_authors, get_proxy_search_terms
@@ -299,6 +300,20 @@ async def _process_book(job_id: str) -> None:
         source = job.source
         isbn = job.isbn
     gate = preflight_candidate(book)
+    if gate == ("HOLD", "SHORT_DESCRIPTION"):
+        description = await fetch_naru_description(isbn)
+        if description and len(description) > len(str(book.get("contents") or "")):
+            async with database.async_session() as db:
+                job = await db.get(CorpusIngestionJob, job_id, with_for_update=True)
+                current_payload = dict(job.payload)
+                current_book = dict(current_payload["book"])
+                if len(description) > len(str(current_book.get("contents") or "")):
+                    book = {**current_book, "contents": description}
+                    job.payload = {**current_payload, "book": book, "contents_source": "DATA4LIBRARY"}
+                    await db.commit()
+                else:
+                    book = current_book
+            gate = preflight_candidate(book)
     if gate:
         await _finish_book(job_id, *gate)
         return

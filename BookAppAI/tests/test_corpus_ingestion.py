@@ -161,6 +161,59 @@ async def test_duplicate_book_uses_richer_source_description(initial_status, exp
 
 
 @pytest.mark.asyncio
+async def test_short_description_is_enriched_before_classification(monkeypatch):
+    book = {
+        "isbn": "9780000000002", "title": "과학의 세계", "authors": "작가",
+        "contents": "", "publisher": "출판사",
+    }
+    description = "과학 지식을 일상의 실험과 연결하는 책입니다. 초등학생을 위한 설명을 담았습니다."
+    job = SimpleNamespace(
+        id="hold-job", isbn=book["isbn"], source="KAKAO_BATCH",
+        payload={"book": book, "discovery_keywords": ["과학"]},
+    )
+
+    class EnrichmentSession(FakeSession):
+        async def get(self, model, job_id, **kwargs):
+            return job
+
+    monkeypatch.setattr(corpus_ingestion.database, "async_session", lambda: EnrichmentSession(job))
+
+    async def fetch(isbn):
+        assert isbn == book["isbn"]
+        return description
+
+    async def no_similar(*args):
+        return None
+
+    async def vector(*args):
+        return [0.1]
+
+    async def classify(title, contents, authors):
+        assert contents == description
+        return {
+            "book_type": "NONFICTION", "evidence_quote": "과학 지식을 일상의 실험과 연결하는 책입니다.",
+            "primary_keyword": "과학", "tags": ["과학"],
+        }
+
+    outcomes = []
+
+    async def finish(*args, **kwargs):
+        outcomes.append(args)
+
+    monkeypatch.setattr(corpus_ingestion, "fetch_naru_description", fetch)
+    monkeypatch.setattr(book_ai_service, "find_similar_corpus_edition", no_similar)
+    monkeypatch.setattr(book_ai_service, "get_embedding", vector)
+    monkeypatch.setattr(book_ai_service, "cosine_similarity", lambda *args: 0.7)
+    monkeypatch.setattr(corpus_ingestion, "_keyword_vector", vector)
+    monkeypatch.setattr(corpus_ingestion.corpus_tagger, "classify_book", classify)
+    monkeypatch.setattr(corpus_ingestion, "_finish_book", finish)
+    await corpus_ingestion._process_book("hold-job")
+    assert job.payload["book"]["contents"] == description
+    assert job.payload["contents_source"] == "DATA4LIBRARY"
+    assert outcomes == [("hold-job", "ACTIVE", None)]
+
+
+@pytest.mark.asyncio
 async def test_rejected_book_never_uses_embedding_or_gemini(monkeypatch):
     job = SimpleNamespace(
         id="one", isbn="9780000000002", source="USER_LIBRARY",
