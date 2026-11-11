@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.services import llm_cooldown
-from app.services.text_utils import infer_book_form, is_search_candidate
+from app.services.text_utils import has_fiction_evidence, infer_book_form, is_search_candidate
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,11 @@ EVIDENCE_LIMIT = 280
 REASON_LIMIT = 80
 INTRO_QUERY_TERMS = ("입문", "기초", "초보", "처음")
 SPECIALIST_QUERY_TERMS = ("전공", "전문", "상담사", "자격", "시험", "수험", "임상", "심리검사", "실무")
+SCHOOL_AUDIENCE_QUERY_TERMS = ("10대", "청소년", "중학생", "고등학생", "중고생", "학교", "교과", "수업")
+SCHOOL_CURRICULUM_TERMS = (
+    "중학교 교과과정", "고등학교 교과과정", "중학교 교육과정", "고등학교 교육과정",
+    "고교학점제", "학교 수업용",
+)
 VERIFIED_STORY_GENRES = {"SF", "판타지", "로맨스", "스릴러", "미스터리", "디스토피아"}
 
 SELECTION_SCHEMA = {
@@ -73,15 +78,21 @@ def _is_general_intro_query(query: str) -> bool:
     )
 
 
-def _is_specialist_training_book(book: Dict[str, Any]) -> bool:
-    """Only use strong training signals; a specialized topic alone is not enough."""
+def _requests_school_audience(query: str) -> bool:
+    normalized = _normalized_text(query).casefold()
+    return any(term in normalized for term in SCHOOL_AUDIENCE_QUERY_TERMS)
+
+
+def _is_training_book(book: Dict[str, Any], allow_school_curriculum: bool = False) -> bool:
+    """Use explicit professional or school curriculum signals, not a topic alone."""
     description = _normalized_text(str(book.get("contents") or "")).casefold()
     has_exercises = any(term in description for term in ("연습문제", "실습문제", "문제풀이"))
     targets_trainees = any(term in description for term in ("상담사", "전공자", "자격시험", "수험생"))
     academic_manual = "이론서" in description and any(
         term in description for term in ("학습할 수 있도록", "교육과정", "교재로")
     )
-    return (has_exercises and targets_trainees) or academic_manual
+    school_curriculum = any(term in description[:500] for term in SCHOOL_CURRICULUM_TERMS)
+    return (has_exercises and targets_trainees) or academic_manual or (school_curriculum and not allow_school_curriculum)
 
 
 def _parse_selection(
@@ -133,6 +144,7 @@ async def rerank_with_gemini(
     fallback = []
     fallback_candidates = candidates
     general_intro = _is_general_intro_query(query)
+    school_audience = _requests_school_audience(query)
     if requested_form == "STORY":
         # A narrow, explicit genre supplies independent evidence for UNKNOWN
         # books; broad story requests still need clear narrative-form evidence.
@@ -142,6 +154,7 @@ async def rerank_with_gemini(
             or (
                 genre in VERIFIED_STORY_GENRES
                 and infer_book_form(book.get("title") or "", book.get("contents") or "") == "UNKNOWN"
+                and has_fiction_evidence(book)
                 and is_search_candidate(book, genre=genre, requested_form="STORY")
             )
         ]
@@ -150,7 +163,7 @@ async def rerank_with_gemini(
         # be replaced by lower-ranked candidates merely to fill five slots.
         fallback_candidates = [
             book for book in fallback_candidates[:FINAL_RESULT_LIMIT]
-            if not _is_specialist_training_book(book)
+            if not _is_training_book(book, allow_school_curriculum=school_audience)
         ]
     for book in fallback_candidates[:FINAL_RESULT_LIMIT]:
         clean_book = {key: value for key, value in book.items() if key not in {"reason", "reason_evidence"}}
@@ -171,7 +184,7 @@ async def rerank_with_gemini(
         return use_fallback("COOLDOWN")
 
     model_candidates = [
-        book for book in candidates if not _is_specialist_training_book(book)
+        book for book in candidates if not _is_training_book(book, allow_school_curriculum=school_audience)
     ] if general_intro else candidates
     if not model_candidates:
         logger.info("Reranker skipped request_id=%s reason=NO_ELIGIBLE_CANDIDATES", trace_id)
@@ -183,7 +196,10 @@ async def rerank_with_gemini(
          "authors": book.get("authors") or "", "evidence": evidence_by_isbn.get(str(book.get("isbn")), "")}
         for book in top
     ]
-    intro_instruction = "일반 독자의 입문 요청입니다. 전문가 양성·시험·수업용 책은 제외하세요. " if general_intro else ""
+    intro_instruction = (
+        "입문 요청입니다. 전문가 양성·자격시험용 책은 제외하세요. "
+        + ("" if school_audience else "학교 수업용 책도 제외하세요. ")
+    ) if general_intro else ""
     prompt = (
         f"사용자 검색어: {json.dumps(query, ensure_ascii=False)}\n\n"
         "검색 의도에 실제로 맞는 책만 최대 5권 골라 순서대로 반환하세요. 적합한 책이 없으면 빈 배열을 반환하세요. "

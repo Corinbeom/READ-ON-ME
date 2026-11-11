@@ -4,6 +4,8 @@ import argparse
 import asyncio
 import json
 import os
+import time
+import uuid
 from pathlib import Path
 
 import httpx
@@ -29,13 +31,21 @@ async def run(url: str, cases: list[dict], limit: int, delay: float, output: Pat
     records = []
     async with httpx.AsyncClient(timeout=70, headers=headers) as client:
         for index, case in enumerate(cases[:limit]):
-            response = await client.post(f"{url.rstrip('/')}/api/ai/search", json={"query": case["query"]})
+            request_id = f"evaluation-{index + 1}-{uuid.uuid4().hex[:8]}"
+            started = time.perf_counter()
+            response = await client.post(
+                f"{url.rstrip('/')}/api/ai/search",
+                json={"query": case["query"]},
+                headers={"X-Request-ID": request_id},
+            )
             response.raise_for_status()
             books = response.json()
             author = case.get("focus_author")
             reference_author = case.get("reference_author")
             forbidden_titles = case.get("forbidden_titles", [])
             records.append({
+                "request_id": request_id,
+                "latency_ms": round((time.perf_counter() - started) * 1000, 1),
                 "query": case["query"],
                 "expected": {key: value for key, value in case.items() if key != "query"},
                 "returned": len(books),
@@ -67,9 +77,9 @@ async def run(url: str, cases: list[dict], limit: int, delay: float, output: Pat
                 } for book in books],
                 "human_query_note": None,
             })
+            output.write_text(json.dumps(records, ensure_ascii=False, indent=2) + "\n")
             if index + 1 < limit:
                 await asyncio.sleep(delay)
-    output.write_text(json.dumps(records, ensure_ascii=False, indent=2) + "\n")
     print(f"evaluated={len(records)} empty={sum(not row['returned'] for row in records)} output={output}")
 
 
@@ -77,7 +87,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8000")
     parser.add_argument("--limit", type=int, default=5)
-    parser.add_argument("--delay", type=float, default=1.0)
+    parser.add_argument("--delay", type=float, default=6.0)
     parser.add_argument("--output", type=Path, default=Path("/tmp/readonme-search-evaluation.json"))
     parser.add_argument("--cases", type=Path, default=DEFAULT_CASES)
     args = parser.parse_args()

@@ -242,6 +242,7 @@ PRACTICAL_TITLE_TERMS = (
     "매뉴얼", "노하우", "작법", "비법", "자기계발기술", "기획세트",
 )
 NARRATIVE_INTRO_TERMS = ("장편소설", "단편소설", "소설집", "동화", "회고록", "자전적", "실화", "주인공", "서사")
+FICTION_EVIDENCE_TERMS = ("소설", "단편", "장편", "서사", "주인공", "모험", "세계관", "캐릭터")
 PRACTICAL_INTRO_TERMS = (
     "자기계발서", "실용서", "대화법", "방법을 소개", "방법을 알려", "방법을 제시",
     "단계별", "상황별", "실전 가이드", "활용법", "노하우", "워크북", "실무서", "입문서",
@@ -260,6 +261,12 @@ def infer_book_form(title: str, contents: str) -> str:
     if _has_any(intro, PRACTICAL_INTRO_TERMS):
         return "PRACTICAL"
     return "UNKNOWN"
+
+
+def has_fiction_evidence(book: dict) -> bool:
+    """Require a work-level narrative cue before using an UNKNOWN book as fiction fallback."""
+    text = f"{book.get('title') or ''} {(book.get('contents') or '')[:500]}".casefold()
+    return _has_any(text, FICTION_EVIDENCE_TERMS)
 
 
 def is_school_anthology(book: dict) -> bool:

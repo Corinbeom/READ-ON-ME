@@ -177,6 +177,20 @@ async def test_explicit_sf_fallback_keeps_verified_unknown_story_but_rejects_gui
 
 
 @pytest.mark.asyncio
+async def test_fantasy_fallback_rejects_genre_overview_without_work_evidence(monkeypatch):
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    overview = {"isbn": "overview", "title": "판타지", "keyword": "판타지", "tags": ["판타지"],
+                "contents": "환상문학의 개념을 정립하고 마법이 등장하는 작품을 기독교적으로 보는 관점을 설명합니다."}
+    story = {"isbn": "story", "title": "치우와 파수꾼의 탑", "keyword": "판타지", "tags": ["판타지"],
+             "contents": "한국 판타지소설의 소년 주인공이 마법사의 땅에서 모험을 펼치는 작품입니다."}
+    series = {"isbn": "series", "title": "룬의 아이들 블러디드 6", "keyword": "판타지", "tags": ["판타지"],
+              "contents": "아름다운 세계관과 개성 넘치는 캐릭터로 사랑받는 한국 판타지 신작입니다."}
+    assert is_search_candidate(overview, genre="판타지", requested_form="STORY")
+    result = await reranker.rerank_with_gemini("판타지 소설 추천", [overview, story, series], "STORY", genre="판타지")
+    assert [book["isbn"] for book in result] == ["story", "series"]
+
+
+@pytest.mark.asyncio
 async def test_general_intro_fallback_skips_clear_training_books_but_keeps_reader_books(monkeypatch):
     monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
     books = [
@@ -202,6 +216,23 @@ async def test_general_intro_fallback_skips_clear_training_books_but_keeps_reade
 
 
 @pytest.mark.asyncio
+async def test_finance_intro_fallback_skips_school_curriculum_but_explicit_teen_request_keeps_it(monkeypatch):
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    reader = {"isbn": "reader", "title": "최소한의 경제공부", "contents":
+              "경제 이슈를 재테크에 적용하는 데 필요한 기초 지식을 일반 독자에게 설명합니다."}
+    curriculum = {"isbn": "curriculum", "title": "경제수학, 위기의 편의점을 살려라!", "contents":
+                  "청소년들이 중학교 교과과정만으로 경제수학을 익히고 고교학점제를 준비하도록 만든 책입니다."}
+    professional = {"isbn": "professional", "title": "투자상담사 자격시험", "contents":
+                    "투자상담사 자격시험을 준비하는 수험생을 위한 연습문제와 풀이를 담았습니다."}
+
+    general = await reranker.rerank_with_gemini("재테크 기초 책 추천", [reader, curriculum, professional])
+    explicit = await reranker.rerank_with_gemini("10대 재테크 기초 책 추천", [reader, curriculum, professional])
+
+    assert [book["isbn"] for book in general] == ["reader"]
+    assert [book["isbn"] for book in explicit] == ["reader", "curriculum"]
+
+
+@pytest.mark.asyncio
 async def test_general_intro_keeps_training_books_out_of_gemini_candidates(monkeypatch):
     original_client = httpx.AsyncClient
     requests = []
@@ -220,6 +251,8 @@ async def test_general_intro_keeps_training_books_out_of_gemini_candidates(monke
     books = [
         {"isbn": "counselor", "title": "청소년 심리 및 상담", "contents":
          "예비 청소년상담사를 위한 상담입문서입니다. 상담 이론과 연습문제를 수록합니다."},
+        {"isbn": "curriculum", "title": "경제수학, 위기의 편의점을 살려라!", "contents":
+         "청소년들이 중학교 교과과정만으로 경제수학을 익히고 고교학점제를 준비하도록 만든 책입니다."},
         {"isbn": "reader", "title": "심리학 첫걸음", "contents":
          "심리학을 처음 읽는 일반 독자에게 쉽게 소개합니다."},
     ]
@@ -227,9 +260,15 @@ async def test_general_intro_keeps_training_books_out_of_gemini_candidates(monke
     assert [book["isbn"] for book in result] == ["reader"]
     assert result[0]["ranking_status"] == "GEMINI"
     assert "counselor" not in requests[0]["contents"][0]["parts"][0]["text"]
+    assert "curriculum" not in requests[0]["contents"][0]["parts"][0]["text"]
 
     await reranker.rerank_with_gemini("상담사 심리검사 입문 교재", books)
     assert "counselor" in requests[1]["contents"][0]["parts"][0]["text"]
+    assert "curriculum" in requests[1]["contents"][0]["parts"][0]["text"]
+
+    await reranker.rerank_with_gemini("10대 심리학 입문", books)
+    assert "counselor" not in requests[2]["contents"][0]["parts"][0]["text"]
+    assert "curriculum" in requests[2]["contents"][0]["parts"][0]["text"]
 
 
 @pytest.mark.asyncio

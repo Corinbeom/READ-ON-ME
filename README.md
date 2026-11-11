@@ -91,12 +91,13 @@ uvicorn app.main:app --reload --port 8000
 - 기존 코퍼스의 유효하지 않은 ISBN은 `cd BookAppAI && python -m tools.repair_legacy_isbn --ids <로컬 ID 목록>`으로 먼저 검증하고, 결과를 확인한 뒤에만 `--apply`로 교정합니다. 로컬 13권의 출처 대조와 복구 매핑은 [ISBN 교정 기록](BookAppAI/evaluation/legacy_isbn_repair_2026-11-11.md)에 있습니다.
 - SF 검색의 빈 대체 결과와 일반 소설 요청의 학교용 선집 우선 노출은 [추천 결과 품질 기록](BookAppAI/evaluation/search_result_quality_2026-11-11.md)에 재현·검증했습니다.
 - 12개 대표 질의의 추천 품질 기준선과 사람 평가 절차는 [평가 기록](BookAppAI/evaluation/search_quality_review_2026-11-11.md)에 있습니다.
+- 12개 질의의 최신 재평가와 일반 입문 검색의 학교 교육과정 도서, 장르별 대체 결과 점검은 [추천 품질 점검](BookAppAI/evaluation/recommendation_quality_audit_2026-11-11.md)에 있습니다.
 - 일반 입문 검색에서 전문 교육용 책을 Gemini 후보와 대체 결과에서 제외한 검증은 [검색 품질 기록](BookAppAI/evaluation/fallback_quality_validation_2026-11-11.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용)
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)
 - 실패한 태깅 작업 재등록: API 키/오류를 해결하고 AI 서버를 재시작한 뒤 `python -m tools.queue_retag --retry-failed --limit 20`으로 확인하고 `--apply`를 붙입니다.
-- 검색 품질 샘플: `python -m tools.evaluate_search --url http://127.0.0.1:8000 --limit 5` (결과는 `/tmp/readonme-search-evaluation.json`). 알려진 오추천 사례는 `--cases evaluation/quality_cases.json --limit 5`로 확인합니다.
+- 검색 품질 샘플: `python -m tools.evaluate_search --url http://127.0.0.1:8000 --limit 5` (결과는 `/tmp/readonme-search-evaluation.json`). 요청 사이 기본 간격은 6초이며 결과에 요청 ID와 응답 시간이 기록됩니다. 알려진 오추천 사례는 `--cases evaluation/quality_cases.json --limit 5`로 확인합니다.
 - 추천: `GET /recommendations/{userId}`
 
 ### 3. React Native 앱 (`BookAppFront`)
