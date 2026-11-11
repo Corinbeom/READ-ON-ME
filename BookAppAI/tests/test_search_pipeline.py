@@ -53,6 +53,21 @@ def test_novel_candidates_reject_exam_books_and_other_genres():
     assert not is_search_candidate(copying_book, "소설")
 
 
+def test_novel_search_excludes_literary_analysis_but_keeps_the_story():
+    analysis = _book(
+        "고전 소설의 착한 주인공들",
+        "고전 소설의 연구 및 감상을 정리한 책으로 여러 인물을 분석합니다.",
+        "소설", ["문학"],
+    )
+    story = _book(
+        "고전 소설의 착한 주인공",
+        "고전 속 인물이 긴 여행을 떠나 새로운 친구들을 만나는 소설입니다.",
+        "소설", ["문학"],
+    )
+    assert not is_search_candidate(analysis, genre="소설")
+    assert is_search_candidate(story, genre="소설")
+
+
 def test_recommendations_exclude_multi_book_sets_without_rejecting_single_books():
     description = "서로 다른 인물들이 성장하며 따뜻한 관계를 만들어 가는 이야기입니다."
     assert not is_search_candidate(_book("어린이 자기계발 동화 시리즈 세트(전30권)", description, "문학", ["동화"]))
@@ -292,6 +307,10 @@ def test_specific_genres_require_specific_evidence_and_reject_books_about_genres
         "SF란 무엇인가?", "과학소설의 본질과 SF 문학의 역사를 설명하는 개론서입니다.",
         "SF", ["SF"],
     )
+    sf_writing_guide = _book(
+        "SF단편소설 쓰기", "청소년이 SF 글쓰기 코칭을 통해 단편소설을 창작하도록 돕는 지도서입니다.",
+        "SF", ["SF"],
+    )
     genre_writing = _book(
         "장르 글쓰기. 1: SF 판타지 공포", "로맨스와 미스터리 장르의 작법 노하우를 설명합니다.",
         "판타지", ["판타지", "로맨스"],
@@ -317,6 +336,7 @@ def test_specific_genres_require_specific_evidence_and_reject_books_about_genres
     assert not is_search_candidate(scam, genre="로맨스")
     assert not is_search_candidate(about_sf, genre="SF")
     assert not is_search_candidate(sf_guide, genre="SF")
+    assert not is_search_candidate(sf_writing_guide, genre="SF")
     assert not is_search_candidate(genre_writing, genre="로맨스")
     assert not is_search_candidate(psychology_about_romance, genre="로맨스")
     assert not is_search_candidate(sf_criticism, genre="SF")

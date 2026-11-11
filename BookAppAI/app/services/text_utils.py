@@ -140,6 +140,8 @@ EXCLUSION_COMBO_TRAILERS = [
     "필독서",     # "중등 필독서" 등 교육과정 연계 묶음
 ]
 
+DAILY_READING_DRILL_TITLE = re.compile(r"(?<!\d)1일\s*1독해")
+
 # Optional human crafted prompts for 더 풍부한 키워드 표현.
 KEYWORD_PROMPTS = {
     "sf": "이 책은 공상 과학 소설(SF) 장르에 속하며 미래 기술과 상상력을 다룹니다.",
@@ -181,6 +183,8 @@ def contains_exclusion_terms(*chunks: str) -> bool:
     # Broad lead/trailer combinations are meaningful in a title, but ordinary
     # descriptions can mention both words about an unrelated literary work.
     title_text = normalized[0] if normalized else ""
+    if DAILY_READING_DRILL_TITLE.search(title_text):
+        return True
     if any(lead in title_text for lead in EXCLUSION_COMBO_LEADS) and any(
         trailer in title_text for trailer in EXCLUSION_COMBO_TRAILERS
     ):
@@ -215,7 +219,7 @@ NARROW_GENRE_EVIDENCE: dict[str, tuple[str, ...]] = {
 }
 GENRE_ABOUT_TITLE = re.compile(
     r"(?:소설|문학|에세이|판타지|로맨스|sf).{0,14}"
-    r"(?:읽기|작법|글쓰기|비평|연구|가이드|마스터플랜|이론|분석|역사|탄생|상상력|무엇인가|어떻게|시대정신|전회|사변|도감)",
+    r"(?:읽기|쓰기|작법|글쓰기|비평|연구|가이드|마스터플랜|이론|분석|역사|탄생|상상력|무엇인가|어떻게|시대정신|전회|사변|도감)",
     re.IGNORECASE,
 )
 STUDY_OR_COLLECTION_TITLE = re.compile(
@@ -228,7 +232,7 @@ NEW_FICTION_OR_POETRY = re.compile(
     r"(?:장편소설|단편소설|소설집|시집)",
     re.IGNORECASE,
 )
-GENRE_META_INTRO = ("평론집", "비평서", "개론서", "작법서", "연구서", "작품 분석")
+GENRE_META_INTRO = ("평론집", "비평서", "개론서", "작법서", "연구서", "작품 분석", "연구 및 감상을 정리")
 
 PRACTICAL_TITLE_TERMS = (
     "대화법", "사용법", "활용법", "실무", "워크북", "가이드", "입문서", "교과서",

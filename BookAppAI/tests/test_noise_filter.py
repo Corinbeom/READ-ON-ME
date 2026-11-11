@@ -10,6 +10,9 @@ from app.services.text_utils import contains_exclusion_terms, should_skip_book
         ("자이스토리 수학", "내신 대비 문제집", True),
         ("해리포터와 마법사의 돌", "호그와트에서의 모험", False),
         ("불편한 편의점", "따뜻한 소설", False),
+        ("1일 1독해 한국사 1", "역사를 읽고 문제를 푸는 훈련을 합니다.", True),
+        ("1일1독해 세계사", "역사를 읽고 문제를 푸는 훈련을 합니다.", True),
+        ("1일 1독서", "매일 읽는 기록을 담은 에세이입니다.", False),
     ],
 )
 def test_contains_exclusion_terms(title, contents, expected):
