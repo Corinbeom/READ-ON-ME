@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.services import llm_cooldown
-from app.services.text_utils import infer_book_form
+from app.services.text_utils import infer_book_form, is_search_candidate
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,7 @@ EVIDENCE_LIMIT = 280
 REASON_LIMIT = 80
 INTRO_QUERY_TERMS = ("입문", "기초", "초보", "처음")
 SPECIALIST_QUERY_TERMS = ("전공", "전문", "상담사", "자격", "시험", "수험", "임상", "심리검사", "실무")
+VERIFIED_STORY_GENRES = {"SF", "판타지", "로맨스", "스릴러", "미스터리", "디스토피아"}
 
 SELECTION_SCHEMA = {
     "type": "ARRAY",
@@ -125,15 +126,24 @@ def _parse_selection(
 
 async def rerank_with_gemini(
     query: str, candidates: List[Dict[str, Any]], requested_form: str = "ANY",
+    request_id: str | None = None,
+    genre: str | None = None,
 ) -> List[Dict[str, Any]]:
+    trace_id = (request_id or "-")[:64]
     fallback = []
     fallback_candidates = candidates
     general_intro = _is_general_intro_query(query)
     if requested_form == "STORY":
-        # Without Gemini, UNKNOWN books have no verified narrative evidence.
+        # A narrow, explicit genre supplies independent evidence for UNKNOWN
+        # books; broad story requests still need clear narrative-form evidence.
         fallback_candidates = [
             book for book in candidates
             if infer_book_form(book.get("title") or "", book.get("contents") or "") == "STORY"
+            or (
+                genre in VERIFIED_STORY_GENRES
+                and infer_book_form(book.get("title") or "", book.get("contents") or "") == "UNKNOWN"
+                and is_search_candidate(book, genre=genre, requested_form="STORY")
+            )
         ]
     if general_intro:
         # Keep the original top-five boundary: rejected training books must not
@@ -147,12 +157,13 @@ async def rerank_with_gemini(
         fallback.append({**clean_book, "ranking_status": "FALLBACK"})
     def use_fallback(reason: str) -> List[Dict[str, Any]]:
         logger.warning(
-            "Reranker fallback reason=%s candidates=%d eligible=%d returned=%d",
-            reason, len(candidates), len(fallback_candidates), len(fallback),
+            "Reranker fallback request_id=%s reason=%s candidates=%d eligible=%d returned=%d",
+            trace_id, reason, len(candidates), len(fallback_candidates), len(fallback),
         )
         return fallback
 
     if not candidates:
+        logger.info("Reranker skipped request_id=%s reason=NO_CANDIDATES", trace_id)
         return []
     if not GEMINI_API_KEY:
         return use_fallback("NO_API_KEY")
@@ -163,6 +174,7 @@ async def rerank_with_gemini(
         book for book in candidates if not _is_specialist_training_book(book)
     ] if general_intro else candidates
     if not model_candidates:
+        logger.info("Reranker skipped request_id=%s reason=NO_ELIGIBLE_CANDIDATES", trace_id)
         return []
     top = model_candidates[:RERANK_CANDIDATE_LIMIT]
     evidence_by_isbn = {str(book["isbn"]): _book_evidence(book) for book in top if book.get("isbn")}
@@ -199,9 +211,12 @@ async def rerank_with_gemini(
             raw = response_candidate["content"]["parts"][0]["text"]
         result = _parse_selection(raw, top, evidence_by_isbn)
         if result is not None:
-            logger.info("Reranker selected %d books with %d grounded reasons", len(result), sum("reason" in book for book in result))
+            logger.info(
+                "Reranker selected request_id=%s candidates=%d selected=%d grounded_reasons=%d",
+                trace_id, len(top), len(result), sum("reason" in book for book in result),
+            )
             return [{**book, "ranking_status": "GEMINI"} for book in result]
-        logger.warning("Reranker invalid selection finish_reason=%s", response_candidate.get("finishReason"))
+        logger.warning("Reranker invalid selection request_id=%s finish_reason=%s", trace_id, response_candidate.get("finishReason"))
         return use_fallback("INVALID_SELECTION")
     except Exception as exc:
         status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
@@ -215,5 +230,5 @@ async def rerank_with_gemini(
             reason = "REQUEST_ERROR"
         else:
             reason = "INVALID_RESPONSE"
-        logger.warning("Reranker request failed reason=%s error=%s", reason, type(exc).__name__)
+        logger.warning("Reranker request failed request_id=%s reason=%s error=%s", trace_id, reason, type(exc).__name__)
         return use_fallback(reason)

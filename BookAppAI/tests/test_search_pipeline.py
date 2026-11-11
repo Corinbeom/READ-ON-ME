@@ -3,10 +3,10 @@ import json
 import httpx
 import pytest
 
-from app.services import llm_cooldown, query_rewriter, reranker
+from app.services import book_ai_service, llm_cooldown, query_rewriter, reranker
 from app.services.intent_classifier import IntentMetadata
 from app.services.reranker import _book_evidence, _parse_selection
-from app.services.text_utils import infer_book_form, is_search_candidate
+from app.services.text_utils import infer_book_form, is_school_anthology, is_search_candidate
 
 
 def _book(title: str, contents: str, keyword: str, tags: list[str]) -> dict:
@@ -68,6 +68,29 @@ def test_novel_search_excludes_literary_analysis_but_keeps_the_story():
     assert is_search_candidate(story, genre="소설")
 
 
+def test_general_novel_search_prefers_regular_books_without_removing_school_anthologies():
+    school_collection = _book(
+        "한국단편소설 40",
+        "한국 단편 소설을 수록한 중고생 문학 필독서 시리즈로 청소년과 성인이 읽을 수 있습니다.",
+        "소설", ["소설"],
+    )
+    regular_novel = _book(
+        "밝은 밤", "한 가족의 삶과 관계를 그린 첫 장편소설입니다.", "소설", ["소설"],
+    )
+    assert is_school_anthology(school_collection)
+    assert not is_school_anthology(regular_novel)
+    assert is_search_candidate(school_collection, genre="소설", requested_form="STORY")
+
+    general = IntentMetadata(raw_query="소설 추천해줘", genre="소설", requested_form="STORY")
+    assert book_ai_service._prefer_general_novels([school_collection, regular_novel], general) == [
+        regular_novel, school_collection,
+    ]
+    explicit = IntentMetadata(raw_query="중고생 소설 선집 추천", genre="소설", requested_form="STORY")
+    assert book_ai_service._prefer_general_novels([school_collection, regular_novel], explicit) == [
+        school_collection, regular_novel,
+    ]
+
+
 def test_recommendations_exclude_multi_book_sets_without_rejecting_single_books():
     description = "서로 다른 인물들이 성장하며 따뜻한 관계를 만들어 가는 이야기입니다."
     assert not is_search_candidate(_book("어린이 자기계발 동화 시리즈 세트(전30권)", description, "문학", ["동화"]))
@@ -118,6 +141,39 @@ async def test_story_fallback_requires_narrative_evidence(monkeypatch):
     result = await reranker.rerank_with_gemini("스타트업 이야기가 궁금해", books, "STORY")
     assert [(book["isbn"], book["ranking_status"]) for book in result] == [("story", "FALLBACK")]
     assert await reranker.rerank_with_gemini("스타트업 이야기가 궁금해", books[:1], "STORY") == []
+
+
+@pytest.mark.asyncio
+async def test_explicit_sf_fallback_keeps_verified_unknown_story_but_rejects_guides(monkeypatch, caplog):
+    original_client = httpx.AsyncClient
+
+    def timeout(request):
+        raise httpx.ReadTimeout("test timeout", request=request)
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(timeout), timeout=kwargs.get("timeout"),
+    ))
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(llm_cooldown, "_blocked_until", 0.0)
+    sf_story = {
+        "isbn": "sf-story", "title": "SF보다 Vol 1 얼음",
+        "contents": "이 계절의 SF 소설 선정작을 소개하며 미래 기술과 상상력을 다룬 작품을 담았습니다.",
+        "keyword": "SF", "tags": ["SF", "소설"],
+    }
+    sf_guide = {
+        "isbn": "sf-guide", "title": "SF 소설 읽기",
+        "contents": "SF 소설의 역사와 주요 작품을 분석하는 비평서입니다.",
+        "keyword": "SF", "tags": ["SF"],
+    }
+    assert infer_book_form(sf_story["title"], sf_story["contents"]) == "UNKNOWN"
+    result = await reranker.rerank_with_gemini(
+        "SF 소설 추천", [sf_story, sf_guide], "STORY", genre="SF",
+    )
+    assert [(book["isbn"], book["ranking_status"]) for book in result] == [
+        ("sf-story", "FALLBACK"),
+    ]
+    assert "reason=TIMEOUT" in caplog.text
+    assert await reranker.rerank_with_gemini("이야기 추천", [sf_story], "STORY") == []
 
 
 @pytest.mark.asyncio
@@ -216,7 +272,10 @@ async def test_reranker_uses_one_structured_call_and_accepts_no_match(monkeypatc
     monkeypatch.setattr(llm_cooldown, "_blocked_until", 0.0)
     books = [{"isbn": "1", "title": "실용서", "contents": "실용적인 방법을 차근차근 알려주는 책입니다."}]
     assert await reranker.rerank_with_gemini("서사 중심 책", books) == []
-    assert len(requests) == 1
+    sf_story = [{"isbn": "2", "title": "SF보다 Vol 1 얼음", "keyword": "SF", "tags": ["소설"],
+                 "contents": "SF 소설 선정작을 소개하며 미래 기술과 상상력을 다룬 작품을 담았습니다."}]
+    assert await reranker.rerank_with_gemini("SF 소설 추천", sf_story, "STORY", genre="SF") == []
+    assert len(requests) == 2
     assert requests[0]["generationConfig"]["responseSchema"]["type"] == "ARRAY"
     assert requests[0]["generationConfig"]["responseMimeType"] == "application/json"
 

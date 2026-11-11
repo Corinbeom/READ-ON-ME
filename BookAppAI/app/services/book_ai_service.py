@@ -21,7 +21,7 @@ from app.services.prompt_templates import PromptTemplateBuilder
 from app.services.reference_search import find_reference_anchor, has_theme_evidence
 from app.services.reranker import rerank_with_gemini
 from app.services.search_retrieval import retrieve_candidates
-from app.services.text_utils import is_search_candidate
+from app.services.text_utils import is_school_anthology, is_search_candidate
 
 # --- Configuration ---
 # prod 환경 검증은 lifespan의 validate_prod_config()가 담당
@@ -139,6 +139,18 @@ def _deduplicate_results(results: list) -> list:
     return sorted(seen.values(), key=lambda row: (-(row.get("retrieval_score") or 0), row.get("isbn") or ""))
 
 
+_ANTHOLOGY_REQUEST_TERMS = ("선집", "모음집", "앤솔로지", "중고생", "필독서", "교과서")
+
+
+def _prefer_general_novels(books: list[dict], intent) -> list[dict]:
+    """Keep school anthologies available, but rank other novels first for broad requests."""
+    if intent.query_type != "general" or intent.genre != "소설" or any(
+        term in intent.raw_query for term in _ANTHOLOGY_REQUEST_TERMS
+    ):
+        return books
+    return sorted(books, key=is_school_anthology)
+
+
 async def find_similar_corpus_edition(db: AsyncSession, title: str, authors: str) -> BookCorpus | None:
     norm_title = _normalize_title(title)
     norm_author = _normalize_first_author(authors)
@@ -192,11 +204,15 @@ async def search_by_natural_language(query: str, db: AsyncSession, request_id: s
     if reference and reference.theme_keywords:
         filtered = [book for book in filtered if has_theme_evidence(book, reference.theme_keywords)]
     filtered = _deduplicate_results(filtered)
+    filtered = _prefer_general_novels(filtered, intent)
     retrieval_ms = (time.perf_counter() - started) * 1000 - intent_ms - embed_ms
     rerank_query = query
     if reference:
         rerank_query += f" 기준 작품: {', '.join(reference.titles[:3])}. 핵심 주제: {', '.join(reference.theme_keywords[:5])}. 다른 작가의 책 중에서 골라줘."
-    results = (await rerank_with_gemini(rerank_query, filtered, intent.requested_form))[:AI_SEARCH_RESULT_LIMIT]
+    results = (await rerank_with_gemini(
+        rerank_query, filtered, intent.requested_form, request_id=request_id, genre=intent.genre,
+    ))[:AI_SEARCH_RESULT_LIMIT]
+    results = _prefer_general_novels(results, intent)
 
     elapsed_ms = (time.perf_counter() - started) * 1000
     rerank_ms = elapsed_ms - intent_ms - embed_ms - retrieval_ms

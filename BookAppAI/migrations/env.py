@@ -18,7 +18,7 @@ from app.models.corpus_ingestion_job import CorpusIngestionJob
 
 config = context.config
 if config.config_file_name:
-    fileConfig(config.config_file_name)
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 target_metadata = Base.metadata
 
