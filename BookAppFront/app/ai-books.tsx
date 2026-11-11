@@ -299,8 +299,15 @@ export default function AiBookSelectionScreen() {
         ) : books.length === 0 ? (
           <View style={styles.centerStage}>
             <BookmarkMascot state="empty" size={220} />
-            <Text style={styles.title}>맞는 책을 찾지 못했어요</Text>
-            <Text style={styles.description}>분위기나 주제를 조금 바꿔 다시 찾아볼까요?</Text>
+            <Text style={styles.title}>{job.result_outcome === 'DEGRADED_EMPTY' ? '지금은 추천을 확인하지 못했어요' : '맞는 책을 찾지 못했어요'}</Text>
+            <Text style={styles.description}>{job.result_outcome === 'DEGRADED_EMPTY'
+              ? '책을 찾는 서비스에 일시적인 문제가 있어요. 잠시 후 같은 조건으로 다시 찾아주세요.'
+              : '분위기나 주제를 조금 바꿔 다시 찾아볼까요?'}</Text>
+            {job.result_outcome === 'DEGRADED_EMPTY' ? (
+              <TouchableOpacity style={styles.primaryButton} onPress={() => { void startSearch(job.query); }} disabled={isSubmitting} accessibilityRole="button">
+                <Text style={styles.primaryButtonText}>{isSubmitting ? '요청을 보내는 중...' : '같은 조건으로 다시 찾기'}</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity style={styles.primaryButton} onPress={() => { void startOver(); }} accessibilityRole="button">
               <Text style={styles.primaryButtonText}>다른 조건으로 찾기</Text>
             </TouchableOpacity>
@@ -340,7 +347,11 @@ export default function AiBookSelectionScreen() {
             </View>
             <Text style={styles.description}>두 권을 고르면 추천 이유를 비교할 수 있어요. 바로 한 권을 결정해도 좋아요.</Text>
             <View style={styles.queryBox}><Text style={styles.queryLabel}>찾은 조건</Text><Text style={styles.queryText} numberOfLines={2}>{job.query}</Text></View>
-            {books.some((book) => book.ranking_status === 'FALLBACK') ? <Text style={styles.helperText}>AI 재정렬이 어려워 검색 결과를 기준으로 책을 골랐어요.</Text> : null}
+            {job.result_outcome === 'FALLBACK' || books.some((book) => book.ranking_status === 'FALLBACK') ? (
+              <Text style={styles.helperText}>{job.result_basis === 'SHARED_THEMES'
+                ? 'AI 재정렬이 어려워 기준 작가의 작품과 공통 주제가 확인된 책을 골랐어요.'
+                : 'AI 재정렬이 어려워 검색 결과를 기준으로 책을 골랐어요.'}</Text>
+            ) : null}
             <Text style={styles.countText}>추천 후보 {books.length}권</Text>
             {books.map((book, index) => (
               <AiBookChoiceCard

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.book_corpus import BookCorpus
 from app.services.search_retrieval import _author_matches
+from app.services.text_utils import FICTION_LABELS, has_fiction_evidence, infer_book_form
 
 
 @dataclass
@@ -46,6 +47,34 @@ def has_theme_evidence(book: dict, themes: list[str]) -> bool:
     labels = {label.casefold() for label in labels if isinstance(label, str)}
     description = f"{book.get('title') or ''} {book.get('contents') or ''}".casefold()
     return any(theme.casefold() in labels or (len(theme) >= 3 and theme.casefold() in description) for theme in themes)
+
+
+def is_verified_similar_fallback(book: dict, reference: ReferenceAnchor) -> bool:
+    """Require two shared themes and work evidence before bypassing the reranker."""
+    if _author_matches(book.get("authors"), reference.author):
+        return False
+    if infer_book_form(book.get("title") or "", book.get("contents") or "") == "PRACTICAL":
+        return False
+    tags = book.get("tags") if isinstance(book.get("tags"), list) else []
+    labels = {
+        label.casefold() for label in [book.get("keyword"), *tags]
+        if isinstance(label, str)
+    }
+    description = f"{book.get('title') or ''} {book.get('contents') or ''}".casefold()
+    shared = {
+        theme.casefold() for theme in reference.theme_keywords
+        if theme and (
+            theme.casefold() in labels or (len(theme) >= 3 and theme.casefold() in description)
+        )
+    }
+    if len(shared) < 2:
+        return False
+    intro = (book.get("contents") or "")[:500].casefold()
+    work_evidence = has_fiction_evidence(book) or (
+        bool(labels & {label.casefold() for label in FICTION_LABELS})
+        and "작품" in intro and "그린" in intro
+    )
+    return work_evidence
 
 
 def _author_variants(name: str) -> list[str]:

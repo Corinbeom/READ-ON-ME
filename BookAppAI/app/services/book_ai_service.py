@@ -18,7 +18,7 @@ from app.services.gemini_tagger import GeminiTagger
 from app.services.intent_classifier import IntentAnalyzer
 from app.services.keyword_expander import KeywordExpander
 from app.services.prompt_templates import PromptTemplateBuilder
-from app.services.reference_search import find_reference_anchor, has_theme_evidence
+from app.services.reference_search import find_reference_anchor, has_theme_evidence, is_verified_similar_fallback
 from app.services.reranker import rerank_with_gemini
 from app.services.search_retrieval import retrieve_candidates
 from app.services.text_utils import is_school_anthology, is_search_candidate
@@ -173,7 +173,9 @@ async def find_similar_corpus_edition(db: AsyncSession, title: str, authors: str
 # --- Main Orchestrators & Search ---
 
 
-async def search_by_natural_language(query: str, db: AsyncSession, request_id: str | None = None):
+async def search_by_natural_language(
+    query: str, db: AsyncSession, request_id: str | None = None, outcome: dict | None = None,
+):
     """Retrieve bounded candidates, enforce explicit constraints, then rank up to five books."""
     started = time.perf_counter()
     intent = await intent_analyzer.analyze(query)
@@ -184,6 +186,8 @@ async def search_by_natural_language(query: str, db: AsyncSession, request_id: s
         reference = await find_reference_anchor(db, intent.reference_author)
         if reference is None:
             logger.info("search_no_reference type=author_similar")
+            if outcome is not None:
+                outcome.update(status="NO_MATCH", reason_code="NO_REFERENCE")
             return []
         query_embedding = reference.embedding
         keywords = _limit_keywords([*reference.theme_keywords, *keywords])
@@ -205,13 +209,20 @@ async def search_by_natural_language(query: str, db: AsyncSession, request_id: s
         filtered = [book for book in filtered if has_theme_evidence(book, reference.theme_keywords)]
     filtered = _deduplicate_results(filtered)
     filtered = _prefer_general_novels(filtered, intent)
+    verified_fallback = (
+        [book for book in filtered if is_verified_similar_fallback(book, reference)]
+        if reference else None
+    )
     retrieval_ms = (time.perf_counter() - started) * 1000 - intent_ms - embed_ms
     rerank_query = query
     if reference:
         rerank_query += f" 기준 작품: {', '.join(reference.titles[:3])}. 핵심 주제: {', '.join(reference.theme_keywords[:5])}. 다른 작가의 책 중에서 골라줘."
     results = (await rerank_with_gemini(
         rerank_query, filtered, intent.requested_form, request_id=request_id, genre=intent.genre,
+        outcome=outcome, verified_fallback=verified_fallback,
     ))[:AI_SEARCH_RESULT_LIMIT]
+    if outcome is not None and reference and outcome.get("status") == "FALLBACK":
+        outcome["basis"] = "SHARED_THEMES"
     results = _prefer_general_novels(results, intent)
 
     elapsed_ms = (time.perf_counter() - started) * 1000

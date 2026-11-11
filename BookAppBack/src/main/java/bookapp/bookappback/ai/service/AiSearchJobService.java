@@ -1,6 +1,7 @@
 package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.ai.dto.AiSearchJobResponse;
+import bookapp.bookappback.ai.dto.AiSearchOutcome;
 import bookapp.bookappback.ai.entity.AiSearchJob;
 import bookapp.bookappback.ai.repository.AiSearchJobRepository;
 import bookapp.bookappback.common.exception.AppException;
@@ -123,7 +124,7 @@ public class AiSearchJobService {
             }
             UUID jobId = job.getId();
             try {
-                searchService.search(job.getQuery(), jobId.toString())
+                searchService.searchWithOutcome(job.getQuery(), jobId.toString())
                         .publishOn(Schedulers.boundedElastic())
                         .subscribe(
                                 results -> finish(jobId, results, null),
@@ -135,13 +136,16 @@ public class AiSearchJobService {
         }
     }
 
-    private void finish(UUID id, List<?> results, Throwable error) {
+    private void finish(UUID id, AiSearchOutcome result, Throwable error) {
         try {
             transactions.executeWithoutResult(tx -> {
                 var job = repository.findById(id).orElseThrow();
                 if (error == null) {
                     try {
-                        job.setResultJson(objectMapper.writeValueAsString(results));
+                        job.setResultJson(objectMapper.writeValueAsString(result.books()));
+                        job.setResultOutcome(result.status());
+                        job.setResultReason(result.reasonCode());
+                        job.setResultBasis(result.basis());
                         job.setStatus("SUCCEEDED");
                     } catch (Exception ex) {
                         job.setStatus("FAILED");
@@ -174,6 +178,7 @@ public class AiSearchJobService {
             catch (Exception ex) { log.error("AI 검색 결과 파싱 실패 [{}]", job.getId(), ex); }
         }
         return new AiSearchJobResponse(job.getId(), job.getQuery(), job.getStatus(), results,
-                job.getErrorCode(), job.getCreatedAt(), job.getStartedAt(), job.getCompletedAt(), job.getExpiresAt());
+                job.getErrorCode(), job.getResultOutcome(), job.getResultReason(), job.getResultBasis(),
+                job.getCreatedAt(), job.getStartedAt(), job.getCompletedAt(), job.getExpiresAt());
     }
 }

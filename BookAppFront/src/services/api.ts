@@ -97,6 +97,9 @@ export interface AiSearchJob {
   status: 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
   results: AiSearchBook[] | null;
   error_code: string | null;
+  result_outcome: 'MODEL' | 'FALLBACK' | 'NO_MATCH' | 'DEGRADED_EMPTY' | null;
+  result_reason: string | null;
+  result_basis: 'SHARED_THEMES' | 'NONE' | null;
   created_at: string;
   started_at: string | null;
   completed_at: string | null;

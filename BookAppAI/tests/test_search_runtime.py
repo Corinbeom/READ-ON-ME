@@ -10,8 +10,40 @@ from app.database import get_db
 from app.services import corpus_ingestion
 from app.services import book_ai_service
 from app.services import query_rewriter
+from app.services import reranker
 from app.services.search_retrieval import RetrievalCounts
 from app.services.reference_search import ReferenceAnchor
+
+
+@pytest.mark.asyncio
+async def test_search_keeps_array_body_and_exposes_outcome_headers(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
+
+    async def fake_db():
+        yield object()
+
+    async def fake_search(query, db, request_id=None, outcome=None):
+        assert request_id == "job-1"
+        outcome.update(status="FALLBACK", reason_code="HTTP_503", basis="SHARED_THEMES")
+        return [{"isbn": "1", "ranking_status": "FALLBACK"}]
+
+    monkeypatch.setattr(book_ai_service, "search_by_natural_language", fake_search)
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+            response = await client.post(
+                "/api/ai/search", json={"query": "비슷한 소설"},
+                headers={"X-Internal-Token": "test-only-token", "X-Request-ID": "job-1"},
+            )
+        assert response.status_code == 200
+        assert response.json() == [{"isbn": "1", "ranking_status": "FALLBACK"}]
+        assert response.headers["X-Search-Outcome"] == "FALLBACK"
+        assert response.headers["X-Search-Reason"] == "HTTP_503"
+        assert response.headers["X-Search-Basis"] == "SHARED_THEMES"
+    finally:
+        app.dependency_overrides.clear()
 
 
 @pytest.mark.asyncio
@@ -148,7 +180,7 @@ async def test_search_uses_one_rerank_and_no_query_rewrite(monkeypatch):
             "keyword": "자기계발", "tags": ["자기계발"], "retrieval_score": 0.8,
         }], RetrievalCounts(vector=1, merged=1))
 
-    async def fake_rerank(query, candidates, requested_form, request_id=None, genre=None):
+    async def fake_rerank(query, candidates, requested_form, request_id=None, genre=None, outcome=None, verified_fallback=None):
         nonlocal calls
         calls += 1
         assert requested_form == "ANY"
@@ -183,7 +215,7 @@ async def test_reference_author_search_uses_anchor_and_excludes_author(monkeypat
             "keyword": "소설", "tags": ["소설"], "retrieval_score": 0.8,
         }], RetrievalCounts(vector=1, merged=1))
 
-    async def rerank(query, candidates, requested_form, request_id=None, genre=None):
+    async def rerank(query, candidates, requested_form, request_id=None, genre=None, outcome=None, verified_fallback=None):
         assert "기준 작품: 1984, 동물 농장" in query
         assert requested_form == "STORY"
         return candidates
@@ -196,3 +228,32 @@ async def test_reference_author_search_uses_anchor_and_excludes_author(monkeypat
         "조지 오웰 작가가 쓴 책과 유사한 분위기의 책을 추천해줘", object(),
     )
     assert [book["isbn"] for book in results] == ["1"]
+
+
+@pytest.mark.asyncio
+async def test_other_author_similar_search_uses_verified_fallback(monkeypatch):
+    async def anchor(db, author):
+        assert author == "김영하"
+        return ReferenceAnchor(author, ["기준 소설"], [0.1, 0.2], ["기억", "상실", "가족"])
+
+    async def retrieve(db, embedding, intent, keywords, exclude_author=None):
+        assert exclude_author == "김영하"
+        return ([
+            {"isbn": "same", "title": "기억의 소설", "authors": "김영하",
+             "contents": "오래된 기억과 상실을 겪는 한 가족의 삶을 그린 장편소설입니다.", "keyword": "소설", "tags": ["기억", "상실"], "retrieval_score": 0.9},
+            {"isbn": "other", "title": "다른 기억", "authors": "다른 작가",
+             "contents": "오래된 기억과 상실을 겪는 한 가족의 삶을 그린 장편소설입니다.", "keyword": "소설", "tags": ["기억", "상실"], "retrieval_score": 0.8},
+            {"isbn": "weak", "title": "기억의 조각", "authors": "또 다른 작가",
+             "contents": "기억을 따라 오래된 마을로 돌아간 인물의 여정을 그린 장편소설입니다.", "keyword": "소설", "tags": ["기억"], "retrieval_score": 0.7},
+        ], RetrievalCounts(vector=3, merged=3))
+
+    monkeypatch.setattr(book_ai_service, "find_reference_anchor", anchor)
+    monkeypatch.setattr(book_ai_service, "retrieve_candidates", retrieve)
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    outcome = {}
+    results = await book_ai_service.search_by_natural_language(
+        "김영하 작가의 소설과 비슷한 책", object(), outcome=outcome,
+    )
+    assert [book["isbn"] for book in results] == ["other"]
+    assert results[0]["ranking_status"] == "FALLBACK"
+    assert outcome == {"status": "FALLBACK", "reason_code": "NO_API_KEY", "basis": "SHARED_THEMES"}

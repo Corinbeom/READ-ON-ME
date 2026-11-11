@@ -9,6 +9,12 @@ from app.services.reranker import _book_evidence, _parse_selection
 from app.services.text_utils import infer_book_form, is_school_anthology, is_search_candidate
 
 
+@pytest.fixture(autouse=True)
+def reset_reranker_cooldown(monkeypatch):
+    monkeypatch.setattr(llm_cooldown, "_blocked_until", 0.0)
+    monkeypatch.setattr(llm_cooldown, "_transient_failures", 0)
+
+
 def _book(title: str, contents: str, keyword: str, tags: list[str]) -> dict:
     return {
         "title": title,
@@ -166,12 +172,14 @@ async def test_explicit_sf_fallback_keeps_verified_unknown_story_but_rejects_gui
         "keyword": "SF", "tags": ["SF"],
     }
     assert infer_book_form(sf_story["title"], sf_story["contents"]) == "UNKNOWN"
+    outcome = {}
     result = await reranker.rerank_with_gemini(
-        "SF 소설 추천", [sf_story, sf_guide], "STORY", genre="SF",
+        "SF 소설 추천", [sf_story, sf_guide], "STORY", genre="SF", outcome=outcome,
     )
     assert [(book["isbn"], book["ranking_status"]) for book in result] == [
         ("sf-story", "FALLBACK"),
     ]
+    assert outcome == {"status": "FALLBACK", "reason_code": "TIMEOUT"}
     assert "reason=TIMEOUT" in caplog.text
     assert await reranker.rerank_with_gemini("이야기 추천", [sf_story], "STORY") == []
 
@@ -286,12 +294,15 @@ async def test_rate_limit_fallback_records_cause(monkeypatch, caplog):
     calls = []
     monkeypatch.setattr(llm_cooldown, "rate_limited", lambda: calls.append(True))
 
+    outcome = {}
     result = await reranker.rerank_with_gemini(
         "심리학 입문 책 추천",
         [{"isbn": "reader", "title": "심리학 이야기", "contents": "심리학을 처음 읽는 일반 독자에게 쉽게 소개합니다."}],
+        outcome=outcome,
     )
     assert [book["isbn"] for book in result] == ["reader"]
     assert calls == [True]
+    assert outcome == {"status": "FALLBACK", "reason_code": "HTTP_429"}
     assert "reason=HTTP_429" in caplog.text
 
 
@@ -317,6 +328,52 @@ async def test_reranker_uses_one_structured_call_and_accepts_no_match(monkeypatc
     assert len(requests) == 2
     assert requests[0]["generationConfig"]["responseSchema"]["type"] == "ARRAY"
     assert requests[0]["generationConfig"]["responseMimeType"] == "application/json"
+
+
+@pytest.mark.asyncio
+async def test_reranker_distinguishes_model_no_match_from_upstream_empty(monkeypatch):
+    original_client = httpx.AsyncClient
+    responses = [
+        httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "[]"}]}}]}),
+        httpx.Response(503),
+    ]
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(lambda request: responses.pop(0)), timeout=kwargs.get("timeout"),
+    ))
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", "test-key")
+    book = {"isbn": "one", "title": "다른 작가의 소설", "contents": "가족의 기억과 상실을 그린 장편소설입니다."}
+    no_match = {}
+    degraded = {}
+    assert await reranker.rerank_with_gemini("비슷한 소설", [book], "STORY", outcome=no_match) == []
+    assert no_match == {"status": "NO_MATCH", "reason_code": "MODEL_NO_MATCH"}
+    assert await reranker.rerank_with_gemini(
+        "비슷한 소설", [book], "STORY", outcome=degraded, verified_fallback=[],
+    ) == []
+    assert degraded == {"status": "DEGRADED_EMPTY", "reason_code": "HTTP_503"}
+
+
+@pytest.mark.asyncio
+async def test_transient_failure_cooldown_skips_third_llm_call(monkeypatch):
+    original_client = httpx.AsyncClient
+    calls = []
+
+    def unavailable(request):
+        calls.append(request)
+        return httpx.Response(503)
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(unavailable), timeout=kwargs.get("timeout"),
+    ))
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", "test-key")
+    book = {"isbn": "one", "title": "소설", "contents": "가족의 이야기를 그린 장편소설입니다."}
+    outcomes = []
+    for _ in range(3):
+        outcome = {}
+        await reranker.rerank_with_gemini("소설 추천", [book], "STORY", outcome=outcome)
+        outcomes.append(outcome)
+    assert len(calls) == 2
+    assert [outcome["reason_code"] for outcome in outcomes] == ["HTTP_503", "HTTP_503", "COOLDOWN"]
+    assert all(outcome["status"] == "FALLBACK" for outcome in outcomes)
 
 
 def test_evidence_skips_author_bio_when_book_description_follows():

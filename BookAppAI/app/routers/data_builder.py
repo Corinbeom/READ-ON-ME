@@ -1,5 +1,5 @@
 from collections import Counter
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -51,14 +51,21 @@ async def embed_single_book(request: SingleBookRequest, db: AsyncSession = Depen
 
 
 @router.post("/api/ai/search", dependencies=[Depends(require_internal_token)])
-async def ai_search(request: AiSearchRequest, db: AsyncSession = Depends(get_db), x_request_id: str | None = Header(default=None)):
+async def ai_search(
+    request: AiSearchRequest, response: Response, db: AsyncSession = Depends(get_db),
+    x_request_id: str | None = Header(default=None),
+):
     """
     Performs a natural language search for books using vector similarity.
     """
     if not request.query:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
-    results = await book_ai_service.search_by_natural_language(request.query, db, x_request_id)
+    outcome: dict = {}
+    results = await book_ai_service.search_by_natural_language(request.query, db, x_request_id, outcome)
+    response.headers["X-Search-Outcome"] = outcome.get("status", "NO_MATCH")
+    response.headers["X-Search-Reason"] = outcome.get("reason_code", "NONE")
+    response.headers["X-Search-Basis"] = outcome.get("basis", "NONE")
     return results
 
 

@@ -1,6 +1,7 @@
 package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.ai.dto.AiSearchRequestDto;
+import bookapp.bookappback.ai.dto.AiSearchOutcome;
 import io.netty.channel.ChannelOption;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -41,6 +42,10 @@ public class AiSearchService {
     }
 
     public Mono<List<?>> search(String query, String requestId) {
+        return searchWithOutcome(query, requestId).map(AiSearchOutcome::books);
+    }
+
+    public Mono<AiSearchOutcome> searchWithOutcome(String query, String requestId) {
         return webClient.post()
                     .uri("/api/ai/search")
                     .headers(headers -> {
@@ -51,7 +56,18 @@ public class AiSearchService {
                     })
                     .bodyValue(new AiSearchRequestDto(query))
                     .retrieve()
-                    .bodyToMono(new ParameterizedTypeReference<List<?>>() {})
+                    .toEntity(new ParameterizedTypeReference<List<?>>() {})
+                    .map(response -> {
+                        List<?> books = response.getBody();
+                        if (books == null) throw new IllegalStateException("AI search returned no body");
+                        String status = response.getHeaders().getFirst("X-Search-Outcome");
+                        if (status == null) throw new IllegalStateException("AI search returned no outcome");
+                        return new AiSearchOutcome(
+                                books, status,
+                                response.getHeaders().getFirst("X-Search-Reason"),
+                                response.getHeaders().getFirst("X-Search-Basis")
+                        );
+                    })
                     .switchIfEmpty(Mono.error(new IllegalStateException("AI search returned no body")))
                     .timeout(Duration.ofSeconds(60));
     }

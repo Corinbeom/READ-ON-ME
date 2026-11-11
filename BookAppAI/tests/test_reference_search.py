@@ -2,7 +2,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.services.reference_search import find_reference_anchor, has_theme_evidence
+from app.services.reference_search import (
+    ReferenceAnchor, find_reference_anchor, has_theme_evidence, is_verified_similar_fallback,
+)
 
 
 class FakeResult:
@@ -51,3 +53,17 @@ def test_theme_evidence_accepts_tag_or_description():
     assert has_theme_evidence({"keyword": "디스토피아", "tags": []}, ["디스토피아"])
     assert has_theme_evidence({"contents": "전체주의 사회를 그린 소설입니다."}, ["전체주의"])
     assert not has_theme_evidence({"title": "일반 역사책", "tags": ["역사"]}, ["디스토피아"])
+
+
+def test_similar_author_fallback_requires_shared_themes_and_a_work():
+    reference = ReferenceAnchor("김영하", ["기준 소설"], [1.0], ["기억", "상실", "가족"])
+    novel = {
+        "title": "다른 작가의 장편소설", "authors": "다른 작가",
+        "contents": "기억과 상실을 겪는 가족의 이야기를 그린 장편소설입니다.",
+        "keyword": "소설", "tags": ["기억", "상실"],
+    }
+    assert is_verified_similar_fallback(novel, reference)
+    assert not is_verified_similar_fallback({**novel, "authors": "김영하"}, reference)
+    assert not is_verified_similar_fallback({**novel, "tags": ["기억"], "contents": "기억을 다룬 장편소설입니다."}, reference)
+    assert not is_verified_similar_fallback({**novel, "title": "기억 활용법"}, reference)
+    assert not is_verified_similar_fallback({**novel, "title": "기억의 분석", "contents": "기억과 상실을 분석하는 비평서입니다."}, reference)

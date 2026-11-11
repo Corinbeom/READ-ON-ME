@@ -35,6 +35,15 @@ public class AiSearchJob {
     @Column(name = "error_code", length = 40)
     private String errorCode;
 
+    @Column(name = "result_outcome", length = 24)
+    private String resultOutcome;
+
+    @Column(name = "result_reason", length = 40)
+    private String resultReason;
+
+    @Column(name = "result_basis", length = 40)
+    private String resultBasis;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

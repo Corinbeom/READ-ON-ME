@@ -2,6 +2,7 @@ package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.ai.controller.AiSearchController;
 import bookapp.bookappback.ai.dto.AiSearchRequestDto;
+import bookapp.bookappback.ai.dto.AiSearchOutcome;
 import bookapp.bookappback.ai.repository.AiSearchJobRepository;
 import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.security.UserDetailsImpl;
@@ -75,13 +76,13 @@ class AiSearchJobServiceTest {
     void dispatchNeverExceedsTwoAndPersistsResults() throws Exception {
         var active = new AtomicInteger();
         var maximum = new AtomicInteger();
-        when(searchService.search(anyString(), anyString())).thenAnswer(invocation -> Mono.defer(() -> {
+        when(searchService.searchWithOutcome(anyString(), anyString())).thenAnswer(invocation -> Mono.defer(() -> {
             int count = active.incrementAndGet();
             maximum.accumulateAndGet(count, Math::max);
             return Mono.delay(Duration.ofMillis(150))
                     .map(tick -> {
                         active.decrementAndGet();
-                        return List.of("book");
+                        return new AiSearchOutcome(List.of("book"), "MODEL", "NONE", "NONE");
                     });
         }));
 
@@ -96,12 +97,13 @@ class AiSearchJobServiceTest {
         awaitSucceeded(3);
         assertEquals(2, maximum.get());
         assertTrue(service.recent(1L).stream().allMatch(job -> job.results().isArray()));
+        assertTrue(service.recent(1L).stream().allMatch(job -> "MODEL".equals(job.resultOutcome())));
         ReflectionTestUtils.setField(service, "dispatchEnabled", false);
     }
 
     @Test
     void failureAndRestartAreVisibleToOwner() throws Exception {
-        when(searchService.search(anyString(), anyString())).thenReturn(Mono.error(new TimeoutException("slow")));
+        when(searchService.searchWithOutcome(anyString(), anyString())).thenReturn(Mono.error(new TimeoutException("slow")));
         var failed = service.submit(1L, "느린 책", "timeout-key");
         ReflectionTestUtils.setField(service, "dispatchEnabled", true);
         service.dispatch();
@@ -117,6 +119,32 @@ class AiSearchJobServiceTest {
         repository.saveAndFlush(row);
         service.recover();
         assertEquals("INTERRUPTED", service.get(1L, interrupted.id()).errorCode());
+    }
+
+    @Test
+    void emptyUpstreamFailureRemainsDistinctFromNoMatch() throws Exception {
+        when(searchService.searchWithOutcome(anyString(), anyString())).thenReturn(
+                Mono.just(new AiSearchOutcome(List.of(), "DEGRADED_EMPTY", "HTTP_503", "NONE")));
+        var submitted = service.submit(1L, "비슷한 소설", "degraded-key");
+        ReflectionTestUtils.setField(service, "dispatchEnabled", true);
+        service.dispatch();
+        awaitSucceeded(1);
+
+        var completed = service.get(1L, submitted.id());
+        assertEquals("SUCCEEDED", completed.status());
+        assertEquals(0, completed.results().size());
+        assertEquals("DEGRADED_EMPTY", completed.resultOutcome());
+        assertEquals("HTTP_503", completed.resultReason());
+        assertEquals("NONE", completed.resultBasis());
+
+        var response = mvc.perform(get("/api/ai/jobs/" + submitted.id()).with(user(principal(1L))))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        var data = mapper.readTree(response.getContentAsString()).path("data");
+        assertTrue(data.has("result_outcome"), data.toString());
+        assertEquals("DEGRADED_EMPTY", data.path("result_outcome").asText());
+        assertEquals("HTTP_503", data.path("result_reason").asText());
+        assertTrue(data.path("completed_at").isTextual());
+        ReflectionTestUtils.setField(service, "dispatchEnabled", false);
     }
 
     @Test
@@ -151,7 +179,8 @@ class AiSearchJobServiceTest {
             first.dispose();
             second.dispose();
         }
-        when(searchService.search(anyString(), anyString())).thenReturn(Mono.just(List.of("book")));
+        when(searchService.searchWithOutcome(anyString(), anyString()))
+                .thenReturn(Mono.just(new AiSearchOutcome(List.of("book"), "MODEL", "NONE", "NONE")));
         service.dispatch();
         awaitSucceeded(1);
         ReflectionTestUtils.setField(service, "dispatchEnabled", false);

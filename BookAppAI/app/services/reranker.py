@@ -139,13 +139,15 @@ async def rerank_with_gemini(
     query: str, candidates: List[Dict[str, Any]], requested_form: str = "ANY",
     request_id: str | None = None,
     genre: str | None = None,
+    outcome: dict | None = None,
+    verified_fallback: List[Dict[str, Any]] | None = None,
 ) -> List[Dict[str, Any]]:
     trace_id = (request_id or "-")[:64]
     fallback = []
-    fallback_candidates = candidates
+    fallback_candidates = verified_fallback if verified_fallback is not None else candidates
     general_intro = _is_general_intro_query(query)
     school_audience = _requests_school_audience(query)
-    if requested_form == "STORY":
+    if requested_form == "STORY" and verified_fallback is None:
         # A narrow, explicit genre supplies independent evidence for UNKNOWN
         # books; broad story requests still need clear narrative-form evidence.
         fallback_candidates = [
@@ -169,6 +171,8 @@ async def rerank_with_gemini(
         clean_book = {key: value for key, value in book.items() if key not in {"reason", "reason_evidence"}}
         fallback.append({**clean_book, "ranking_status": "FALLBACK"})
     def use_fallback(reason: str) -> List[Dict[str, Any]]:
+        if outcome is not None:
+            outcome.update(status="FALLBACK" if fallback else "DEGRADED_EMPTY", reason_code=reason)
         logger.warning(
             "Reranker fallback request_id=%s reason=%s candidates=%d eligible=%d returned=%d",
             trace_id, reason, len(candidates), len(fallback_candidates), len(fallback),
@@ -176,6 +180,8 @@ async def rerank_with_gemini(
         return fallback
 
     if not candidates:
+        if outcome is not None:
+            outcome.update(status="NO_MATCH", reason_code="NO_CANDIDATES")
         logger.info("Reranker skipped request_id=%s reason=NO_CANDIDATES", trace_id)
         return []
     if not GEMINI_API_KEY:
@@ -187,6 +193,8 @@ async def rerank_with_gemini(
         book for book in candidates if not _is_training_book(book, allow_school_curriculum=school_audience)
     ] if general_intro else candidates
     if not model_candidates:
+        if outcome is not None:
+            outcome.update(status="NO_MATCH", reason_code="NO_ELIGIBLE_CANDIDATES")
         logger.info("Reranker skipped request_id=%s reason=NO_ELIGIBLE_CANDIDATES", trace_id)
         return []
     top = model_candidates[:RERANK_CANDIDATE_LIMIT]
@@ -223,10 +231,16 @@ async def rerank_with_gemini(
         async with httpx.AsyncClient(timeout=RERANK_TIMEOUT) as client:
             resp = await client.post(url, params={"key": GEMINI_API_KEY}, json=payload)
             resp.raise_for_status()
+            llm_cooldown.succeeded()
             response_candidate = resp.json()["candidates"][0]
             raw = response_candidate["content"]["parts"][0]["text"]
         result = _parse_selection(raw, top, evidence_by_isbn)
         if result is not None:
+            if outcome is not None:
+                outcome.update(
+                    status="MODEL" if result else "NO_MATCH",
+                    reason_code="NONE" if result else "MODEL_NO_MATCH",
+                )
             logger.info(
                 "Reranker selected request_id=%s candidates=%d selected=%d grounded_reasons=%d",
                 trace_id, len(top), len(result), sum("reason" in book for book in result),
@@ -238,6 +252,8 @@ async def rerank_with_gemini(
         status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
         if status == 429:
             llm_cooldown.rate_limited()
+        elif status == 503 or isinstance(exc, httpx.TimeoutException):
+            llm_cooldown.transient_failure()
         if status:
             reason = f"HTTP_{status}"
         elif isinstance(exc, httpx.TimeoutException):
