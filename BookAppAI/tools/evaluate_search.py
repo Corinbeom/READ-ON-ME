@@ -14,6 +14,14 @@ from app.services.reranker import _normalized_text
 DEFAULT_CASES = Path(__file__).parents[1] / "evaluation/golden_queries.json"
 
 
+def _grounded_reason(book: dict) -> bool | None:
+    reason = book.get("reason")
+    evidence = book.get("reason_evidence")
+    if not reason and not evidence:
+        return None
+    return bool(reason and evidence and evidence in _normalized_text(book.get("contents") or ""))
+
+
 async def run(url: str, cases: list[dict], limit: int, delay: float, output: Path) -> None:
     headers = {}
     if token := os.getenv("INTERNAL_API_TOKEN"):
@@ -52,8 +60,7 @@ async def run(url: str, cases: list[dict], limit: int, delay: float, output: Pat
                     "isbn": book.get("isbn"), "title": book.get("title"), "authors": book.get("authors"),
                     "ranking_status": book.get("ranking_status"), "reason": book.get("reason"),
                     "reason_evidence": book.get("reason_evidence"),
-                    "grounded_reason": bool(book.get("reason") and book.get("reason_evidence")
-                                             and book["reason_evidence"] in _normalized_text(book.get("contents") or "")),
+                    "grounded_reason": _grounded_reason(book),
                 } for book in books],
                 "human_relevance_1_to_5": None,
             })

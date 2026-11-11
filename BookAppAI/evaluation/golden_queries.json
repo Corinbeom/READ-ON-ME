@@ -25,7 +25,7 @@
   {"query":"긴장감 있는 스릴러","genre":"스릴러","tone":"스릴"},
   {"query":"몰입감 있는 소설 추천","genre":"소설","tone":"몰입감"},
   {"query":"감성적인 에세이","query_type":"mood","genre":"에세이","tone":"감성"},
-  {"query":"어두운 분위기의 책","query_type":"mood","requested_form":"STORY"},
+  {"query":"어두운 분위기의 책","query_type":"mood","tone":"어두운","requested_form":"STORY"},
   {"query":"힐링 에세이 추천","query_type":"mood","genre":"에세이","tone":"힐링"},
   {"query":"김영하 작가의 소설과 비슷한 책","query_type":"author_similar","reference_author":"김영하"},
   {"query":"따뜻한 감성의 소설","query_type":"mood","genre":"소설","tone":"감성"},

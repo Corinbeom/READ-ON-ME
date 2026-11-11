@@ -134,9 +134,10 @@ async def test_search_uses_one_rerank_and_no_query_rewrite(monkeypatch):
             "keyword": "자기계발", "tags": ["자기계발"], "retrieval_score": 0.8,
         }], RetrievalCounts(vector=1, merged=1))
 
-    async def fake_rerank(query, candidates):
+    async def fake_rerank(query, candidates, requested_form):
         nonlocal calls
         calls += 1
+        assert requested_form == "ANY"
         return candidates
 
     monkeypatch.setattr(query_rewriter, "rewrite_query", forbidden_rewrite)
@@ -167,8 +168,9 @@ async def test_reference_author_search_uses_anchor_and_excludes_author(monkeypat
             "keyword": "소설", "tags": ["소설"], "retrieval_score": 0.8,
         }], RetrievalCounts(vector=1, merged=1))
 
-    async def rerank(query, candidates):
+    async def rerank(query, candidates, requested_form):
         assert "기준 작품: 1984, 동물 농장" in query
+        assert requested_form == "STORY"
         return candidates
 
     monkeypatch.setattr(book_ai_service, "find_reference_anchor", anchor)

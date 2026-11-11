@@ -53,6 +53,15 @@ def test_novel_candidates_reject_exam_books_and_other_genres():
     assert not is_search_candidate(copying_book, "소설")
 
 
+def test_recommendations_exclude_multi_book_sets_without_rejecting_single_books():
+    description = "서로 다른 인물들이 성장하며 따뜻한 관계를 만들어 가는 이야기입니다."
+    assert not is_search_candidate(_book("어린이 자기계발 동화 시리즈 세트(전30권)", description, "문학", ["동화"]))
+    assert not is_search_candidate(_book("성장 동화 전 3권", description, "문학", ["동화"]))
+    assert not is_search_candidate(_book("세계문학 중단편세트(NOON)", description, "문학", ["동화"]))
+    assert is_search_candidate(_book("마인드세트", description, "문학", ["동화"]))
+    assert is_search_candidate(_book("세계를 건너 너에게 갈게", description, "문학", ["동화"]))
+
+
 def test_reranker_selection_ignores_duplicate_and_unknown_isbns():
     books = [
         {"isbn": "1", "title": "첫 번째", "contents": "첫 번째 책은 조용한 마을을 배경으로 사람들의 만남을 그립니다."},
@@ -82,6 +91,18 @@ def test_unverifiable_reason_is_omitted_and_book_still_selected():
     )
     assert selected is not None and [book["isbn"] for book in selected] == ["1"]
     assert "reason" not in selected[0]
+
+
+@pytest.mark.asyncio
+async def test_story_fallback_requires_narrative_evidence(monkeypatch):
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    books = [
+        {"isbn": "guide", "title": "창업의 이해", "contents": "창업 이론과 절차를 소개합니다."},
+        {"isbn": "story", "title": "창업의 밤", "contents": "작은 가게를 시작한 사람의 회고록입니다."},
+    ]
+    result = await reranker.rerank_with_gemini("스타트업 이야기가 궁금해", books, "STORY")
+    assert [(book["isbn"], book["ranking_status"]) for book in result] == [("story", "FALLBACK")]
+    assert await reranker.rerank_with_gemini("스타트업 이야기가 궁금해", books[:1], "STORY") == []
 
 
 @pytest.mark.asyncio

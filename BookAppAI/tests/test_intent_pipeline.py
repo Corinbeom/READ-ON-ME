@@ -90,6 +90,8 @@ async def test_mood_query_does_not_trigger_author_intent():
 
     assert intent.query_type == "mood"
     assert intent.focus_author is None
+    assert intent.tone == "어두운"
+    assert "어두운 분위기" in PromptTemplateBuilder().build(intent, intent.raw_query)
 
 
 def test_prompt_builder_domain_template_includes_constraints():

@@ -218,6 +218,7 @@ STUDY_OR_COLLECTION_TITLE = re.compile(
     r"(?:정보관리사|자격증|학습전략 프로그램|필독서 세트|작법서|작가 마스터플랜|장르 글쓰기|아이템 도감)",
     re.IGNORECASE,
 )
+MULTI_BOOK_SET_TITLE = re.compile(r"(?<!마인드)세트|(?:전|총)\s*\d+\s*권")
 NEW_FICTION_OR_POETRY = re.compile(
     r"(?:첫|신작|새로운|[두세네다섯여섯일곱여덟아홉열0-9]+\s*번째).{0,8}"
     r"(?:장편소설|단편소설|소설집|시집)",
@@ -313,6 +314,8 @@ def is_search_candidate(
     title = book.get("title") or ""
     contents = book.get("contents") or ""
     authors = format_authors(book.get("authors"))
+    if MULTI_BOOK_SET_TITLE.search(title):
+        return False
     if contains_exclusion_terms(title, contents, authors) or len(contents.strip()) < 30:
         return False
     if requested_form == "STORY" and infer_book_form(title, contents) == "PRACTICAL":

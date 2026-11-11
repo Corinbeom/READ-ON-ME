@@ -14,6 +14,7 @@ AUTHOR_TEMPLATE = (
 )
 
 MOOD_TEMPLATE = "독자가 '{tone}' 감성을 느낄 수 있는 책을 소개해줘. {extra}"
+DARK_MOOD_TEMPLATE = "어두운 분위기의 이야기, 긴장감 있고 불안한 서사를 담은 소설을 추천해줘. {extra}"
 
 SIMILAR_TEMPLATE = (
     "아래 설명과 유사한 주제/분위기의 책을 찾아줘: '{query}'. "
@@ -43,6 +44,8 @@ class PromptTemplateBuilder:
             if constraint_clause:
                 details.append(constraint_clause)
             extra = " ".join(details)
+            if intent.tone == "어두운":
+                return DARK_MOOD_TEMPLATE.format(extra=extra)
             return MOOD_TEMPLATE.format(tone=intent.tone, extra=extra)
 
         if intent.query_type == "similar":

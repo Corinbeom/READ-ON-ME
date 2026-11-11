@@ -480,7 +480,7 @@ async def search_by_natural_language(query: str, db: AsyncSession, request_id: s
     rerank_query = query
     if reference:
         rerank_query += f" 기준 작품: {', '.join(reference.titles[:3])}. 핵심 주제: {', '.join(reference.theme_keywords[:5])}. 다른 작가의 책 중에서 골라줘."
-    results = (await rerank_with_gemini(rerank_query, filtered))[:AI_SEARCH_RESULT_LIMIT]
+    results = (await rerank_with_gemini(rerank_query, filtered, intent.requested_form))[:AI_SEARCH_RESULT_LIMIT]
 
     elapsed_ms = (time.perf_counter() - started) * 1000
     rerank_ms = elapsed_ms - intent_ms - embed_ms - retrieval_ms

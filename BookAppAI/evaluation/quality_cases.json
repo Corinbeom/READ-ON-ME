@@ -1,5 +1,5 @@
 [
-  {"query":"따뜻한 이야기를 읽고 싶어","requested_form":"STORY","forbidden_titles":["마음챙김 대화"]},
+  {"query":"따뜻한 이야기를 읽고 싶어","requested_form":"STORY","forbidden_titles":["마음챙김 대화", "어린이 자기계발 동화 시리즈 세트"]},
   {"query":"스타트업 이야기가 궁금해","requested_form":"STORY","forbidden_titles":["창업실무", "기업가정신과 창업"]},
   {"query":"어두운 분위기의 책","requested_form":"STORY","forbidden_titles":["진로탐색 및 취업과 창업"]},
   {"query":"창업 입문자를 위한 책","requested_form":"PRACTICAL"},

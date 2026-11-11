@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.services import llm_cooldown
+from app.services.text_utils import infer_book_form
 
 logger = logging.getLogger(__name__)
 
@@ -102,9 +103,18 @@ def _parse_selection(
     return result if result or not selections else None
 
 
-async def rerank_with_gemini(query: str, candidates: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+async def rerank_with_gemini(
+    query: str, candidates: List[Dict[str, Any]], requested_form: str = "ANY",
+) -> List[Dict[str, Any]]:
     fallback = []
-    for book in candidates[:FINAL_RESULT_LIMIT]:
+    fallback_candidates = candidates
+    if requested_form == "STORY":
+        # Without Gemini, UNKNOWN books have no verified narrative evidence.
+        fallback_candidates = [
+            book for book in candidates
+            if infer_book_form(book.get("title") or "", book.get("contents") or "") == "STORY"
+        ]
+    for book in fallback_candidates[:FINAL_RESULT_LIMIT]:
         clean_book = {key: value for key, value in book.items() if key not in {"reason", "reason_evidence"}}
         fallback.append({**clean_book, "ranking_status": "FALLBACK"})
     if not GEMINI_API_KEY or not candidates or not llm_cooldown.available():
