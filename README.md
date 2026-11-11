@@ -85,6 +85,7 @@ uvicorn app.main:app --reload --port 8000
 - 기존 코퍼스 점검: `python -m tools.audit_corpus --limit 1000 --output /tmp/corpus-audit.jsonl`로 변경 없이 보고서를 생성합니다. 검토한 명확한 교재·세트·`977` 정기간행물만 `--apply-ids 12,34`처럼 한 번에 최대 20권씩 제외할 수 있습니다.
 - 로컬 `LEGACY` 코퍼스의 1차 제외 내역과 복구 기준은 [검증 기록](BookAppAI/evaluation/legacy_corpus_cleanup_2026-11-11.md)에 있습니다. 다른 DB에는 자동 적용되지 않습니다.
 - 12개 대표 질의의 추천 품질 기준선과 사람 평가 절차는 [평가 기록](BookAppAI/evaluation/search_quality_review_2026-11-11.md)에 있습니다.
+- Gemini 장애 시 일반 입문 검색의 대체 결과가 전문 교육용 책으로 채워지지 않도록 한 검증은 [대체 결과 기록](BookAppAI/evaluation/fallback_quality_validation_2026-11-11.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용)
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)

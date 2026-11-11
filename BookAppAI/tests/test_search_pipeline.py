@@ -106,6 +106,55 @@ async def test_story_fallback_requires_narrative_evidence(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_general_intro_fallback_skips_clear_training_books_but_keeps_reader_books(monkeypatch):
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    books = [
+        {"isbn": "counselor", "title": "청소년 심리 및 상담", "contents":
+         "예비 청소년상담사를 위한 상담입문서입니다. 상담 이론을 설명하고 연습문제를 수록합니다."},
+        {"isbn": "manual", "title": "심리검사의 종류와 활용", "contents":
+         "심리검사의 종류와 활용에 대해 다룬 이론서입니다. 기초 내용을 학습할 수 있도록 구성했습니다."},
+        {"isbn": "reader", "title": "나 혼자만 알고 싶은 실전 심리학", "contents":
+         "일반인이 이해하기 어려운 심리학을 일상의 인간관계 속에서 쉽게 설명합니다."},
+        {"isbn": "memoir", "title": "마음의 이야기", "contents":
+         "한 사람이 자신의 마음을 돌아보는 경험을 담은 책입니다."},
+        {"isbn": "intro", "title": "심리학 첫걸음", "contents":
+         "심리학을 처음 읽는 사람에게 주요 개념을 알기 쉽게 소개합니다."},
+        {"isbn": "late", "title": "나중 후보", "contents":
+         "일반 독자가 이해할 수 있게 심리학을 설명하는 책입니다."},
+    ]
+    result = await reranker.rerank_with_gemini("심리학 입문 책 추천", books)
+    assert [book["isbn"] for book in result] == ["reader", "memoir", "intro"]
+    assert result[0]["ranking_status"] == "FALLBACK"
+
+    specialist = await reranker.rerank_with_gemini("상담사 심리검사 입문 교재", books)
+    assert [book["isbn"] for book in specialist] == ["counselor", "manual", "reader", "memoir", "intro"]
+
+
+@pytest.mark.asyncio
+async def test_rate_limit_fallback_records_cause(monkeypatch, caplog):
+    original_client = httpx.AsyncClient
+
+    def respond(request):
+        return httpx.Response(429, request=request)
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(respond), timeout=kwargs.get("timeout"),
+    ))
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(llm_cooldown, "_blocked_until", 0.0)
+    calls = []
+    monkeypatch.setattr(llm_cooldown, "rate_limited", lambda: calls.append(True))
+
+    result = await reranker.rerank_with_gemini(
+        "심리학 입문 책 추천",
+        [{"isbn": "reader", "title": "심리학 이야기", "contents": "심리학을 처음 읽는 일반 독자에게 쉽게 소개합니다."}],
+    )
+    assert [book["isbn"] for book in result] == ["reader"]
+    assert calls == [True]
+    assert "reason=HTTP_429" in caplog.text
+
+
+@pytest.mark.asyncio
 async def test_reranker_uses_one_structured_call_and_accepts_no_match(monkeypatch):
     original_client = httpx.AsyncClient
     requests = []

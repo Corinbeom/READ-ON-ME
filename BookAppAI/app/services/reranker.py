@@ -24,6 +24,8 @@ RERANK_CANDIDATE_LIMIT = 10
 FINAL_RESULT_LIMIT = 5
 EVIDENCE_LIMIT = 280
 REASON_LIMIT = 80
+INTRO_QUERY_TERMS = ("입문", "기초", "초보", "처음")
+SPECIALIST_QUERY_TERMS = ("전공", "전문", "상담사", "자격", "시험", "수험", "임상", "심리검사", "실무")
 
 SELECTION_SCHEMA = {
     "type": "ARRAY",
@@ -61,6 +63,24 @@ def _book_evidence(book: Dict[str, Any]) -> str:
         match = re.search(r"이 책은|이 책에서|이 책에는|이 작품은", contents)
         start = match.start() if match else 0
     return contents[start:start + EVIDENCE_LIMIT].strip()
+
+
+def _is_general_intro_query(query: str) -> bool:
+    normalized = _normalized_text(query).casefold()
+    return any(term in normalized for term in INTRO_QUERY_TERMS) and not any(
+        term in normalized for term in SPECIALIST_QUERY_TERMS
+    )
+
+
+def _is_specialist_training_book(book: Dict[str, Any]) -> bool:
+    """Only use strong training signals; a specialized topic alone is not enough."""
+    description = _normalized_text(str(book.get("contents") or "")).casefold()
+    has_exercises = any(term in description for term in ("연습문제", "실습문제", "문제풀이"))
+    targets_trainees = any(term in description for term in ("상담사", "전공자", "자격시험", "수험생"))
+    academic_manual = "이론서" in description and any(
+        term in description for term in ("학습할 수 있도록", "교육과정", "교재로")
+    )
+    return (has_exercises and targets_trainees) or academic_manual
 
 
 def _parse_selection(
@@ -114,11 +134,29 @@ async def rerank_with_gemini(
             book for book in candidates
             if infer_book_form(book.get("title") or "", book.get("contents") or "") == "STORY"
         ]
+    if _is_general_intro_query(query):
+        # Keep the original top-five boundary: rejected training books must not
+        # be replaced by lower-ranked candidates merely to fill five slots.
+        fallback_candidates = [
+            book for book in fallback_candidates[:FINAL_RESULT_LIMIT]
+            if not _is_specialist_training_book(book)
+        ]
     for book in fallback_candidates[:FINAL_RESULT_LIMIT]:
         clean_book = {key: value for key, value in book.items() if key not in {"reason", "reason_evidence"}}
         fallback.append({**clean_book, "ranking_status": "FALLBACK"})
-    if not GEMINI_API_KEY or not candidates or not llm_cooldown.available():
+    def use_fallback(reason: str) -> List[Dict[str, Any]]:
+        logger.warning(
+            "Reranker fallback reason=%s candidates=%d eligible=%d returned=%d",
+            reason, len(candidates), len(fallback_candidates), len(fallback),
+        )
         return fallback
+
+    if not candidates:
+        return []
+    if not GEMINI_API_KEY:
+        return use_fallback("NO_API_KEY")
+    if not llm_cooldown.available():
+        return use_fallback("COOLDOWN")
 
     top = candidates[:RERANK_CANDIDATE_LIMIT]
     evidence_by_isbn = {str(book["isbn"]): _book_evidence(book) for book in top if book.get("isbn")}
@@ -155,10 +193,19 @@ async def rerank_with_gemini(
         if result is not None:
             logger.info("Reranker selected %d books with %d grounded reasons", len(result), sum("reason" in book for book in result))
             return [{**book, "ranking_status": "GEMINI"} for book in result]
-        logger.warning("Reranker fallback error=InvalidSelection finish_reason=%s", response_candidate.get("finishReason"))
+        logger.warning("Reranker invalid selection finish_reason=%s", response_candidate.get("finishReason"))
+        return use_fallback("INVALID_SELECTION")
     except Exception as exc:
         status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
         if status == 429:
             llm_cooldown.rate_limited()
-        logger.warning("Reranker fallback error=%s status=%s", type(exc).__name__, status)
-    return fallback
+        if status:
+            reason = f"HTTP_{status}"
+        elif isinstance(exc, httpx.TimeoutException):
+            reason = "TIMEOUT"
+        elif isinstance(exc, httpx.RequestError):
+            reason = "REQUEST_ERROR"
+        else:
+            reason = "INVALID_RESPONSE"
+        logger.warning("Reranker request failed reason=%s error=%s", reason, type(exc).__name__)
+        return use_fallback(reason)
