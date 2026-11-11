@@ -22,6 +22,13 @@ class IsbnNormalizerTest {
     }
 
     @Test
+    void convertsCanonical978IsbnBackToValidIsbn10() {
+        assertEquals("1127241346", IsbnNormalizer.toIsbn10("9781127241347"));
+        assertEquals("112722199X", IsbnNormalizer.toIsbn10("9781127221998"));
+        assertEquals(null, IsbnNormalizer.toIsbn10("1400000309490"));
+    }
+
+    @Test
     void kakaoBookEntityStoresCanonicalIsbn() {
         KakaoBookDto dto = new KakaoBookDto();
         dto.setTitle("플랫랜드");

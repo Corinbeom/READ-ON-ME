@@ -49,6 +49,19 @@ public final class IsbnNormalizer {
         return null;
     }
 
+    public static String toIsbn10(String isbn13) {
+        if (isbn13 == null || !isbn13.startsWith("978") || !isValid13(isbn13)) {
+            return null;
+        }
+        String stem = isbn13.substring(3, 12);
+        int sum = 0;
+        for (int i = 0; i < stem.length(); i++) {
+            sum += Character.digit(stem.charAt(i), 10) * (10 - i);
+        }
+        int check = (11 - sum % 11) % 11;
+        return stem + (check == 10 ? "X" : check);
+    }
+
     private static boolean isValid13(String token) {
         if (!token.matches("(978|979)[0-9]{10}")) {
             return false;

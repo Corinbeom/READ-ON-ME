@@ -70,11 +70,30 @@ public class BookService {
                 .orElseGet(() -> {
                     KakaoBookSearchResponse response = kakaoSearchCacheService.searchBookByIsbn(isbn);
 
-                    if (response == null || response.getDocuments().isEmpty()) {
+                    String isbn10 = IsbnNormalizer.toIsbn10(isbn);
+                    if ((response == null || response.getDocuments() == null || response.getDocuments().isEmpty())
+                            && isbn10 != null) {
+                        response = kakaoSearchCacheService.searchBookByIsbn(isbn10);
+                    }
+
+                    if (response == null || response.getDocuments() == null || response.getDocuments().isEmpty()) {
                         throw new BookExceptions.BookNotFoundException("검색 결과가 없습니다: " + isbn);
                     }
 
-                    return saveBookToUserLibrary(response.getDocuments().get(0));
+                    if (isbn10 == null) {
+                        return saveBookToUserLibrary(response.getDocuments().get(0));
+                    }
+                    return response.getDocuments().stream()
+                            .filter(document -> {
+                                try {
+                                    return isbn.equals(IsbnNormalizer.toIsbn13(document.getIsbn()));
+                                } catch (IllegalArgumentException exception) {
+                                    return false;
+                                }
+                            })
+                            .findFirst()
+                            .map(this::saveBookToUserLibrary)
+                            .orElseThrow(() -> new BookExceptions.BookNotFoundException("검색 결과가 없습니다: " + isbn));
                 });
     }
 

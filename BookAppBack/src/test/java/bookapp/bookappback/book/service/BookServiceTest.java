@@ -15,6 +15,7 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -104,5 +105,43 @@ class BookServiceTest {
         verify(bookRepository).findByIsbn13("9781127241347");
         verify(bookRepository, never()).findByIsbn13("1400000309490");
         verify(service).submitCorpusIngestion(saved);
+    }
+
+    @Test
+    void findsCanonicalIsbn13ThroughKakaoIsbn10AndChecksTheReturnedBook() {
+        BookService service = spy(new BookService(
+                bookRepository, kakaoSearchCacheService, webClientBuilder,
+                userBookStatusRepository, "http://localhost:8000", "test-token"));
+        KakaoBookDto wrong = new KakaoBookDto();
+        wrong.setIsbn("9780306406157");
+        KakaoBookDto matching = new KakaoBookDto();
+        matching.setIsbn("1127241346 1400000309490");
+        Book expected = new Book();
+        expected.setIsbn13("9781127241347");
+        when(bookRepository.findByIsbn13("9781127241347")).thenReturn(Optional.empty());
+        when(kakaoSearchCacheService.searchBookByIsbn("9781127241347"))
+                .thenReturn(new KakaoBookSearchResponse(null, Collections.emptyList()));
+        when(kakaoSearchCacheService.searchBookByIsbn("1127241346"))
+                .thenReturn(new KakaoBookSearchResponse(null, List.of(wrong, matching)));
+        doReturn(expected).when(service).saveBookToUserLibrary(matching);
+
+        assertSame(expected, service.getBookByIsbn("9781127241347"));
+        verify(service, never()).saveBookToUserLibrary(wrong);
+        verify(kakaoSearchCacheService).searchBookByIsbn("1127241346");
+    }
+
+    @Test
+    void rejectsKakaoIsbn10FallbackWhenReturnedBookDoesNotMatch() {
+        KakaoBookDto wrong = new KakaoBookDto();
+        wrong.setIsbn("9780306406157");
+        when(bookRepository.findByIsbn13("9781127241347")).thenReturn(Optional.empty());
+        when(kakaoSearchCacheService.searchBookByIsbn("9781127241347"))
+                .thenReturn(new KakaoBookSearchResponse(null, Collections.emptyList()));
+        when(kakaoSearchCacheService.searchBookByIsbn("1127241346"))
+                .thenReturn(new KakaoBookSearchResponse(null, List.of(wrong)));
+
+        assertThrows(BookExceptions.BookNotFoundException.class,
+                () -> bookService.getBookByIsbn("9781127241347"));
+        verify(bookRepository, never()).save(any(Book.class));
     }
 }
