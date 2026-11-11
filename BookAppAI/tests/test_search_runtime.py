@@ -74,8 +74,9 @@ async def test_data_build_returns_durable_run_id(monkeypatch):
     async def fake_db():
         yield object()
 
-    async def create_job(db, keywords):
+    async def create_job(db, keywords, *, max_pages_per_term, max_new_books):
         assert keywords == ["소설"]
+        assert (max_pages_per_term, max_new_books) == (1, 5)
         return SimpleNamespace(id="batch-job", status="PENDING")
 
     monkeypatch.setattr(corpus_ingestion, "create_batch_job", create_job)
@@ -85,7 +86,8 @@ async def test_data_build_returns_durable_run_id(monkeypatch):
         async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
             response = await client.post(
                 "/api/books/fetch-and-filter",
-                json={"keywords": ["소설"]}, headers={"X-Internal-Token": "test-only-token"},
+                json={"keywords": ["소설"], "max_pages_per_term": 1, "max_new_books": 5},
+                headers={"X-Internal-Token": "test-only-token"},
             )
         assert response.status_code == 202
         assert response.json() == {"run_id": "batch-job", "status": "PENDING"}

@@ -40,6 +40,19 @@ def _now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _merge_book_metadata(old: dict[str, Any], new: dict[str, Any], *, prefer_new: bool) -> dict[str, Any]:
+    """Keep the longer source description and fill missing bibliographic fields."""
+    primary, secondary = (new, old) if prefer_new else (old, new)
+    merged = {**secondary, **primary}
+    for field in ("title", "authors", "publisher", "thumbnail"):
+        if field in primary or field in secondary:
+            merged[field] = primary.get(field) or secondary.get(field)
+    old_contents = str(old.get("contents") or "")
+    new_contents = str(new.get("contents") or "")
+    merged["contents"] = new_contents if len(new_contents) > len(old_contents) else old_contents
+    return merged
+
+
 def _public_job(job: CorpusIngestionJob, candidate_counts: dict[str, int] | None = None) -> dict:
     return {
         "id": job.id, "type": job.job_type, "source": job.source, "isbn": job.isbn,
@@ -49,22 +62,30 @@ def _public_job(job: CorpusIngestionJob, candidate_counts: dict[str, int] | None
     }
 
 
-async def create_batch_job(db: AsyncSession, keywords: list[str]) -> CorpusIngestionJob:
+async def create_batch_job(
+    db: AsyncSession, keywords: list[str], *,
+    max_pages_per_term: int = MAX_PAGES_PER_TERM, max_new_books: int | None = None,
+) -> CorpusIngestionJob:
     clean = list(dict.fromkeys(term.strip() for term in keywords if isinstance(term, str) and term.strip()))
     if not clean or len(clean) > 20 or any(len(term) > 40 for term in clean):
         raise ValueError("Provide 1–20 keywords, each at most 40 characters")
+    if not 1 <= max_pages_per_term <= MAX_PAGES_PER_TERM or (max_new_books is not None and not 1 <= max_new_books <= 20):
+        raise ValueError("Batch limits must be 1–5 pages per term and 1–20 new books")
     await db.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": _BATCH_CREATE_LOCK})
     active = (await db.execute(select(CorpusIngestionJob).where(
         CorpusIngestionJob.job_type == "BATCH",
         CorpusIngestionJob.status.in_(["PENDING", "RUNNING", "RETRY"]),
     ).order_by(CorpusIngestionJob.created_at).limit(1))).scalar_one_or_none()
     if active:
-        if active.payload.get("keywords") == clean:
+        if (active.payload.get("keywords") == clean
+                and active.payload.get("max_pages_per_term", MAX_PAGES_PER_TERM) == max_pages_per_term
+                and active.payload.get("max_new_books") == max_new_books):
             return active
         raise BatchAlreadyRunning(active.id)
     job = CorpusIngestionJob(
         id=str(uuid.uuid4()), job_type="BATCH", source="KAKAO_BATCH", status="PENDING",
-        payload={"keywords": clean}, progress={"term_index": 0, "page": 1, "fetched": 0, "queued": 0, "duplicates": 0, "invalid_isbn": 0},
+        payload={"keywords": clean, "max_pages_per_term": max_pages_per_term, "max_new_books": max_new_books},
+        progress={"term_index": 0, "page": 1, "fetched": 0, "queued": 0, "duplicates": 0, "invalid_isbn": 0},
         next_attempt_at=_now(),
     )
     db.add(job)
@@ -117,15 +138,17 @@ async def enqueue_book(
             better_description or source == "USER_LIBRARY"
             or (job.reject_reason == "LOW_TOPIC_SIMILARITY" and new_topic)
         )
+        merged_book = _merge_book_metadata(old_book, book, prefer_new=source == "USER_LIBRARY")
         if requeued:
-            chosen_book = book if source == "USER_LIBRARY" or better_description else old_book
-            job.payload = {"book": chosen_book, "discovery_keywords": keywords}
+            job.payload = {"book": merged_book, "discovery_keywords": keywords}
             job.status = "PENDING"
             job.attempts = 0
             job.error_code = None
             job.reject_reason = None
             job.next_attempt_at = _now()
-        elif keywords != old_payload.get("discovery_keywords", []):
+        elif job.status in {"PENDING", "RETRY"} and (better_description or merged_book != old_book or keywords != old_keywords):
+            job.payload = {**old_payload, "book": merged_book, "discovery_keywords": keywords}
+        elif keywords != old_keywords:
             job.payload = {**old_payload, "discovery_keywords": keywords}
     if commit:
         await db.commit()
@@ -194,6 +217,8 @@ async def _process_batch(job_id: str) -> None:
             await db.commit()
         return
     keyword, term = terms[index]
+    max_pages = int(job.payload.get("max_pages_per_term", MAX_PAGES_PER_TERM))
+    max_new_books = job.payload.get("max_new_books")
     documents, is_end = await _fetch_kakao_page(term, page)
     async with database.async_session() as db:
         job = await db.get(CorpusIngestionJob, job_id)
@@ -203,17 +228,23 @@ async def _process_batch(job_id: str) -> None:
         known_corpus_isbns = set((await db.execute(
             select(BookCorpus.isbn).where(BookCorpus.isbn.in_(isbns))
         )).scalars().all()) if isbns else set()
-        for book in documents:
+        for position, book in enumerate(documents):
+            if max_new_books is not None and progress["queued"] >= max_new_books:
+                progress["skipped_limit"] = progress.get("skipped_limit", 0) + len(documents) - position
+                break
             status, _ = await enqueue_book(db, book, source="KAKAO_BATCH", run_id=job_id, discovery_keyword=keyword, commit=False, known_corpus_isbns=known_corpus_isbns)
             key = "invalid_isbn" if status == "INVALID_ISBN" else "duplicates" if status in {"ALREADY_INDEXED", "INDEXED", "RUNNING", "PENDING", "RETRY", "HOLD", "REJECTED", "FAILED"} else "queued"
             progress[key] += 1
-        if is_end or not documents or page >= MAX_PAGES_PER_TERM:
+        limit_reached = max_new_books is not None and progress["queued"] >= max_new_books
+        if limit_reached:
+            progress["limit_reached"] = True
+        if is_end or not documents or page >= max_pages:
             progress["term_index"] = index + 1
             progress["page"] = 1
         else:
             progress["page"] = page + 1
         job.progress = progress
-        job.status = "DONE" if progress["term_index"] >= len(terms) else "PENDING"
+        job.status = "DONE" if limit_reached or progress["term_index"] >= len(terms) else "PENDING"
         job.attempts = 0
         job.error_code = None
         job.next_attempt_at = _now() + timedelta(seconds=2)

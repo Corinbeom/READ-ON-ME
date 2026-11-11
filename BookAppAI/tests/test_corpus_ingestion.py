@@ -38,6 +38,41 @@ def test_batch_book_uniqueness_is_scoped_to_run():
 
 
 @pytest.mark.asyncio
+async def test_pilot_batch_stops_after_five_new_books(monkeypatch):
+    job = SimpleNamespace(
+        id="pilot", payload={"keywords": ["pilot"], "max_pages_per_term": 1, "max_new_books": 5},
+        progress={"term_index": 0, "page": 1, "fetched": 0, "queued": 0, "duplicates": 0, "invalid_isbn": 0},
+        status="RUNNING", attempts=1, error_code=None, next_attempt_at=None, updated_at=None,
+    )
+
+    class BatchSession(FakeSession):
+        async def execute(self, statement):
+            return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: []))
+
+    monkeypatch.setattr(corpus_ingestion.database, "async_session", lambda: BatchSession(job))
+
+    async def fetch(term, page):
+        assert (term, page) == ("pilot", 1)
+        return [{"isbn": "9780000000002"} for _ in range(20)], False
+
+    queued = []
+
+    async def enqueue(db, book, **kwargs):
+        queued.append(book)
+        return "QUEUED", None
+
+    monkeypatch.setattr(corpus_ingestion, "_fetch_kakao_page", fetch)
+    monkeypatch.setattr(corpus_ingestion, "enqueue_book", enqueue)
+    await corpus_ingestion._process_batch("pilot")
+    assert len(queued) == 5
+    assert job.status == "DONE"
+    assert job.progress["fetched"] == 20
+    assert job.progress["queued"] == 5
+    assert job.progress["skipped_limit"] == 15
+    assert job.progress["limit_reached"] is True
+
+
+@pytest.mark.asyncio
 async def test_rejected_batch_book_requeues_for_new_keyword_without_losing_richer_metadata():
     old_book = {
         "isbn": "9780000000002", "title": "별과 밤의 이야기", "authors": "작가",
@@ -76,6 +111,53 @@ async def test_rejected_batch_book_requeues_for_new_keyword_without_losing_riche
     assert job.attempts == 0
     selection = session.selection.compile(dialect=postgresql.dialect())
     assert selection.params["run_id_1"] == "batch-1"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("initial_status, expected_status", [
+    ("PENDING", "PENDING"), ("RETRY", "RETRY"), ("HOLD", "QUEUED"),
+])
+async def test_duplicate_book_uses_richer_source_description(initial_status, expected_status):
+    old_book = {
+        "isbn": "9780000000002", "title": "작은 책", "authors": "작가",
+        "contents": "짧은 소개", "publisher": "기존 출판사",
+    }
+    job = SimpleNamespace(
+        id="book-job", status=initial_status, reject_reason="SHORT_DESCRIPTION",
+        payload={"book": old_book, "discovery_keywords": ["에세이"]},
+        attempts=2, error_code="TEMPORARY", next_attempt_at=None,
+    )
+
+    class EnqueueSession:
+        def __init__(self):
+            self.calls = 0
+
+        async def execute(self, statement):
+            self.calls += 1
+            value = job if self.calls == 3 else None
+            return SimpleNamespace(scalar_one_or_none=lambda: value, scalar_one=lambda: value)
+
+        async def commit(self):
+            pass
+
+    richer_description = "작가의 일상과 관계를 담은 산문집입니다. " * 6
+    status, returned = await corpus_ingestion.enqueue_book(
+        EnqueueSession(),
+        {"isbn": old_book["isbn"], "title": "작은 책", "authors": "작가",
+         "contents": richer_description, "publisher": ""},
+        source="KAKAO_BATCH", run_id="batch-1", discovery_keyword="산문",
+    )
+    assert status == expected_status
+    assert returned is job
+    assert job.payload["book"]["contents"] == richer_description
+    assert job.payload["book"]["publisher"] == "기존 출판사"
+    assert job.payload["discovery_keywords"] == ["에세이", "산문"]
+    if initial_status == "HOLD":
+        assert job.status == "PENDING"
+        assert job.attempts == 0
+        assert job.reject_reason is None
+    else:
+        assert job.status == initial_status
 
 
 @pytest.mark.asyncio

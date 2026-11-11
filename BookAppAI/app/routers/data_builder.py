@@ -14,7 +14,11 @@ router = APIRouter()
 @router.post("/api/books/fetch-and-filter", status_code=202, dependencies=[Depends(require_internal_token)])
 async def fetch_and_filter_books(request: KeywordRequest, db: AsyncSession = Depends(get_db)):
     try:
-        job = await corpus_ingestion.create_batch_job(db, request.keywords)
+        job = await corpus_ingestion.create_batch_job(
+            db, request.keywords,
+            max_pages_per_term=request.max_pages_per_term,
+            max_new_books=request.max_new_books,
+        )
     except corpus_ingestion.BatchAlreadyRunning as exc:
         raise HTTPException(status_code=409, detail={"active_run_id": exc.run_id}, headers={"Retry-After": "30"}) from exc
     except ValueError as exc:

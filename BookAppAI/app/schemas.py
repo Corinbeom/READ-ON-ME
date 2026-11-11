@@ -1,8 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 class KeywordRequest(BaseModel):
     keywords: List[str]
+    max_pages_per_term: int = Field(default=5, ge=1, le=5)
+    max_new_books: Optional[int] = Field(default=None, ge=1, le=20)
 
 class SingleBookRequest(BaseModel):
     title: str
