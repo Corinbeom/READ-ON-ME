@@ -130,11 +130,14 @@ def test_reranker_selection_ignores_duplicate_and_unknown_isbns():
 
 def test_unverifiable_reason_is_omitted_and_book_still_selected():
     books = [{"isbn": "1", "title": "따뜻한 책", "contents": "따뜻한 책은 작은 동네의 이웃들이 함께 살아가는 모습을 담은 소설입니다."}]
+    diagnostics = {}
     selected = _parse_selection(
-        '[{"isbn":"1","reason":"우주 전쟁의 결말을 보여줍니다.","evidence_quote":"우주 전쟁의 결말"}]', books,
+        '[{"isbn":"1","reason":"우주 전쟁의 결말을 보여줍니다.","evidence_quote":"우주 전쟁의 결말을 자세히 보여줍니다"}]', books,
+        diagnostics=diagnostics,
     )
     assert selected is not None and [book["isbn"] for book in selected] == ["1"]
     assert "reason" not in selected[0]
+    assert diagnostics["reason_rejections"] == [{"isbn": "1", "code": "QUOTE_MISMATCH"}]
 
 
 def test_grounded_reason_survives_small_model_length_overruns():
@@ -152,10 +155,12 @@ def test_grounded_reason_survives_small_model_length_overruns():
     assert selected[0]["reason"] == reason
     assert selected[0]["reason_evidence"] == quote.strip()
 
+    diagnostics = {}
     too_long = _parse_selection(json.dumps([{
         "isbn": "1", "reason": reason + "추가 설명" * 10, "evidence_quote": quote,
-    }], ensure_ascii=False), [book])
+    }], ensure_ascii=False), [book], diagnostics=diagnostics)
     assert too_long is not None and "reason" not in too_long[0]
+    assert diagnostics["reason_rejections"] == [{"isbn": "1", "code": "REASON_TOO_LONG"}]
 
 
 @pytest.mark.asyncio
@@ -285,9 +290,12 @@ async def test_general_intro_keeps_training_books_out_of_gemini_candidates(monke
         {"isbn": "reader", "title": "심리학 첫걸음", "contents":
          "심리학을 처음 읽는 일반 독자에게 쉽게 소개합니다."},
     ]
-    result = await reranker.rerank_with_gemini("심리학 입문 책 추천", books)
+    diagnostics = {}
+    result = await reranker.rerank_with_gemini("심리학 입문 책 추천", books, diagnostics=diagnostics)
     assert [book["isbn"] for book in result] == ["reader"]
     assert result[0]["ranking_status"] == "GEMINI"
+    assert diagnostics["model_input_isbns"] == ["reader"]
+    assert diagnostics["model_selected_isbns"] == ["reader"]
     assert "counselor" not in requests[0]["contents"][0]["parts"][0]["text"]
     assert "curriculum" not in requests[0]["contents"][0]["parts"][0]["text"]
 

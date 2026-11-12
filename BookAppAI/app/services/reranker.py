@@ -98,6 +98,7 @@ def _is_training_book(book: Dict[str, Any], allow_school_curriculum: bool = Fals
 
 def _parse_selection(
     raw: str, candidates: List[Dict[str, Any]], evidence_by_isbn: Optional[dict[str, str]] = None,
+    diagnostics: dict | None = None,
 ) -> Optional[List[Dict[str, Any]]]:
     try:
         selections = json.loads(raw.strip())
@@ -121,13 +122,24 @@ def _parse_selection(
         reason = selection.get("reason")
         quote = selection.get("evidence_quote")
         evidence = evidence_by_isbn.get(isbn, "")
-        if (
-            isinstance(reason, str) and 1 <= len(reason.strip()) <= REASON_LIMIT
-            and isinstance(quote, str) and 12 <= len(quote.strip()) <= EVIDENCE_QUOTE_LIMIT
-            and _normalized_text(quote) in evidence
-        ):
+        issue = None
+        if not isinstance(reason, str) or not reason.strip():
+            issue = "MISSING_REASON"
+        elif len(reason.strip()) > REASON_LIMIT:
+            issue = "REASON_TOO_LONG"
+        elif not isinstance(quote, str) or not quote.strip():
+            issue = "MISSING_QUOTE"
+        elif len(quote.strip()) < 12:
+            issue = "QUOTE_TOO_SHORT"
+        elif len(quote.strip()) > EVIDENCE_QUOTE_LIMIT:
+            issue = "QUOTE_TOO_LONG"
+        elif _normalized_text(quote) not in evidence:
+            issue = "QUOTE_MISMATCH"
+        if issue is None:
             book["reason"] = reason.strip()
             book["reason_evidence"] = _normalized_text(quote)
+        elif diagnostics is not None:
+            diagnostics.setdefault("reason_rejections", []).append({"isbn": isbn, "code": issue})
         result.append(book)
         seen_isbns.add(isbn)
         if len(result) >= FINAL_RESULT_LIMIT:
@@ -142,6 +154,7 @@ async def rerank_with_gemini(
     genre: str | None = None,
     outcome: dict | None = None,
     verified_fallback: List[Dict[str, Any]] | None = None,
+    diagnostics: dict | None = None,
 ) -> List[Dict[str, Any]]:
     trace_id = (request_id or "-")[:64]
     fallback = []
@@ -171,6 +184,8 @@ async def rerank_with_gemini(
     for book in fallback_candidates[:FINAL_RESULT_LIMIT]:
         clean_book = {key: value for key, value in book.items() if key not in {"reason", "reason_evidence"}}
         fallback.append({**clean_book, "ranking_status": "FALLBACK"})
+    if diagnostics is not None:
+        diagnostics["fallback_isbns"] = [book["isbn"] for book in fallback]
     def use_fallback(reason: str) -> List[Dict[str, Any]]:
         if outcome is not None:
             outcome.update(status="FALLBACK" if fallback else "DEGRADED_EMPTY", reason_code=reason)
@@ -199,6 +214,8 @@ async def rerank_with_gemini(
         logger.info("Reranker skipped request_id=%s reason=NO_ELIGIBLE_CANDIDATES", trace_id)
         return []
     top = model_candidates[:RERANK_CANDIDATE_LIMIT]
+    if diagnostics is not None:
+        diagnostics["model_input_isbns"] = [book["isbn"] for book in top]
     evidence_by_isbn = {str(book["isbn"]): _book_evidence(book) for book in top if book.get("isbn")}
     book_list = [
         {"isbn": str(book.get("isbn") or ""), "title": book.get("title") or "",
@@ -235,8 +252,10 @@ async def rerank_with_gemini(
             llm_cooldown.succeeded()
             response_candidate = resp.json()["candidates"][0]
             raw = response_candidate["content"]["parts"][0]["text"]
-        result = _parse_selection(raw, top, evidence_by_isbn)
+        result = _parse_selection(raw, top, evidence_by_isbn, diagnostics)
         if result is not None:
+            if diagnostics is not None:
+                diagnostics["model_selected_isbns"] = [book["isbn"] for book in result]
             if outcome is not None:
                 outcome.update(
                     status="MODEL" if result else "NO_MATCH",

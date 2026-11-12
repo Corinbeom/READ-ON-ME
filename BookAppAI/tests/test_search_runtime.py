@@ -180,11 +180,13 @@ async def test_search_uses_one_rerank_and_no_query_rewrite(monkeypatch):
             "keyword": "자기계발", "tags": ["자기계발"], "retrieval_score": 0.8,
         }], RetrievalCounts(vector=1, merged=1))
 
-    async def fake_rerank(query, candidates, requested_form, request_id=None, genre=None, outcome=None, verified_fallback=None):
+    async def fake_rerank(query, candidates, requested_form, request_id=None, genre=None, outcome=None, verified_fallback=None, diagnostics=None):
         nonlocal calls
         calls += 1
         assert requested_form == "ANY"
         assert request_id == "test-job"
+        assert diagnostics is not None
+        diagnostics["model_input_isbns"] = [book["isbn"] for book in candidates]
         return candidates
 
     monkeypatch.setattr(query_rewriter, "rewrite_query", forbidden_rewrite)
@@ -192,9 +194,16 @@ async def test_search_uses_one_rerank_and_no_query_rewrite(monkeypatch):
     monkeypatch.setattr(book_ai_service, "retrieve_candidates", fake_retrieve)
     monkeypatch.setattr(book_ai_service, "rerank_with_gemini", fake_rerank)
 
-    results = await book_ai_service.search_by_natural_language("자기계발 책", object(), "test-job")
+    diagnostics = {}
+    results = await book_ai_service.search_by_natural_language(
+        "자기계발 책", object(), "test-job", diagnostics=diagnostics,
+    )
     assert len(results) == 1
     assert calls == 1
+    assert diagnostics["retrieved_isbns"] == ["1"]
+    assert diagnostics["filtered_isbns"] == ["1"]
+    assert diagnostics["model_input_isbns"] == ["1"]
+    assert diagnostics["result_isbns"] == ["1"]
 
 
 @pytest.mark.asyncio

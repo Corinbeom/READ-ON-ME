@@ -175,6 +175,7 @@ async def find_similar_corpus_edition(db: AsyncSession, title: str, authors: str
 
 async def search_by_natural_language(
     query: str, db: AsyncSession, request_id: str | None = None, outcome: dict | None = None,
+    diagnostics: dict | None = None,
 ):
     """Retrieve bounded candidates, enforce explicit constraints, then rank up to five books."""
     started = time.perf_counter()
@@ -209,6 +210,9 @@ async def search_by_natural_language(
         filtered = [book for book in filtered if has_theme_evidence(book, reference.theme_keywords)]
     filtered = _deduplicate_results(filtered)
     filtered = _prefer_general_novels(filtered, intent)
+    if diagnostics is not None:
+        diagnostics["retrieved_isbns"] = [book["isbn"] for book in candidates]
+        diagnostics["filtered_isbns"] = [book["isbn"] for book in filtered]
     verified_fallback = (
         [book for book in filtered if is_verified_similar_fallback(book, reference)]
         if reference else None
@@ -217,13 +221,18 @@ async def search_by_natural_language(
     rerank_query = query
     if reference:
         rerank_query += f" 기준 작품: {', '.join(reference.titles[:3])}. 핵심 주제: {', '.join(reference.theme_keywords[:5])}. 다른 작가의 책 중에서 골라줘."
+    rerank_kwargs = {"request_id": request_id, "genre": intent.genre,
+                     "outcome": outcome, "verified_fallback": verified_fallback}
+    if diagnostics is not None:
+        rerank_kwargs["diagnostics"] = diagnostics
     results = (await rerank_with_gemini(
-        rerank_query, filtered, intent.requested_form, request_id=request_id, genre=intent.genre,
-        outcome=outcome, verified_fallback=verified_fallback,
+        rerank_query, filtered, intent.requested_form, **rerank_kwargs,
     ))[:AI_SEARCH_RESULT_LIMIT]
     if outcome is not None and reference and outcome.get("status") == "FALLBACK":
         outcome["basis"] = "SHARED_THEMES"
     results = _prefer_general_novels(results, intent)
+    if diagnostics is not None:
+        diagnostics["result_isbns"] = [book["isbn"] for book in results]
 
     elapsed_ms = (time.perf_counter() - started) * 1000
     rerank_ms = elapsed_ms - intent_ms - embed_ms - retrieval_ms

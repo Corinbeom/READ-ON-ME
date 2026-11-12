@@ -95,6 +95,7 @@ uvicorn app.main:app --reload --port 8000
 - 일반 입문 검색에서 전문 교육용 책을 Gemini 후보와 대체 결과에서 제외한 검증은 [검색 품질 기록](BookAppAI/evaluation/fallback_quality_validation_2026-11-11.md)에 있습니다.
 - 결과 상태를 함께 수집한 최신 12개 질의 재점검과 다른 작가 유사 검색 결과는 [추천 품질 재점검](BookAppAI/evaluation/search_quality_recheck_2026-11-12.md)에 있습니다.
 - 추천 이유 누락의 재현 원인과 `LEGACY` 코퍼스 의존도는 [추천 품질 심층 점검](BookAppAI/evaluation/recommendation_depth_audit_2026-11-12.md)에 있습니다.
+- 검색·필터·Gemini 입력·최종 선택의 `ACTIVE`/`LEGACY` 비율과 이유 누락 원인은 [단계별 검색 점검](BookAppAI/evaluation/search_stage_audit_2026-11-12.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용). 본문은 책 배열이며 `X-Search-Outcome`, `X-Search-Reason`, `X-Search-Basis` 헤더로 결과 상태를 전달합니다.
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)
