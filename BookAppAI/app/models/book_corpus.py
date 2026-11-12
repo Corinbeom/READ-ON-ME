@@ -23,3 +23,6 @@ class BookCorpus(Base):
     source = Column(String(30), nullable=True)
     classification_version = Column(String(100), nullable=True)
     validated_at = Column(DateTime(timezone=True), nullable=True)
+    kdc_code = Column(String(20), nullable=True)
+    kdc_source = Column(String(30), nullable=True)
+    kdc_checked_at = Column(DateTime(timezone=True), nullable=True)

@@ -14,6 +14,8 @@ Gemini 태깅과 검색 재정렬의 기본 모델은 `gemini-3.5-flash-lite`입
 
 AI 코퍼스 수집의 `CORPUS_SIMILARITY_THRESHOLD` 기본값은 `0.45`입니다. 카카오 키워드 후보가 주제 프롬프트와 이 값보다 낮은 유사도를 보이면 Gemini 분류 전에 제외합니다. 사용자 서재에서 추가한 책에는 이 키워드 필터를 적용하지 않습니다. 데이터 수집은 서버 시작 시 자동 실행되지 않으며 내부 토큰으로 보호된 `POST /api/books/fetch-and-filter`를 호출해야 합니다.
 
+선택 설정인 `LIBRARY_BIGDATA_API_KEY`가 있으면 정보나루의 ISBN 일치 도서 상세에서 짧은 소개를 보강하고, 새 이야기형 책의 KDC 분류번호를 저장합니다. 기존 코퍼스는 `cd BookAppAI && python -m tools.backfill_korean_fiction_kdc`로 미리 보고 `--apply`로 보강합니다. 재조회가 필요한 누락 건은 `--retry-missing`을 사용합니다. KDC `813` 계열은 한국소설 근거로, 다른 `8xx` 문학 번호는 비한국소설 근거로 쓰며, KDC가 없으면 기존 태그·소개 근거를 유지합니다. 조회 실패는 도서 편입을 막지 않습니다.
+
 `GEMINI_CLASSIFIER_MIN_INTERVAL_SECONDS` 기본값은 `6`입니다. 같은 AI 프로세스의 도서 분류 요청 사이에 최소 간격을 두어 호출량을 낮춥니다. 여러 AI 프로세스가 동시에 실행되는 경우 이 간격은 프로세스마다 적용됩니다.
 
 ### 권장(운영/보안)

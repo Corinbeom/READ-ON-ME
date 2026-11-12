@@ -24,7 +24,7 @@ TITLE_GENRE_TERMS = {
     "디스토피아": ("디스토피아",),
 }
 
-_COLUMNS = "id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags, source, classification_version, recommendation_status"
+_COLUMNS = "id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags, source, classification_version, recommendation_status, kdc_code, kdc_source"
 
 
 @dataclass

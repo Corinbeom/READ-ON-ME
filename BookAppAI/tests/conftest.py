@@ -12,3 +12,4 @@ if ROOT_DIR not in sys.path:
 def default_embedding_provider(monkeypatch):
     """Keep tests offline when the developer's .env selects Gemini."""
     monkeypatch.setenv("EMBEDDING_PROVIDER", "local")
+    monkeypatch.delenv("LIBRARY_BIGDATA_API_KEY", raising=False)

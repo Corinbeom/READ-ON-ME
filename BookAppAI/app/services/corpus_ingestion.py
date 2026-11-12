@@ -17,7 +17,7 @@ import app.database as database
 from app.models.book_corpus import BookCorpus
 from app.models.corpus_ingestion_job import CorpusIngestionJob
 from app.services import llm_cooldown
-from app.services.corpus_metadata import fetch_naru_description
+from app.services.corpus_metadata import fetch_naru_description, fetch_naru_kdc
 from app.services.corpus_quality import normalize_isbn, preflight_candidate, validate_classification
 from app.services.gemini_tagger import GeminiTagger
 from app.services.text_utils import build_book_text, build_keyword_prompt, format_authors, get_proxy_search_terms
@@ -274,7 +274,15 @@ async def _keyword_vector(keyword: str) -> list[float] | None:
     return _keyword_embeddings.get(cache_key)
 
 
-async def _finish_book(job_id: str, status: str, reason: str | None = None, *, embedding=None, classification=None, classification_result=None, similarity=0.0) -> None:
+async def _kdc_metadata(isbn: str, book_type: str | None) -> dict:
+    if book_type != "STORY" or not os.getenv("LIBRARY_BIGDATA_API_KEY"):
+        return {}
+    code = await fetch_naru_kdc(isbn)
+    return {"kdc_code": code, "kdc_source": "DATA4LIBRARY" if code else None,
+            "kdc_checked_at": _now()}
+
+
+async def _finish_book(job_id: str, status: str, reason: str | None = None, *, embedding=None, classification=None, classification_result=None, similarity=0.0, kdc_metadata=None) -> None:
     async with database.async_session() as db:
         job = await db.get(CorpusIngestionJob, job_id)
         if status == "ACTIVE":
@@ -285,7 +293,7 @@ async def _finish_book(job_id: str, status: str, reason: str | None = None, *, e
                 thumbnail=book.get("thumbnail"), keyword=classification[0], tags=classification[1],
                 similarity_score=similarity, **embedding_write_values(embedding), recommendation_status="ACTIVE",
                 source=job.source, classification_version=corpus_tagger.model,
-                validated_at=_now(),
+                validated_at=_now(), **(kdc_metadata or {}),
             ).on_conflict_do_nothing(index_elements=["isbn"]))
             job.status = "INDEXED"
         else:
@@ -376,7 +384,8 @@ async def _process_book(job_id: str) -> None:
     status, reason, keyword, tags = validate_classification(book, result)
     if source == "CURATED_SEED" and status == "ACTIVE":
         status = "REVIEW_PENDING"
-    await _finish_book(job_id, status, reason, embedding=embedding, classification=(keyword, tags), classification_result=result, similarity=similarity)
+    kdc_metadata = await _kdc_metadata(isbn, result.get("book_type")) if status == "ACTIVE" else {}
+    await _finish_book(job_id, status, reason, embedding=embedding, classification=(keyword, tags), classification_result=result, similarity=similarity, kdc_metadata=kdc_metadata)
 
 
 async def review_curated_job(
@@ -434,6 +443,7 @@ async def review_curated_job(
         existing = (await db.execute(select(BookCorpus.id).where(BookCorpus.isbn == job.isbn))).scalar_one_or_none()
         if existing is not None:
             raise ValueError("ISBN already exists in the corpus")
+        kdc_metadata = await _kdc_metadata(job.isbn, progress.get("book_type"))
         await db.execute(insert(BookCorpus).values(
             title=book["title"], contents=book.get("contents"), isbn=job.isbn,
             authors=format_authors(book.get("authors")), publisher=book.get("publisher"),
@@ -441,7 +451,7 @@ async def review_curated_job(
             tags=list(dict.fromkeys(tag.strip() for tag in chosen_tags)),
             similarity_score=0.0, **embedding_write_values(embedding), recommendation_status="ACTIVE",
             source=job.source, classification_version=f"{progress.get('classification_model') or corpus_tagger.model}:reviewed",
-            validated_at=_now(),
+            validated_at=_now(), **kdc_metadata,
         ))
         job.status = "INDEXED"
         job.reject_reason = None

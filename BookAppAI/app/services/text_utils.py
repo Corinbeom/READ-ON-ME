@@ -272,7 +272,13 @@ def has_fiction_evidence(book: dict) -> bool:
 
 
 def has_korean_fiction_evidence(book: dict) -> bool:
-    """Use explicit corpus labels or description evidence; names and publishers prove nothing."""
+    """Prefer ISBN-verified KDC over labels; names and publishers prove nothing."""
+    code = book.get("kdc_code")
+    if book.get("kdc_source") == "DATA4LIBRARY" and isinstance(code, str) and re.fullmatch(r"\d{3}(?:\.\d+)?", code):
+        if code.startswith("813"):
+            return True
+        if code.startswith("8"):
+            return False
     labels = [book.get("keyword"), *(book.get("tags") if isinstance(book.get("tags"), list) else [])]
     if any(isinstance(label, str) and label.casefold() in {"한국", "한국소설", "국내소설"} for label in labels):
         return True

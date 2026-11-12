@@ -73,6 +73,7 @@ services:
       DATABASE_URL: ${AI_DATABASE_URL}
       # AI 빌더는 카카오 API도 직접 호출함
       KAKAO_API_KEY: ${KAKAO_API_KEY}
+      LIBRARY_BIGDATA_API_KEY: ${LIBRARY_BIGDATA_API_KEY:-}
       # AI -> Spring (협업필터링 입력)
       SPRING_BOOT_URL: ${SPRING_BOOT_URL:-http://backend:8080}
       # Spring 내부 API 호출 토큰

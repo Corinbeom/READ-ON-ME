@@ -532,6 +532,18 @@ def test_korean_novel_constraint_uses_work_evidence_not_korean_language_or_publi
     assert is_search_candidate(known, genre="SF", requested_form="STORY", constraints=["한국"])
     assert not is_search_candidate(translated, genre="SF", requested_form="STORY", constraints=["한국"])
     assert not is_search_candidate(unknown, genre="소설", requested_form="STORY", constraints=["한국"])
+    assert is_search_candidate(
+        {**unknown, "kdc_code": "813.7", "kdc_source": "DATA4LIBRARY"},
+        genre="소설", requested_form="STORY", constraints=["한국"],
+    )
+    assert not is_search_candidate(
+        {**known, "kdc_code": "843.6", "kdc_source": "DATA4LIBRARY"},
+        genre="소설", requested_form="STORY", constraints=["한국"],
+    )
+    assert not is_search_candidate(
+        {**unknown, "kdc_code": "813.7", "kdc_source": "UNVERIFIED"},
+        genre="소설", requested_form="STORY", constraints=["한국"],
+    )
 
 
 def test_self_help_candidates_reject_training_and_unrelated_career_books():

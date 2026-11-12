@@ -40,6 +40,25 @@ def test_batch_book_uniqueness_is_scoped_to_run():
 
 
 @pytest.mark.asyncio
+async def test_kdc_metadata_only_looks_up_story_books_with_source_key(monkeypatch):
+    calls = []
+
+    async def kdc(isbn):
+        calls.append(isbn)
+        return "813.7"
+
+    monkeypatch.setattr(corpus_ingestion, "fetch_naru_kdc", kdc)
+    assert await corpus_ingestion._kdc_metadata("9780000000002", "STORY") == {}
+    monkeypatch.setenv("LIBRARY_BIGDATA_API_KEY", "test-key")
+    assert await corpus_ingestion._kdc_metadata("9780000000002", "PRACTICAL") == {}
+    metadata = await corpus_ingestion._kdc_metadata("9780000000002", "STORY")
+    assert metadata["kdc_code"] == "813.7"
+    assert metadata["kdc_source"] == "DATA4LIBRARY"
+    assert metadata["kdc_checked_at"] is not None
+    assert calls == ["9780000000002"]
+
+
+@pytest.mark.asyncio
 async def test_curated_intake_records_provenance_and_separate_source():
     job = SimpleNamespace(id="curated-job", status="PENDING", payload={})
 
@@ -105,6 +124,7 @@ async def test_curated_classification_waits_for_review_before_indexing(monkeypat
 @pytest.mark.parametrize("provider,vector_column", [("local", "embedding"), ("gemini", "gemini_embedding")])
 async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch, provider, vector_column):
     monkeypatch.setenv("EMBEDDING_PROVIDER", provider)
+    monkeypatch.setenv("LIBRARY_BIGDATA_API_KEY", "test-key")
     book = {"isbn": "9780000000002", "title": "별의 이야기", "authors": "작가",
             "contents": "한 아이가 별을 찾아 떠나며 가족의 비밀을 알게 되는 장편소설입니다."}
     job = SimpleNamespace(id="curated", isbn=book["isbn"], source="CURATED_SEED",
@@ -134,7 +154,12 @@ async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch, p
     async def vector(*args, **kwargs):
         return [0.1]
 
+    async def kdc(isbn):
+        assert isbn == book["isbn"]
+        return "813.7"
+
     monkeypatch.setattr(book_ai_service, "get_embedding", vector)
+    monkeypatch.setattr(corpus_ingestion, "fetch_naru_kdc", kdc)
     db = ReviewSession()
     status = await corpus_ingestion.review_curated_job(
         db, "curated", decision="approve", keyword="한국소설",
@@ -146,6 +171,8 @@ async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch, p
     assert params["tags"] == ["한국소설", "소설"]
     assert params["recommendation_status"] == "ACTIVE"
     assert params[vector_column] == [0.1]
+    assert params["kdc_code"] == "813.7"
+    assert params["kdc_source"] == "DATA4LIBRARY"
     assert ("gemini_embedding" if provider == "local" else "embedding") not in params
     assert job.progress["review_note"] == "출판사에서 장편소설로 분류"
 
