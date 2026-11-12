@@ -209,6 +209,8 @@ NONFICTION_LABELS = {
     "논픽션", "회고록", "전기", "역사", "과학", "사회", "인문학", "경제",
     "금융", "정치", "철학", "심리", "심리학", "비즈니스", "자기계발",
 }
+NONSTORY_PRIMARY_LABELS = NONFICTION_LABELS | {"에세이", "시", "시집"}
+STORY_LABELS = (FICTION_LABELS - {"문학"}) | {"그림책", "동화", "휴먼 드라마"}
 NARROW_GENRE_EVIDENCE: dict[str, tuple[str, ...]] = {
     "sf": ("sf", "공상과학", "과학소설", "과학 소설", "사이언스 픽션"),
     "판타지": ("판타지", "마법", "이세계", "환상 세계"),
@@ -238,14 +240,14 @@ NEW_FICTION_OR_POETRY = re.compile(
 GENRE_META_INTRO = ("평론집", "비평서", "개론서", "작법서", "연구서", "작품 분석", "연구 및 감상을 정리")
 
 PRACTICAL_TITLE_TERMS = (
-    "대화법", "사용법", "활용법", "실무", "워크북", "가이드", "입문서", "교과서",
-    "매뉴얼", "노하우", "작법", "비법", "자기계발기술", "기획세트",
+    "대화법", "사용법", "활용법", "실무", "워크북", "가이드", "입문서", "입문", "교과서",
+    "매뉴얼", "노하우", "작법", "비법", "자기계발기술", "기획세트", "필사", "지도서",
 )
 NARRATIVE_INTRO_TERMS = ("장편소설", "단편소설", "소설집", "동화", "회고록", "자전적", "실화", "주인공", "서사")
 FICTION_EVIDENCE_TERMS = ("소설", "단편", "장편", "서사", "주인공", "모험", "세계관", "캐릭터")
 PRACTICAL_INTRO_TERMS = (
     "자기계발서", "실용서", "대화법", "방법을 소개", "방법을 알려", "방법을 제시",
-    "단계별", "상황별", "실전 가이드", "활용법", "노하우", "워크북", "실무서", "입문서",
+    "단계별", "상황별", "실전 가이드", "안내서", "활용법", "노하우", "워크북", "실무서", "입문서",
     "예비창업자", "창업을 준비하는 학생",
 )
 
@@ -267,6 +269,18 @@ def has_fiction_evidence(book: dict) -> bool:
     """Require a work-level narrative cue before using an UNKNOWN book as fiction fallback."""
     text = f"{book.get('title') or ''} {(book.get('contents') or '')[:500]}".casefold()
     return _has_any(text, FICTION_EVIDENCE_TERMS)
+
+
+def has_korean_fiction_evidence(book: dict) -> bool:
+    """Use explicit corpus labels or description evidence; names and publishers prove nothing."""
+    labels = [book.get("keyword"), *(book.get("tags") if isinstance(book.get("tags"), list) else [])]
+    if any(isinstance(label, str) and label.casefold() in {"한국", "한국소설", "국내소설"} for label in labels):
+        return True
+    intro = (book.get("contents") or "")[:500].casefold()
+    return _has_any(intro, (
+        "한국소설", "한국 소설", "한국문학", "한국 문학", "한국 작가", "한국 여성 작가",
+        "국내 소설", "국내 작가", "국내 여성 작가",
+    ))
 
 
 def is_school_anthology(book: dict) -> bool:
@@ -337,7 +351,7 @@ def _genre_matches(genre: str, title: str, contents: str, labels: list[str]) -> 
 
 def is_search_candidate(
     book: dict, genre: Optional[str] = None, domain: Optional[str] = None,
-    requested_form: str = "ANY",
+    requested_form: str = "ANY", constraints: Optional[list[str]] = None,
 ) -> bool:
     title = book.get("title") or ""
     contents = book.get("contents") or ""
@@ -346,17 +360,40 @@ def is_search_candidate(
         return False
     if contains_exclusion_terms(title, contents, authors) or len(contents.strip()) < 30:
         return False
-    if requested_form == "STORY" and infer_book_form(title, contents) == "PRACTICAL":
+    form = infer_book_form(title, contents)
+    if requested_form == "STORY" and (
+        GENRE_ABOUT_TITLE.search(title) or STUDY_OR_COLLECTION_TITLE.search(title)
+        or _has_any(contents[:180].casefold(), GENRE_META_INTRO)
+    ):
+        return False
+    if requested_form == "STORY" and form == "PRACTICAL":
+        return False
+    if requested_form == "STORY" and form != "STORY" and (
+        "시집" in title or "시집" in contents[:180] or "에세이" in contents[:180]
+    ):
+        return False
+    if requested_form == "PRACTICAL" and form == "STORY":
         return False
 
     tags = book.get("tags")
     labels = [book.get("keyword"), *(tags if isinstance(tags, list) else [])]
     labels = [label for label in labels if isinstance(label, str) and label and label != "user_added"]
+    if requested_form == "STORY" and form == "UNKNOWN":
+        if (book.get("keyword") or "").casefold() in NONSTORY_PRIMARY_LABELS:
+            return False
+        if not {label.casefold() for label in labels} & STORY_LABELS:
+            return False
     if genre:
         if genre == "소설" and "필사" in title:
             return False
         if not _genre_matches(genre, title, contents, labels):
             return False
+    korean_fiction_request = bool(
+        genre and (genre.casefold() == "소설" or genre.casefold() in NARROW_GENRE_EVIDENCE
+                   or genre.endswith(" 소설"))
+    )
+    if korean_fiction_request and constraints and "한국" in constraints and not has_korean_fiction_evidence(book):
+        return False
     if domain and ("시집" in labels or "시집" in contents[:500]) and genre != "시":
         return False
     if domain in DOMAIN_EVIDENCE:

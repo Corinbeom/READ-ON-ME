@@ -1,0 +1,328 @@
+{
+  "sample_hash": "08a9fb821d0cb3b325128c03e001b6080d222fcead1fa9ea6dd5ceb8cb85bf92",
+  "reranker_cases": [
+    {
+      "query": "따뜻한 이야기를 읽고 싶어",
+      "models": {
+        "local": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9788956608334",
+              "title": "재인, 재욱, 재훈",
+              "reason": "다정함과 친절에 대해 이야기하는 명랑하고 유쾌한 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791155283875",
+              "title": "베스트셀러 소",
+              "reason": "소박하고 서정적인 이야기로 따뜻한 마음을 갖게 해줍니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        },
+        "gemini": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9791155283875",
+              "title": "베스트셀러 소",
+              "reason": "소박한 이야기들이 현대인들에게 조금 더 따뜻한 마음으로 세상을 바라보게 해 준다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "query": "어두운 분위기의 책",
+      "models": {
+        "local": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9791141602499",
+              "title": "종말까지 다섯 걸음",
+              "reason": "종말이 확정된 세계와 좀비 바이러스를 다룬 서늘한 상상력의 소설이다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788956609959",
+              "title": "종의 기원",
+              "reason": "평범했던 한 청년이 살인자로 태어나는 악인의 탄생기를 다룬다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791167902580",
+              "title": "적산가옥의 유령",
+              "reason": "음산한 적산가옥에 숨겨진 비밀의 공포를 섬뜩하게 그려낸 소설이다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791190337755",
+              "title": "죽이고 싶은 아이",
+              "reason": "여고생의 죽음이라는 평범하지 않은 이야기를 다룬 소설이다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        },
+        "gemini": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9791167902580",
+              "title": "적산가옥의 유령",
+              "reason": "음산한 적산가옥에 숨겨진 비밀의 공포를 다룬 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788982739088",
+              "title": "화씨 451",
+              "reason": "인간의 생각이 통제되는 사회에 대한 경고가 담긴 디스토피아적 미래 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791141602499",
+              "title": "종말까지 다섯 걸음",
+              "reason": "종말이 확정된 세계와 좀비 바이러스에 감염된 인류의 모습을 다룬 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791190337755",
+              "title": "죽이고 싶은 아이",
+              "reason": "여고생의 죽음과 시체 발견 사건을 다룬 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788956609959",
+              "title": "종의 기원",
+              "reason": "평범했던 청년이 살인자로 태어나는 악인의 탄생기를 다룬 소설입니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "query": "SF 소설 추천",
+      "models": {
+        "local": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9788932041513",
+              "title": "SF보다 Vol 1 얼음",
+              "reason": "한국문학의 최전선에서 주목받는 젊은 작가들의 SF 작품을 소개하는 시리즈입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788932042916",
+              "title": "SF 보다 Vol 3: 빛",
+              "reason": "신작 SF 단편을 만나는 즐거움을 제공하는 SF 보다 시리즈의 세 번째 테마 책입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791189852146",
+              "title": "스프(SF) 미스터리",
+              "reason": "존재하지 않는 SF와 경험하지 못하는 미스터리 요소들을 보여주는 책입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788998711351",
+              "title": "여성작가 SF 단편모음집",
+              "reason": "국내 최초의 여성 SF 단편집으로 동시대 한국 여성 작가의 SF를 광범위하게 포괄합니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9781127210633",
+              "title": "시간화가 - 시간여행 SF선집",
+              "reason": "시간여행 등을 다룬 중단편 소설 다섯 편이 실린 시간여행 SF선집입니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        },
+        "gemini": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9788932042916",
+              "title": "SF 보다 Vol 3: 빛",
+              "reason": "신작 SF 단편을 만나는 즐거움을 제공하는 SF 소설 시리즈입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788956057842",
+              "title": "당신 인생의 이야기",
+              "reason": "지적 상상력과 철학적 사유를 선사하는 여덟 편의 SF 단편 소설집입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788925588735",
+              "title": "프로젝트 헤일메리",
+              "reason": "지구를 구하기 위해 헤일메리호에 오른 주인공의 이야기를 다룬 SF 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9781127210633",
+              "title": "시간화가 - 시간여행 SF선집",
+              "reason": "시간여행 등을 다룬 중단편 소설 다섯 편이 실린 SF 선집입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788982739088",
+              "title": "화씨 451",
+              "reason": "책이 금지된 가까운 미래를 배경으로 한 디스토피아적 미래 소설입니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "query": "감성적인 에세이",
+      "models": {
+        "local": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9791197647673",
+              "title": "한 번뿐인 인생은 어떻게 살아야 하는가",
+              "reason": "감동적이고 독창적인 에세이로 인생에 대한 깊은 이해와 성찰을 전달합니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788994468136",
+              "title": "로드 판타지",
+              "reason": "길에서 눈맞춘 20개의 풍경을 20개의 에세이로 담아냈습니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        },
+        "gemini": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9791197647673",
+              "title": "한 번뿐인 인생은 어떻게 살아야 하는가",
+              "reason": "인생에 대한 심사숙고를 독려하고 감동적이고 독창적인 에세이로 성찰을 전달합니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788994468136",
+              "title": "로드 판타지",
+              "reason": "길에서 눈맞춘 풍경을 20개의 에세이로 담아 일상을 애정하는 온기로 가득합니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791188850129",
+              "title": "요가 매트만큼의 세계",
+              "reason": "어깨에 힘을 빼고 가뿐하게 살아가기 위한 일상 회복 기술을 다룬 에세이입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791197332678",
+              "title": "벼랑 끝이지만 아직 떨어지진 않았어",
+              "reason": "작가의 불행한 인생 경험과 이겨낸 방법, 위로의 글들이 에세이의 첫 장을 이룹니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "query": "한국소설 추천",
+      "models": {
+        "local": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9788954681179",
+              "title": "밝은 밤",
+              "reason": "차세대 한국소설을 이끌 작가 최은영의 첫 장편소설이다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788954692526",
+              "title": "각각의 계절",
+              "reason": "권여선의 일곱번째 소설집이다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788932041513",
+              "title": "SF보다 Vol 1 얼음",
+              "reason": "한국문학의 최전선에서 주목받는 젊은 작가와 독자를 연결하는 SF 시리즈의 첫 책이다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788956608334",
+              "title": "재인, 재욱, 재훈",
+              "reason": "한국소설에 활력을 불어넣어주고 있는 정세랑의 소설이다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        },
+        "gemini": {
+          "outcome": {
+            "status": "MODEL",
+            "reason_code": "NONE"
+          },
+          "books": [
+            {
+              "isbn": "9788954681179",
+              "title": "밝은 밤",
+              "reason": "작가 최은영의 첫 장편소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788954692526",
+              "title": "각각의 계절",
+              "reason": "권여선 작가의 일곱번째 소설집입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9788956608334",
+              "title": "재인, 재욱, 재훈",
+              "reason": "정세랑 작가의 소설입니다.",
+              "ranking_status": "GEMINI"
+            },
+            {
+              "isbn": "9791167902580",
+              "title": "적산가옥의 유령",
+              "reason": "조예은 작가의 신작 소설입니다.",
+              "ranking_status": "GEMINI"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "scope": "Five representative queries; same reranker, after candidate filtering; outcomes are independent API calls.",
+  "retry_note": "Initial Korean pair and later warm local call received HTTP 503; only successful retries are shown in models. See evaluation report for failure details."
+}

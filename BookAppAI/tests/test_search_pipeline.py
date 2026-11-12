@@ -447,7 +447,91 @@ def test_story_request_rejects_clear_practical_guides_but_keeps_narratives_and_u
     assert is_search_candidate(story, requested_form="STORY")
     assert is_search_candidate(memoir, requested_form="STORY")
     assert not is_search_candidate(startup_guide, domain="비즈니스", requested_form="STORY")
-    assert is_search_candidate(unknown, requested_form="STORY")
+    assert not is_search_candidate(unknown, requested_form="STORY")
+    unknown_unclassified = _book("조용한 책", unknown["contents"], "user_added", ["user_added"])
+    assert not is_search_candidate(unknown_unclassified, requested_form="STORY")
+    assert not is_search_candidate(story, requested_form="PRACTICAL")
+
+
+def test_story_request_excludes_pilot_guides_without_excluding_actual_stories():
+    guide = _book(
+        "명상심리치료입문",
+        "명상과 심리학을 결부시켜 내면의 감정과 생각을 돌이켜 보도록 돕는 입문 책입니다.",
+        "심리", ["심리", "입문"],
+    )
+    copying = _book(
+        "하루 한 줄 마음 챙김 필사책",
+        "세계 문학 속 문장을 따라 쓰면서 마음을 가다듬는 과정을 함께합니다.",
+        "철학", ["철학"],
+    )
+    novel = _book(
+        "날씨가 좋으면 찾아가겠어요",
+        "시골 마을의 작은 독립서점을 배경으로 주인공들이 관계를 회복하는 장편소설입니다.",
+        "소설", ["소설"],
+    )
+    poetry = _book(
+        "사랑하고 선량하게 잦아드네",
+        "시인이 두번째 시집을 펴내며 사랑과 희망에 관해 적었습니다.",
+        "user_added", ["시집"],
+    )
+    essay = _book(
+        "감정의 색깔",
+        "다양한 감정의 층위를 돌아보고 나를 받아들이도록 돕는 에세이입니다.",
+        "에세이", ["감정"],
+    )
+    picture_book = _book(
+        "수박 수영장",
+        "수박 안에서 이웃들이 함께 수영하며 즐겁게 노는 모습을 그린 따뜻한 그림책입니다.",
+        "그림책", ["아동문학", "따뜻한"],
+    )
+    about_sf = _book(
+        "SF 소설 읽기",
+        "SF 소설의 세계를 조망하고 교사가 학생들의 동아리 활동을 지도하는 데 도움을 줍니다.",
+        "SF", ["SF"],
+    )
+    mislabeled_essay = _book(
+        "로드 판타지",
+        "길에서 만난 스무 개 풍경을 스무 개의 에세이로 담은 책입니다.",
+        "판타지", ["판타지"],
+    )
+    literary_analysis = _book(
+        "고전 소설의 착한 주인공들",
+        "고전소설의 연구 및 감상을 정리하고 여러 작품의 인물을 분석합니다.",
+        "소설", ["소설"],
+    )
+    assert not is_search_candidate(guide, requested_form="STORY")
+    assert not is_search_candidate(copying, requested_form="STORY")
+    assert not is_search_candidate(poetry, requested_form="STORY")
+    assert not is_search_candidate(essay, requested_form="STORY")
+    assert not is_search_candidate(about_sf, requested_form="STORY")
+    assert not is_search_candidate(mislabeled_essay, requested_form="STORY")
+    assert not is_search_candidate(literary_analysis, requested_form="STORY")
+    assert is_search_candidate(novel, requested_form="STORY")
+    assert is_search_candidate(picture_book, requested_form="STORY")
+
+
+def test_korean_novel_constraint_uses_work_evidence_not_korean_language_or_publisher():
+    translated = _book(
+        "당신 인생의 이야기",
+        "과학소설 작가 테드 창의 SF 소설집을 한국어로 번역해 출간했습니다.",
+        "SF", ["SF", "소설"],
+    )
+    known = _book(
+        "여성작가 SF 단편모음집",
+        "동시대 한국 여성 작가의 SF를 모은 소설집으로 여러 단편을 수록했습니다.",
+        "SF", ["SF", "한국"],
+    )
+    unknown = _book(
+        "날씨가 좋으면 찾아가겠어요",
+        "시골 마을 책방에서 주인공들이 다시 만나는 장편소설입니다.",
+        "소설", ["소설"],
+    )
+    assert is_search_candidate(translated, genre="소설", requested_form="STORY")
+    assert not is_search_candidate(translated, genre="소설", requested_form="STORY", constraints=["한국"])
+    assert is_search_candidate(known, genre="소설", requested_form="STORY", constraints=["한국"])
+    assert is_search_candidate(known, genre="SF", requested_form="STORY", constraints=["한국"])
+    assert not is_search_candidate(translated, genre="SF", requested_form="STORY", constraints=["한국"])
+    assert not is_search_candidate(unknown, genre="소설", requested_form="STORY", constraints=["한국"])
 
 
 def test_self_help_candidates_reject_training_and_unrelated_career_books():

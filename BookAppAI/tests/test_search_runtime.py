@@ -207,6 +207,35 @@ async def test_search_uses_one_rerank_and_no_query_rewrite(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_korean_novel_constraint_reaches_reranker_only_with_supported_candidates(monkeypatch):
+    async def embedding(prompt):
+        return [0.1]
+
+    async def retrieve(db, vector, intent, keywords, exclude_author=None):
+        assert intent.genre == "소설"
+        assert "한국" in intent.constraints
+        return ([
+            {"isbn": "foreign", "title": "당신 인생의 이야기", "authors": "테드 창",
+             "contents": "과학소설 작가의 SF 소설집을 한국어로 번역하여 출간했습니다.",
+             "keyword": "SF", "tags": ["SF", "소설"], "retrieval_score": 0.9},
+            {"isbn": "korean", "title": "여성작가 SF 단편모음집", "authors": "여러 작가",
+             "contents": "동시대 한국 여성 작가들의 SF를 모아 여러 단편을 수록한 소설집입니다.",
+             "keyword": "SF", "tags": ["SF", "한국"], "retrieval_score": 0.8},
+        ], RetrievalCounts(vector=2, merged=2))
+
+    async def rerank(query, candidates, requested_form, request_id=None, genre=None, outcome=None, verified_fallback=None):
+        assert requested_form == "STORY"
+        assert [book["isbn"] for book in candidates] == ["korean"]
+        return candidates
+
+    monkeypatch.setattr(book_ai_service, "get_embedding", embedding)
+    monkeypatch.setattr(book_ai_service, "retrieve_candidates", retrieve)
+    monkeypatch.setattr(book_ai_service, "rerank_with_gemini", rerank)
+    results = await book_ai_service.search_by_natural_language("한국소설 추천", object())
+    assert [book["isbn"] for book in results] == ["korean"]
+
+
+@pytest.mark.asyncio
 async def test_reference_author_search_uses_anchor_and_excludes_author(monkeypatch):
     async def anchor(db, author):
         assert author == "조지 오웰"

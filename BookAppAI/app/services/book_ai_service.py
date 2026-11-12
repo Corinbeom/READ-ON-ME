@@ -204,7 +204,7 @@ async def search_by_natural_language(
     )
     filtered = [
         book for book in candidates
-        if is_search_candidate(book, intent.genre, intent.domain, intent.requested_form)
+        if is_search_candidate(book, intent.genre, intent.domain, intent.requested_form, intent.constraints)
     ]
     if reference and reference.theme_keywords:
         filtered = [book for book in filtered if has_theme_evidence(book, reference.theme_keywords)]

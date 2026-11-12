@@ -109,7 +109,7 @@ async def _candidate_report(books: list[dict], vectors: dict[str, np.ndarray], q
         scored.append({**book, "similarity": float(np.dot(vectors[book["isbn"]], query_vector))})
     candidates, counts = await retrieve_candidates(_SampleDB(scored), query_vector.tolist(), intent, keywords)
     filtered = [book for book in candidates if is_search_candidate(
-        book, intent.genre, intent.domain, intent.requested_form,
+        book, intent.genre, intent.domain, intent.requested_form, intent.constraints,
     )]
     filtered = svc._prefer_general_novels(svc._deduplicate_results(filtered), intent)
     model_input = _select_model_input(filtered, intent.genre)
