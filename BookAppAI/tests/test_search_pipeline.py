@@ -137,6 +137,27 @@ def test_unverifiable_reason_is_omitted_and_book_still_selected():
     assert "reason" not in selected[0]
 
 
+def test_grounded_reason_survives_small_model_length_overruns():
+    quote = "책 소개에 실제로 등장하는 근거 문장입니다. " * 5
+    quote = quote[:123]
+    reason = "책 소개에 근거해 읽을 만한 내용을 설명합니다. " * 4
+    reason = reason[:104]
+    book = {"isbn": "1", "title": "근거 있는 책", "contents": quote + " 다른 설명도 있습니다."}
+    assert len(reason) == 104 and len(quote) == 123
+
+    selected = _parse_selection(json.dumps([{
+        "isbn": "1", "reason": reason, "evidence_quote": quote,
+    }], ensure_ascii=False), [book])
+    assert selected is not None
+    assert selected[0]["reason"] == reason
+    assert selected[0]["reason_evidence"] == quote.strip()
+
+    too_long = _parse_selection(json.dumps([{
+        "isbn": "1", "reason": reason + "추가 설명" * 10, "evidence_quote": quote,
+    }], ensure_ascii=False), [book])
+    assert too_long is not None and "reason" not in too_long[0]
+
+
 @pytest.mark.asyncio
 async def test_story_fallback_requires_narrative_evidence(monkeypatch):
     monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
