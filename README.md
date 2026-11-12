@@ -102,7 +102,7 @@ uvicorn app.main:app --reload --port 8000
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)
 - 실패한 태깅 작업 재등록: API 키/오류를 해결하고 AI 서버를 재시작한 뒤 `python -m tools.queue_retag --retry-failed --limit 20`으로 확인하고 `--apply`를 붙입니다.
 - 검색 품질 샘플: `python -m tools.evaluate_search --url http://127.0.0.1:8000 --limit 5` (결과는 `/tmp/readonme-search-evaluation.json`). 요청 사이 기본 간격은 6초이며 결과에 요청 ID와 응답 시간이 기록됩니다. 알려진 오추천 사례는 `--cases evaluation/quality_cases.json --limit 5`로 확인합니다.
-- 관리자 ISBN 편입: `python -m tools.curated_corpus discover --kdc 8 --start-date 2026-01-01 --end-date 2026-10-31 --pages 1 3 5`는 정보나루 주제별 인기대출 목록에서 후보를 찾아 카카오 ISBN 정보와 대조한 뒤 `/tmp/readonme-curated-candidates.json`에 기록합니다. 정보나루 키가 없으면 `--isbn-file /tmp/candidates.json`으로 출처 URL과 ISBN이 담긴 목록을 검증할 수 있습니다. 목록을 읽은 뒤 `python -m tools.curated_corpus queue --manifest /tmp/readonme-curated-candidates.json --isbns <ISBN>`으로 미리 보고, 같은 명령에 `--apply`를 붙여 선택한 책만 기존 검수 큐에 접수합니다. `202`나 `QUEUED`는 편입 완료가 아니며 작업 상태가 `INDEXED`가 되어야 합니다.
+- 관리자 ISBN 편입: AI 워커 환경에 `LIBRARY_BIGDATA_API_KEY`를 설정한 뒤 `python -m tools.curated_corpus discover --kdc 8 --start-date 2026-01-01 --end-date 2026-10-31 --pages 1 3 5`로 정보나루 인기대출 후보를 조회하거나, `--library-keyword 한국소설 --pages 1 3`으로 도서 검색 후보를 조회합니다. 출처 URL과 ISBN을 적은 수동 목록은 `--isbn-file /tmp/candidates.json`으로 검증할 수 있습니다. 검토 결과는 `/tmp/readonme-curated-candidates.json`에 저장됩니다. `python -m tools.curated_corpus queue --manifest /tmp/readonme-curated-candidates.json --isbns <ISBN>`으로 미리 보고, 같은 명령에 `--apply`를 붙여 선택한 책만 검수 큐에 접수합니다. 짧지만 책 중심인 정보나루 소개를 사용하려면 해당 ISBN을 `--naru-isbns <ISBN>`에 지정합니다. `QUEUED`는 편입 완료가 아니며 작업 상태와 최종 분류를 함께 확인해야 합니다.
 - 추천: `GET /recommendations/{userId}`
 
 ### 3. React Native 앱 (`BookAppFront`)

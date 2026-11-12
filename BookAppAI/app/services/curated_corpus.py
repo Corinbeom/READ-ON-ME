@@ -6,6 +6,7 @@ import os
 import re
 from datetime import date
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -14,6 +15,7 @@ from app.services.corpus_quality import normalize_isbn, preflight_candidate
 
 
 NARU_POPULAR_URL = "https://data4library.kr/api/loanItemSrch"
+NARU_SEARCH_URL = "https://data4library.kr/api/srchBooks"
 KAKAO_BOOK_URL = "https://dapi.kakao.com/v3/search/book"
 
 
@@ -41,6 +43,9 @@ def _clean_candidate(item: dict[str, Any]) -> dict[str, Any] | None:
         "source_url": url[:500],
         "target_subject": str(item.get("target_subject") or "").strip()[:60],
         "source_context": item.get("source_context") if isinstance(item.get("source_context"), dict) else {},
+        "preferred_description_source": (
+            "DATA4LIBRARY" if item.get("preferred_description_source") == "DATA4LIBRARY" else None
+        ),
     }
 
 
@@ -92,6 +97,50 @@ async def discover_naru_popular(
     return list(found.values())
 
 
+async def discover_naru_books(
+    *, keyword: str, pages: list[int], client: httpx.AsyncClient | None = None,
+) -> list[dict[str, Any]]:
+    """Use library text search only for discovery; never treat the query as a book label."""
+    key = os.getenv("LIBRARY_BIGDATA_API_KEY")
+    if not key:
+        raise RuntimeError("LIBRARY_BIGDATA_API_KEY is required for library discovery")
+    keyword = keyword.strip()
+    if not keyword or len(keyword) > 40 or not pages or any(page < 1 or page > 100 for page in pages):
+        raise ValueError("Provide a 1–40 character keyword and page numbers 1–100")
+    own_client = client is None
+    client = client or httpx.AsyncClient(timeout=httpx.Timeout(12.0, connect=3.0))
+    found: dict[str, dict[str, Any]] = {}
+    try:
+        for page in pages:
+            response = await client.get(NARU_SEARCH_URL, params={
+                "authKey": key, "keyword": keyword, "pageNo": page,
+                "pageSize": 50, "format": "json",
+            })
+            response.raise_for_status()
+            docs = (response.json().get("response") or {}).get("docs")
+            if not isinstance(docs, list):
+                raise ValueError("Library search returned an unexpected document list")
+            for wrapped in docs:
+                book = wrapped.get("doc") if isinstance(wrapped, dict) else None
+                if not isinstance(book, dict):
+                    continue
+                candidate = _clean_candidate({
+                    "isbn": book.get("isbn13"), "discovery_source": "DATA4LIBRARY_SEARCH",
+                    "source_url": f"{NARU_SEARCH_URL}?keyword={quote(keyword)}",
+                    "target_subject": keyword,
+                    "source_context": {
+                        "query": keyword, "page": page, "title": book.get("bookname"),
+                        "class_no": book.get("class_no"), "class_nm": book.get("class_nm"),
+                    },
+                })
+                if candidate:
+                    found.setdefault(candidate["isbn"], candidate)
+    finally:
+        if own_client:
+            await client.aclose()
+    return list(found.values())
+
+
 async def fetch_kakao_exact(isbn: str, client: httpx.AsyncClient | None = None) -> dict[str, Any] | None:
     key = os.getenv("KAKAO_API_KEY")
     if not key:
@@ -129,11 +178,16 @@ async def verify_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
     expected_title = candidate["source_context"].get("title")
     if expected_title and not _same_title(str(expected_title), str(book.get("title") or "")):
         return {"candidate": candidate, "book": book, "status": "HOLD", "reason": "SOURCE_TITLE_MISMATCH"}
-    if len(str(book.get("contents") or "")) < 120:
-        description = await fetch_naru_description(candidate["isbn"])
-        if description and len(description) > len(str(book.get("contents") or "")):
-            book["contents"] = description
-            candidate["description_source"] = "DATA4LIBRARY"
+    description = await fetch_naru_description(candidate["isbn"])
+    preferred = candidate["preferred_description_source"] == "DATA4LIBRARY"
+    if preferred and not description:
+        return {"candidate": candidate, "book": book, "status": "HOLD", "reason": "PREFERRED_DESCRIPTION_UNAVAILABLE"}
+    if description and (preferred or len(description) > len(str(book.get("contents") or ""))):
+        book["contents"] = description
+        candidate["description_source"] = "DATA4LIBRARY"
+    elif description:
+        # A shorter library synopsis can still describe the book better than a longer author biography.
+        candidate["alternate_description"] = description
     gate = preflight_candidate(book)
     if gate:
         return {"candidate": candidate, "book": book, "status": gate[0], "reason": gate[1]}

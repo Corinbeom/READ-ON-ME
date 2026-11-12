@@ -23,6 +23,10 @@ async def discover(args) -> None:
         candidates = source.get("candidates") if isinstance(source, dict) else source
         if not isinstance(candidates, list):
             raise ValueError("ISBN file must contain a candidate list")
+    elif args.library_keyword:
+        candidates = await curated_corpus.discover_naru_books(
+            keyword=args.library_keyword, pages=args.pages,
+        )
     else:
         if not args.kdc or not args.start_date or not args.end_date:
             raise ValueError("Library discovery requires --kdc, --start-date, and --end-date")
@@ -69,21 +73,26 @@ async def queue(args) -> None:
     manifest = json.loads(args.manifest.read_text())
     records = {row["candidate"]["isbn"]: row for row in manifest["records"]}
     selected = list(dict.fromkeys(isbn.strip() for isbn in args.isbns.split(",")))
+    naru_selected = set(isbn.strip() for isbn in args.naru_isbns.split(",") if isbn.strip())
     if not 1 <= len(selected) <= 20 or any(
         isbn not in records or records[isbn]["status"] != "READY_FOR_REVIEW" for isbn in selected
     ):
         raise ValueError("Select 1–20 ready ISBNs from the manifest")
+    if not naru_selected.issubset(selected):
+        raise ValueError("--naru-isbns must be selected ISBNs")
     if not args.apply:
         for isbn in selected:
             row = records[isbn]
-            print(f"PREVIEW isbn={isbn} title={row['book']['title']} source={row['candidate']['discovery_source']}")
+            print(f"PREVIEW isbn={isbn} title={row['book']['title']} source={row['candidate']['discovery_source']} description={'DATA4LIBRARY' if isbn in naru_selected else 'AUTO'}")
         return
 
     database.init_db()
     try:
         async with database.async_session() as db:
             for isbn in selected:
-                candidate = records[isbn]["candidate"]
+                candidate = dict(records[isbn]["candidate"])
+                if isbn in naru_selected:
+                    candidate["preferred_description_source"] = "DATA4LIBRARY"
                 # Re-read the real source; a local manifest is a review aid, not trusted book text.
                 verified = await curated_corpus.verify_candidate(candidate)
                 if verified["status"] != "READY_FOR_REVIEW":
@@ -107,6 +116,7 @@ if __name__ == "__main__":
     origin = discovery.add_mutually_exclusive_group(required=True)
     origin.add_argument("--isbn-file", type=Path)
     origin.add_argument("--kdc", help="Library KDC subject code")
+    origin.add_argument("--library-keyword", help="Library text search, used for discovery only")
     discovery.add_argument("--start-date", help="YYYY-MM-DD")
     discovery.add_argument("--end-date", help="YYYY-MM-DD")
     discovery.add_argument("--pages", type=int, nargs="+", default=[1, 3, 5])
@@ -116,6 +126,7 @@ if __name__ == "__main__":
     intake = sub.add_parser("queue", help="Queue only selected ISBNs after reading the manifest")
     intake.add_argument("--manifest", type=Path, required=True)
     intake.add_argument("--isbns", required=True, help="Comma-separated exact ISBNs from the manifest")
+    intake.add_argument("--naru-isbns", default="", help="Selected ISBNs whose verified library synopsis should replace Kakao text")
     intake.add_argument("--apply", action="store_true")
     intake.add_argument("--delay", type=float, default=6.0)
     args = parser.parse_args()

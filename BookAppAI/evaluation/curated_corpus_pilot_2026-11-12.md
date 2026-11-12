@@ -1,27 +1,28 @@
 # ISBN 기반 코퍼스 편입 파일럿 — 2026-11-12
 
-## 구현
+## 구현과 키 위치
 
-- 도서관 정보나루 인기대출 목록에서 KDC·기간·페이지로 ISBN을 찾는 경로와, 출판사 등 외부 목록의 ISBN을 받는 경로를 추가했다. 검색어는 후보 발견 기록일 뿐 최종 장르 라벨이 아니다.
-- 두 경로 모두 카카오 `target=isbn` 조회 결과의 ISBN이 정확히 일치해야 책 정보를 사용한다. 발견 출처에 제목이 있으면 제목도 대조한다. 소개가 짧으면 정보나루 ISBN 상세 조회로 실제 소개를 보강한다. 검토 목록은 `/tmp`의 JSON 파일로 남기며, **명시적으로 선택한 ISBN만** `CURATED_SEED` 작업으로 접수한다. 접수 시에도 출처를 다시 조회한다.
-- `CURATED_SEED`는 기존 검수 워커의 ISBN·서지·중복·형식·Gemini 근거 검사를 사용한다. 출처 URL과 발견 맥락은 작업 페이로드에, 도서 원천은 `book_corpus.source`에 남는다. 동일 ISBN의 관리자 작업은 중복 접수되지 않는다.
+- 정보나루 인기대출 목록(KDC·기간·페이지), 정보나루 도서 검색, 출판사 등 외부 ISBN 목록에서 후보를 찾는 경로를 만들었다. 검색어와 KDC는 **발견 맥락**으로만 저장하며 도서의 장르 라벨에 복사하지 않는다.
+- 카카오 `target=isbn` 결과의 ISBN이 정확히 일치해야 메타데이터를 사용한다. 발견 출처에 제목이 있으면 제목도 대조한다. 정보나루 ISBN 상세 소개는 실제 출처가 확인된 경우에만 사용한다. 소개가 더 짧아도 책 자체를 더 잘 설명한다면 검토자가 `--naru-isbns`로 선택할 수 있다.
+- 선택한 ISBN만 별도 `CURATED_SEED` 작업으로 기존 검수 워커에 접수한다. 출처 URL과 발견 맥락은 작업 페이로드에, 도서 원천은 코퍼스에 남는다. 같은 ISBN의 관리자 접수는 중복되지 않는다.
+- 키는 처음부터 `BookAppBack/.env`에 있었다. `BookAppAI/.env`에 없어서 AI 워커의 독립 프로세스에서는 보이지 않았다. 로컬 AI 환경 파일에도 같은 키를 설정했다. 두 환경 파일은 Git 추적 대상이 아니며 값은 보고서에 기록하지 않았다.
 
-## 실제 소량 검증
+## 정보나루 실호출
 
-로컬 환경에는 `LIBRARY_BIGDATA_API_KEY`가 없어 정보나루 **인기대출 조회는 실호출하지 못했다**. 해당 응답 형식과 중복 제거는 모의 응답 테스트로 확인했다. 대신 [문학동네 『각자의 정원』](https://munhak.com/bookAndAuthor/books/detail/10090), [『종말까지 다섯 걸음』](https://munhak.com/bookAndAuthor/books/detail/10225), [『치즈 이야기』](https://munhak.com/bookAndAuthor/books/detail/10166)의 출판사 목록에서 ISBN 3건을 골랐다. 입력 목록은 `/tmp/readonme-publisher-isbns-2026-11-12.json`, 카카오 ISBN 대조 결과는 `/tmp/readonme-curated-pilot-2026-11-12.json`에 있다.
+같은 키로 ISBN 상세 조회와 `srchBooks` 도서 검색은 정상 응답했다. `loanItemSrch` 인기대출 목록은 날짜 범위·요청 건수·주소를 바꿔도 8~30초에 시간 초과됐다. 이 문제는 인증 실패가 아니다. 인기대출 경로는 모의 응답 테스트까지만 통과했고, 이번 실제 후보는 정보나루 도서 검색 및 출판사 목록에서 얻었다. 도서 검색도 키워드 일치 결과를 반환하므로 개별 ISBN·소개 검수가 필수다.
 
-| 책 | ISBN 대조 | 처리 | 이유 |
-| --- | --- | --- | --- |
-| 『각자의 정원』 | 일치 | 접수 보류 | 카카오 소개 252자가 거의 작가 이력과 이전 작품 설명이며 이 책의 줄거리 근거가 부족하다. |
-| 『종말까지 다섯 걸음』 | 일치 | `INDEXED` / `ACTIVE` | 소개에 소설집과 종말·좀비·외계인 이야기의 근거가 있다. 워커가 `STORY`로 분류하고 실제 문구를 인용했다. |
-| 『치즈 이야기』 | 일치 | 접수 보류 | 카카오 소개 251자가 대부분 작가 이력으로 시작해 이 책의 구체적 이야기 근거가 약하다. |
+## 편입 결과
 
-편입 후 로컬 코퍼스는 `ACTIVE 13 / LEGACY 956 / DISABLED 29`다. 실제 작업 ID는 `dcdc9d7f-f035-45bf-8707-65af49ce9b4c`이며 출처 URL이 작업에 저장됐다.
+출판사 목록에서 세 ISBN을 골라 카카오와 대조했다. [『종말까지 다섯 걸음』](https://munhak.com/bookAndAuthor/books/detail/10225)은 `ACTIVE`로 편입됐다. [『각자의 정원』](https://munhak.com/bookAndAuthor/books/detail/10090)은 정보나루의 책 중심 소개로 접수했으나 Gemini가 `동화`로 태깅했다. 출판사와 도서관은 장편소설로 분류하므로 로컬 코퍼스에서 `DISABLED`로 바꾸고 이전 상태를 `/tmp/readonme-garden-classification-before-disable-2026-11-12.json`에 보관했다. [『치즈 이야기』](https://munhak.com/bookAndAuthor/books/detail/10166)은 정보나루 소개를 사용했으나 모델이 인용문을 줄임표로 변형해 `UNVERIFIED_EVIDENCE`로 `HOLD`됐다. 근거 검증 규칙은 완화하지 않았다.
 
-## 검색 노출 확인
+정보나루 `srchBooks`에서 `한국소설` 검색으로 ISBN 후보 5건을 검증했다. 2건은 자동 제목 대조에서 표기 차이가 나 `HOLD`됐으며, 실제 다른 책인지까지 판정한 것은 아니다. 3건은 검토 대상으로 남았다. 시리즈 후속작 『메리골드 마음 사진관』은 이번 일반 소설 시험에서 보류했다. 『재인, 재욱, 재훈』과 『씨 유 어게인』은 책 소개를 확인한 뒤 정보나루 소개로 접수했고 둘 다 `ACTIVE`가 됐다. 현재 로컬 코퍼스는 **`ACTIVE 15 / LEGACY 956 / DISABLED 30`**이다.
 
-`SF 소설 추천`과 `한국소설 추천`을 다시 실행했다. 새 책은 두 질의 모두 검색 후보에 없었다. 결과 원본은 `/tmp/readonme-curated-search-2026-11-12.json`에 있다. 임베딩 유사도 순위는 각각 약 196위·285위로 벡터 상위 30권 밖이었다. `SF` 태그가 없고, `한국소설` 질의에서는 `소설` 태그가 있어도 유사도 기준 키워드 상위 20권 밖이었다. 따라서 **편입 성공만으로 추천 노출이 보장되지 않음**을 실제로 확인했다.
+원본: 출판사 입력 `/tmp/readonme-publisher-isbns-2026-11-12.json`, 출판사 검토 `/tmp/readonme-curated-pilot-2026-11-12.json`, 정보나루 검토 `/tmp/readonme-naru-search-pilot-2026-11-12.json`. `HOLD`·제외된 책을 임의로 `ACTIVE`로 바꾸지 않았다.
 
-다음에는 ISBN 출처와 함께 **책 자체를 설명하는 충분한 소개**를 확보할 수 있는지 먼저 검증한다. 정보나루 키가 설정되면 같은 세 권의 상세 소개를 확인하고, 분야별 소량 후보를 더 찾는다. 이후 적합한 검수 도서가 반복해서 검색 후보 밖에 있을 때, 키워드·후보 풀·점수의 영향을 책 단위로 평가한다. `ACTIVE`라는 상태만으로 일괄 가산점은 주지 않는다.
+## 검색 노출
 
-수동 ISBN 목록 형식은 `{"candidates":[{"isbn":"9791141602499","discovery_source":"PUBLISHER_CATALOG","source_url":"https://munhak.com/bookAndAuthor/books/detail/10225","target_subject":"SF·한국소설","source_context":{"title":"종말까지 다섯 걸음"}}]}`이다. `source_url`과 `source_context.title`은 출처 확인용이고, `target_subject`는 분류 결과에 강제로 쓰이지 않는다.
+『종말까지 다섯 걸음』은 `SF 소설 추천`, `한국소설 추천`의 검색 후보에 들지 못했다. 임베딩 유사도 순위는 각각 약 196위·285위였다(`/tmp/readonme-curated-search-2026-11-12.json`). 반면 『재인, 재욱, 재훈』은 새 편입 뒤 `따뜻한 이야기를 읽고 싶어`, `한국소설 추천` 양쪽에서 Gemini 입력 후보에 들었고, 근거가 확인된 이유와 함께 최종 선택됐다(`/tmp/readonme-naru-search-results-2026-11-12.json`). 『씨 유 어게인』은 두 질의의 검색 후보에 들지 못했다.
+
+소량의 실제 결과만으로 신규 도서 전체의 노출률을 추정할 수 없다. 다음에는 주제별 후보를 더 모으되, **책 중심 소개의 품질과 분류 결과를 편입 후에도 확인**한다. 적합한 도서가 반복해서 후보 밖에 있을 때 검색 점수와 상한을 조정한다. 상태가 `ACTIVE`라는 이유만으로 일괄 가산점을 주지 않는다.
+
+수동 ISBN 목록 예시: `{"candidates":[{"isbn":"9791141602499","discovery_source":"PUBLISHER_CATALOG","source_url":"https://munhak.com/bookAndAuthor/books/detail/10225","target_subject":"SF·한국소설","source_context":{"title":"종말까지 다섯 걸음"}}]}`.
