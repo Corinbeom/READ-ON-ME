@@ -21,6 +21,7 @@ from app.services import book_ai_service as svc
 from app.services.reranker import _select_model_input
 from app.services.search_retrieval import retrieve_candidates
 from app.services.text_utils import build_book_text, is_search_candidate
+from app.services.embedding_backend import provider as embedding_provider
 
 
 MODEL = "gemini-embedding-001"
@@ -126,6 +127,8 @@ async def _candidate_report(books: list[dict], vectors: dict[str, np.ndarray], q
 
 
 async def run(cache_path: Path, output_path: Path, random_count: int, pace: float) -> None:
+    if embedding_provider() != "local":
+        raise RuntimeError("Pilot compares against local vectors; set EMBEDDING_PROVIDER=local")
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is required")
@@ -145,7 +148,7 @@ async def run(cache_path: Path, output_path: Path, random_count: int, pace: floa
             "source": book.source, "classification_version": book.classification_version,
             "recommendation_status": book.recommendation_status,
             "local_vector": _unit(book.embedding),
-        } for book in corpus if len((book.contents or "").strip()) >= 30]
+        } for book in corpus if book.embedding is not None and len((book.contents or "").strip()) >= 30]
         intents = [await svc.intent_analyzer.analyze(case["query"]) for case in cases]
         prompts = [svc.prompt_builder.build(intent, case["query"]) for intent, case in zip(intents, cases)]
         keywords = [svc._limit_keywords(await svc.keyword_expander.expand(intent)) for intent in intents]

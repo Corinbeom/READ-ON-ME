@@ -21,6 +21,7 @@ from app.services.corpus_metadata import fetch_naru_description
 from app.services.corpus_quality import normalize_isbn, preflight_candidate, validate_classification
 from app.services.gemini_tagger import GeminiTagger
 from app.services.text_utils import build_book_text, build_keyword_prompt, format_authors, get_proxy_search_terms
+from app.services.embedding_backend import provider as embedding_provider, write_values as embedding_write_values
 
 
 logger = logging.getLogger(__name__)
@@ -31,7 +32,7 @@ STALE_AFTER = timedelta(minutes=3)
 MAX_ATTEMPTS = 3
 KAKAO_URL = "https://dapi.kakao.com/v3/search/book"
 SIMILARITY_GATE = float(os.getenv("CORPUS_SIMILARITY_THRESHOLD", "0.45"))
-_keyword_embeddings: dict[str, list[float]] = {}
+_keyword_embeddings: dict[tuple[str, str], list[float]] = {}
 corpus_tagger = GeminiTagger()
 _BATCH_CREATE_LOCK = 741906
 _WORKER_LOCK = 741905
@@ -260,12 +261,17 @@ async def _process_batch(job_id: str) -> None:
 
 
 async def _keyword_vector(keyword: str) -> list[float] | None:
-    if keyword not in _keyword_embeddings:
+    cache_key = (embedding_provider(), keyword)
+    if cache_key not in _keyword_embeddings:
         from app.services.book_ai_service import get_embedding
-        vector = await get_embedding(build_keyword_prompt(keyword))
+        error: dict = {}
+        vector = await get_embedding(build_keyword_prompt(keyword), error_out=error)
         if vector:
-            _keyword_embeddings[keyword] = vector
-    return _keyword_embeddings.get(keyword)
+            _keyword_embeddings[cache_key] = vector
+        elif error.get("code") in {"RATE_LIMIT", "AUTH_ERROR", "NO_API_KEY"}:
+            code = error["code"]
+            raise IngestionFailure(code, retryable=code == "RATE_LIMIT")
+    return _keyword_embeddings.get(cache_key)
 
 
 async def _finish_book(job_id: str, status: str, reason: str | None = None, *, embedding=None, classification=None, classification_result=None, similarity=0.0) -> None:
@@ -277,7 +283,7 @@ async def _finish_book(job_id: str, status: str, reason: str | None = None, *, e
                 title=book["title"], contents=book.get("contents"), isbn=job.isbn,
                 authors=format_authors(book.get("authors")), publisher=book.get("publisher"),
                 thumbnail=book.get("thumbnail"), keyword=classification[0], tags=classification[1],
-                similarity_score=similarity, embedding=embedding, recommendation_status="ACTIVE",
+                similarity_score=similarity, **embedding_write_values(embedding), recommendation_status="ACTIVE",
                 source=job.source, classification_version=corpus_tagger.model,
                 validated_at=_now(),
             ).on_conflict_do_nothing(index_elements=["isbn"]))
@@ -339,9 +345,15 @@ async def _process_book(job_id: str) -> None:
             return
     embedding = None
     if source != "CURATED_SEED":
-        embedding = await svc.get_embedding(build_book_text(book["title"], book["contents"], book.get("authors")))
+        embedding_error: dict = {}
+        embedding = await svc.get_embedding(
+            build_book_text(book["title"], book["contents"], book.get("authors")),
+            task_type="RETRIEVAL_DOCUMENT",
+            error_out=embedding_error,
+        )
         if not embedding:
-            raise IngestionFailure("EMBEDDING_UNAVAILABLE")
+            code = embedding_error.get("code", "EMBEDDING_UNAVAILABLE")
+            raise IngestionFailure(code, retryable=code not in {"AUTH_ERROR", "NO_API_KEY"})
     similarity = 0.0
     if source == "KAKAO_BATCH":
         scores = []
@@ -410,9 +422,15 @@ async def review_curated_job(
         if preflight_candidate(book):
             raise ValueError("Book metadata no longer passes admission checks")
         from app.services.book_ai_service import get_embedding
-        embedding = await get_embedding(build_book_text(book["title"], book["contents"], book.get("authors")))
+        embedding_error: dict = {}
+        embedding = await get_embedding(
+            build_book_text(book["title"], book["contents"], book.get("authors")),
+            task_type="RETRIEVAL_DOCUMENT",
+            error_out=embedding_error,
+        )
         if not embedding:
-            raise IngestionFailure("EMBEDDING_UNAVAILABLE")
+            code = embedding_error.get("code", "EMBEDDING_UNAVAILABLE")
+            raise IngestionFailure(code, retryable=code not in {"AUTH_ERROR", "NO_API_KEY"})
         existing = (await db.execute(select(BookCorpus.id).where(BookCorpus.isbn == job.isbn))).scalar_one_or_none()
         if existing is not None:
             raise ValueError("ISBN already exists in the corpus")
@@ -421,7 +439,7 @@ async def review_curated_job(
             authors=format_authors(book.get("authors")), publisher=book.get("publisher"),
             thumbnail=book.get("thumbnail"), keyword=chosen_keyword,
             tags=list(dict.fromkeys(tag.strip() for tag in chosen_tags)),
-            similarity_score=0.0, embedding=embedding, recommendation_status="ACTIVE",
+            similarity_score=0.0, **embedding_write_values(embedding), recommendation_status="ACTIVE",
             source=job.source, classification_version=f"{progress.get('classification_model') or corpus_tagger.model}:reviewed",
             validated_at=_now(),
         ))

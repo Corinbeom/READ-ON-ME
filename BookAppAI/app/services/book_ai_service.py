@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List
 
 import numpy as np
+import httpx
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
@@ -22,6 +23,7 @@ from app.services.reference_search import find_reference_anchor, has_theme_evide
 from app.services.reranker import rerank_with_gemini
 from app.services.search_retrieval import retrieve_candidates
 from app.services.text_utils import is_school_anthology, is_search_candidate
+from app.services.embedding_backend import provider as embedding_provider, gemini_embed
 
 # --- Configuration ---
 # prod 환경 검증은 lifespan의 validate_prod_config()가 담당
@@ -45,6 +47,10 @@ def _load_embedding_model() -> None:
 
 
 async def init_embedding_model() -> None:
+    if embedding_provider() == "gemini":
+        if not os.getenv("GEMINI_API_KEY"):
+            raise RuntimeError("GEMINI_API_KEY is required for Gemini embeddings")
+        return
     await asyncio.get_running_loop().run_in_executor(_embedding_executor, _load_embedding_model)
 
 
@@ -65,9 +71,11 @@ def _limit_keywords(keywords: List[str]) -> List[str]:
 # --- Service Functions ---
 
 
-async def get_embedding(text: str):
-    """Generates embedding for a given text using Hugging Face SentenceTransformer."""
+async def get_embedding(text: str, task_type: str = "RETRIEVAL_QUERY", error_out: dict | None = None):
+    """Generate a vector in the selected provider's single active space."""
     try:
+        if embedding_provider() == "gemini":
+            return await gemini_embed(text, task_type)
         if embedding_model is None:
             raise RuntimeError("Embedding model is not ready")
         embedding = await asyncio.get_running_loop().run_in_executor(
@@ -77,6 +85,14 @@ async def get_embedding(text: str):
         return embedding.tolist()
     except Exception as exc:
         logger.error("Embedding failed error=%s", type(exc).__name__)
+        if error_out is not None:
+            status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+            error_out["code"] = (
+                "RATE_LIMIT" if status == 429 else
+                "AUTH_ERROR" if status in {401, 403} else
+                "NO_API_KEY" if isinstance(exc, RuntimeError) and not os.getenv("GEMINI_API_KEY")
+                and embedding_provider() == "gemini" else "EMBEDDING_UNAVAILABLE"
+            )
         return None
 
 

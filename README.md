@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | `BookAppFront/` | Expo Router 기반 모바일 앱. 로그인/라이브러리/리뷰/알림/AI 책 선택 화면 제공. | React Native 0.81, Expo 54, TypeScript |
 | `BookAppBack/` | 핵심 API 서버. 카카오 도서 검색, JWT 인증, 리뷰·알림, Redis 캐싱, AI 연동을 담당. | Spring Boot 3, Java 17, Gradle |
-| `BookAppAI/` | 카카오 검색 결과를 확장·임베딩·벡터 검색하는 AI 워커. | FastAPI, SQLAlchemy, SentenceTransformers |
+| `BookAppAI/` | 카카오 검색 결과를 확장·임베딩·벡터 검색하는 AI 워커. | FastAPI, SQLAlchemy, pgvector, Gemini 또는 SentenceTransformers |
 
 
 ---
@@ -22,7 +22,7 @@
    - AI 검색 작업을 PostgreSQL에 저장하고 최대 2건만 FastAPI로 전달합니다. AI 추천에 필요한 모든 유저의 서재 데이터는 `/api/library/all`에서 노출합니다.
 
 3. **FastAPI → PostgreSQL + pgvector**  
-   - 카카오 검색 결과를 받아 Gemini 태깅, SentenceTransformer 임베딩으로 `book_corpus` 테이블을 구성하고, 자연어 쿼리/유사도/저자 기반 검색을 제공합니다.
+   - 카카오 검색 결과를 받아 Gemini 태깅과 선택한 임베딩 제공자로 `book_corpus` 테이블을 구성하고, 자연어 쿼리/유사도/저자 기반 검색을 제공합니다.
 
 4. **Redis + SSE**  
    - 리뷰 좋아요 알림을 Redis 캐시와 함께 처리하고, `NotificationListener`가 구독하는 SSE로 푸시합니다.
@@ -74,9 +74,11 @@ cd BookAppBack
 cd BookAppAI
 python -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-local.txt  # EMBEDDING_PROVIDER=local
 uvicorn app.main:app --reload --port 8000
 ```
+
+Gemini 임베딩 모드에서는 `pip install -r requirements.txt`로 로컬 모델 패키지 없이 실행할 수 있습니다. Docker 빌드도 `EMBEDDING_PROVIDER=gemini`로 설정하면 해당 패키지를 설치하지 않습니다.
 
 - 테스트: `pytest`
 - 테스트 의존성: `pip install -r requirements-test.txt`
@@ -163,12 +165,12 @@ docker compose up --build
 
 ## 개발 팁
 
-- FastAPI에서 SentenceTransformer가 로딩되므로 모델/환경 변수를 바꿀 때는 서버 재시작이 필요합니다.
+- 임베딩 제공자는 `EMBEDDING_PROVIDER=local`(기본값) 또는 `gemini`로 선택합니다. Gemini 모드는 로컬 SentenceTransformer를 메모리에 올리지 않으며, 서버 재시작 후 적용됩니다. 기존 코퍼스가 있는 DB에서는 [임베딩 전환 절차](docs/environment-variables.md#gemini-임베딩-전환)를 먼저 완료해야 합니다.
 - AI 검색은 한 Spring 인스턴스에서 실행 2건과 대기 10건으로 제한합니다. 대기열이 가득 차면 `503`과 `Retry-After: 5`를 반환합니다. 재시작 시 대기 작업은 재개하고 실행 중이던 작업은 실패로 표시합니다.
 - 앱은 AI 검색 화면이 열려 있는 동안 작업 상태를 3초마다 확인하고, 화면을 다시 열면 저장된 작업 ID로 최근 24시간 작업을 복원합니다. 접수 요청의 `Idempotency-Key`를 재사용하면 중복 작업을 만들지 않습니다. 후보 비교는 기존 추천 이유와 책 소개의 근거를 보여주며 별도 AI 비교 호출은 하지 않습니다.
 - AI 검색은 규칙 기반 의도 분석 뒤 벡터 30건과 키워드 20건을 합치고, 세부 장르를 명시한 경우 제목이 일치하는 후보를 최대 20건 더 확인합니다. 주제·장르의 근거를 제목과 책 소개에서 검증하고 장르 해설서·학습 자료·여러 권 묶음 세트를 제외하므로 결과가 5권보다 적을 수 있습니다. Gemini 장애 시 이야기형 요청의 대체 결과는 서사 근거가 있는 후보를 사용하고, 명시한 세부 장르에서는 장르·소설 근거가 검증된 후보도 사용할 수 있습니다. 명시한 저자는 정확히 일치하는 책으로 제한합니다. 저자 작품과 비슷한 책 요청은 코퍼스의 해당 저자 작품을 기준으로 다른 저자의 책을 찾습니다. 이 요청의 대체 결과는 작가와 무관하게 기준 작품과 공통 주제 2개 이상 및 작품 근거가 확인된 책만 사용합니다. 기준 작품이 없으면 빈 결과를 반환합니다.
 - 이야기·분위기를 원하는 질문에서는 책 소개에 드러난 실용서 신호를 확인해 명확한 가이드만 제외합니다. 형식이 불분명한 책은 후보에 남깁니다. 상위 후보 10권의 책 중심 소개를 Gemini에 전달하고 재정렬을 최대 1회 호출합니다. 추천 이유는 모델이 인용한 문구가 전달한 소개에 실제로 있는 경우에만 표시합니다. 모델이 적합한 후보가 없다고 판단하면 빈 결과를 반환합니다. 호출 또는 응답 검증이 실패하면 이야기형 요청은 서사 근거 또는 명시한 세부 장르의 검증된 근거가 있는 후보만, 다른 요청은 기존 순서의 후보를 최대 5권까지 이유 없이 반환하고 `ranking_status=FALLBACK`을 표시합니다. 일반 소설 요청에서는 학교용 선집을 단행본보다 뒤에 배치합니다. 검색 작업은 `MODEL`, `FALLBACK`, `NO_MATCH`, `DEGRADED_EMPTY`를 별도 저장합니다. 마지막 상태는 Gemini 장애 중 검증된 대체 결과도 없음을 뜻하며, 앱은 같은 조건 재시도를 안내합니다. 429 뒤에는 60초, 연속 503·시간 초과 두 번 뒤에는 30초간 Gemini 호출을 잠시 멈춥니다.
-- 검색에 쓰는 SentenceTransformer 추론은 단일 작업자로 직렬화합니다. 코퍼스 수집은 PostgreSQL 작업 큐에서 한 번에 한 후보씩 처리합니다. 일반 일시 오류는 최대 3회, API 호출 제한은 긴 간격으로 계속 재시도하며 Gemini 쿨다운 중에는 새 작업을 처리하지 않습니다. 기존 `book_tagging_jobs` 재태깅 워커는 별도로 동작합니다. Spring 시작 시 코퍼스를 자동 수집하지 않으며, 사용자가 서재에 새 책을 저장하면 AI 수집 작업에 접수합니다. 수집 품질 검사 결과와 관계없이 서재 저장은 유지됩니다.
+- 로컬 SentenceTransformer 추론은 단일 작업자로 직렬화합니다. Gemini 임베딩은 쿼리·문서 작업 유형과 별도 벡터 열을 사용하고, 실패 시 AI 검색은 `503`을 반환합니다. 코퍼스 수집은 PostgreSQL 작업 큐에서 한 번에 한 후보씩 처리합니다. 일반 일시 오류는 최대 3회, API 호출 제한은 긴 간격으로 계속 재시도하며 Gemini 쿨다운 중에는 새 작업을 처리하지 않습니다. 기존 `book_tagging_jobs` 재태깅 워커는 별도로 동작합니다. Spring 시작 시 코퍼스를 자동 수집하지 않으며, 사용자가 서재에 새 책을 저장하면 AI 수집 작업에 접수합니다. 수집 품질 검사 결과와 관계없이 서재 저장은 유지됩니다.
 - `BookAppAI/evaluation/golden_queries.json`의 40개 질의는 의도 분석 회귀 테스트에 쓰입니다. `quality_cases.json`은 알려진 오추천 사례와 실용서·저자 유사성 대조 질의를 담습니다. 평가 스크립트는 금지 제목, 이야기형 질문의 실용서 혼입, 추천 이유 근거 여부를 기록합니다. `grounded_reason`이 `null`이면 추천 이유가 없고 `false`이면 이유가 있지만 근거를 확인하지 못한 것입니다. 실제 관련성 점수는 결과의 **각 책**에 있는 `human_relevance_1_to_5`에 직접 기록합니다. 결과 파일의 `contents_excerpt`와 추천 이유를 함께 보고 판단하세요.
 - SSE 연결은 1시간 타임아웃으로 유지됩니다. 앱에서 로그아웃 시 EventSource를 닫아야 리소스 누수가 없습니다.
 - Android 에뮬레이터는 `10.0.2.2`, iOS 시뮬레이터는 `localhost`를 사용합니다. 실제 기기는 로컬 IP 또는 터널을 사용하세요.

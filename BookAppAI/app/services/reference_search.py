@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.book_corpus import BookCorpus
 from app.services.search_retrieval import _author_matches
 from app.services.text_utils import FICTION_LABELS, has_fiction_evidence, infer_book_form
+from app.services.embedding_backend import column as embedding_column
 
 
 @dataclass
@@ -83,6 +84,7 @@ def _author_variants(name: str) -> list[str]:
 
 
 async def find_reference_anchor(db: AsyncSession, author: str) -> ReferenceAnchor | None:
+    vector_attr = embedding_column()
     for variant in _author_variants(author):
         compact = variant.replace(" ", "").replace("%", "\\%").replace("_", "\\_")
         statement = (
@@ -113,7 +115,10 @@ async def find_reference_anchor(db: AsyncSession, author: str) -> ReferenceAncho
         titles: list[str] = []
         selected: list[BookCorpus] = []
         for book in books:
-            vector = np.asarray(book.embedding, dtype=float)
+            stored_vector = getattr(book, vector_attr, None)
+            if stored_vector is None:
+                continue
+            vector = np.asarray(stored_vector, dtype=float)
             norm = np.linalg.norm(vector)
             if vector.ndim != 1 or not np.isfinite(norm) or norm == 0:
                 continue

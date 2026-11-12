@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from app.schemas import UserBookEntry
+from app.services.embedding_backend import column as embedding_column
 
 STATUS_WEIGHTS: dict[str, float] = {
     "COMPLETED": 1.0,
@@ -41,8 +42,9 @@ async def build_user_profile_vector(
     isbns = [b.isbn for b in user_books]
     isbn_to_weight = {b.isbn: STATUS_WEIGHTS.get(b.status, 0.3) for b in user_books}
 
+    vector_column = embedding_column()
     result = await db.execute(
-        text("SELECT isbn, embedding FROM book_corpus WHERE isbn = ANY(:isbns)"),
+        text(f"SELECT isbn, {vector_column} AS embedding FROM book_corpus WHERE isbn = ANY(:isbns) AND {vector_column} IS NOT NULL"),
         {"isbns": isbns},
     )
     rows = result.fetchall()
@@ -89,14 +91,15 @@ async def content_based_recommend(
 
     exclude_isbns: Set[str] = {b.isbn for b in user_books}
     vec_str = str(profile_vec.tolist())
+    vector_column = embedding_column()
 
     if exclude_isbns:
-        sql = text("""
+        sql = text(f"""
             SELECT isbn,
-                   1 - (embedding <=> :profile_vec) AS score
+                   1 - ({vector_column} <=> :profile_vec) AS score
             FROM book_corpus
-            WHERE isbn != ALL(:excludes)
-            ORDER BY embedding <=> :profile_vec
+            WHERE isbn != ALL(:excludes) AND {vector_column} IS NOT NULL
+            ORDER BY {vector_column} <=> :profile_vec
             LIMIT :limit
         """)
         params = {
@@ -105,11 +108,12 @@ async def content_based_recommend(
             "limit": limit,
         }
     else:
-        sql = text("""
+        sql = text(f"""
             SELECT isbn,
-                   1 - (embedding <=> :profile_vec) AS score
+                   1 - ({vector_column} <=> :profile_vec) AS score
             FROM book_corpus
-            ORDER BY embedding <=> :profile_vec
+            WHERE {vector_column} IS NOT NULL
+            ORDER BY {vector_column} <=> :profile_vec
             LIMIT :limit
         """)
         params = {

@@ -49,6 +49,18 @@ async def test_missing_reference_does_not_make_generic_anchor():
     assert await find_reference_anchor(FakeDB(books), "조지 오웰") is None
 
 
+@pytest.mark.asyncio
+async def test_reference_anchor_uses_gemini_vectors_after_switch(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "gemini")
+    books = [SimpleNamespace(
+        isbn="1", title="1984", authors="조지 오웰", contents="소설 소개",
+        embedding=[1.0, 0.0], gemini_embedding=[0.0, 1.0],
+        keyword="소설", tags=["소설"],
+    )]
+    anchor = await find_reference_anchor(FakeDB(books), "조지 오웰")
+    assert anchor.embedding == pytest.approx([0.0, 1.0])
+
+
 def test_theme_evidence_accepts_tag_or_description():
     assert has_theme_evidence({"keyword": "디스토피아", "tags": []}, ["디스토피아"])
     assert has_theme_evidence({"contents": "전체주의 사회를 그린 소설입니다."}, ["전체주의"])

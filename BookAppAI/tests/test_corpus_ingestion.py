@@ -102,7 +102,9 @@ async def test_curated_classification_waits_for_review_before_indexing(monkeypat
 
 
 @pytest.mark.asyncio
-async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch):
+@pytest.mark.parametrize("provider,vector_column", [("local", "embedding"), ("gemini", "gemini_embedding")])
+async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch, provider, vector_column):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", provider)
     book = {"isbn": "9780000000002", "title": "별의 이야기", "authors": "작가",
             "contents": "한 아이가 별을 찾아 떠나며 가족의 비밀을 알게 되는 장편소설입니다."}
     job = SimpleNamespace(id="curated", isbn=book["isbn"], source="CURATED_SEED",
@@ -129,7 +131,7 @@ async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch):
         async def commit(self):
             self.committed = True
 
-    async def vector(*args):
+    async def vector(*args, **kwargs):
         return [0.1]
 
     monkeypatch.setattr(book_ai_service, "get_embedding", vector)
@@ -143,6 +145,8 @@ async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch):
     assert params["keyword"] == "한국소설"
     assert params["tags"] == ["한국소설", "소설"]
     assert params["recommendation_status"] == "ACTIVE"
+    assert params[vector_column] == [0.1]
+    assert ("gemini_embedding" if provider == "local" else "embedding") not in params
     assert job.progress["review_note"] == "출판사에서 장편소설로 분류"
 
 
@@ -346,7 +350,7 @@ async def test_short_description_is_enriched_before_classification(monkeypatch):
     async def no_similar(*args):
         return None
 
-    async def vector(*args):
+    async def vector(*args, **kwargs):
         return [0.1]
 
     async def classify(title, contents, authors):
@@ -409,7 +413,7 @@ async def test_low_similarity_book_skips_gemini(monkeypatch):
     async def no_similar(*args):
         return None
 
-    async def vector(*args):
+    async def vector(*args, **kwargs):
         return [0.1]
 
     async def forbidden(*args):

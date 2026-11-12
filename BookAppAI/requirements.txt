@@ -3,13 +3,10 @@ uvicorn[standard]
 httpx
 pydantic
 python-dotenv
-SQLAlchemy
+SQLAlchemy[asyncio]
 alembic
 asyncpg
 pgvector
 numpy<2
 
 psycopg2-binary
-sentence-transformers
-torch==2.2.2
-transformers==4.38.2

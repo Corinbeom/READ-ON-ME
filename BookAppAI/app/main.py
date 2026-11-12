@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from alembic import command
 from alembic.config import Config
+from sqlalchemy import text
 
 from app.routers import data_builder, recommendation
 from app.services import book_ai_service
@@ -18,6 +19,7 @@ from app.services.corpus_ingestion import run_worker as run_corpus_worker
 from app.security import require_internal_token
 import app.database as _db
 from app.config import validate_prod_config
+from app.services.embedding_backend import column as embedding_column
 from .recommendation_service import get_recommendations
 
 def upgrade_database() -> None:
@@ -25,21 +27,39 @@ def upgrade_database() -> None:
     command.upgrade(config, "head")
 
 
+async def verify_embedding_coverage() -> None:
+    """Fail startup rather than silently searching only part of the active corpus."""
+    vector_column = embedding_column()
+    async with _db.async_session() as db:
+        missing = (await db.execute(text(f"""
+            SELECT count(*) FROM book_corpus
+            WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+              AND {vector_column} IS NULL
+        """))).scalar_one()
+    if missing:
+        raise RuntimeError(f"{missing} searchable books lack {vector_column}; finish backfill before switching providers")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_prod_config()  # 먼저 검증 — DATABASE_URL 포함
     await asyncio.to_thread(upgrade_database)
     _db.init_db()           # 검증 통과 후 엔진 생성
-    await book_ai_service.init_embedding_model()
-    await recover_interrupted_jobs()
     worker_stop = asyncio.Event()
-    worker = asyncio.create_task(run_worker(worker_stop))
-    corpus_worker = asyncio.create_task(run_corpus_worker(worker_stop))
+    workers = []
     try:
+        await book_ai_service.init_embedding_model()
+        await verify_embedding_coverage()
+        await recover_interrupted_jobs()
+        workers = [
+            asyncio.create_task(run_worker(worker_stop)),
+            asyncio.create_task(run_corpus_worker(worker_stop)),
+        ]
         yield
     finally:
         worker_stop.set()
-        await asyncio.gather(worker, corpus_worker)
+        if workers:
+            await asyncio.gather(*workers)
         book_ai_service.shutdown_embedding_model()
         await _db.engine.dispose()
 

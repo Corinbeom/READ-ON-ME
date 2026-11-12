@@ -59,11 +59,16 @@ services:
     restart: unless-stopped
 
   ai:
-    build: ./BookAppAI
+    build:
+      context: ./BookAppAI
+      args:
+        EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
     container_name: readonme-ai
     environment:
       # 예: Gemini key, DB 접근 필요하면 Supabase 연결 등
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
+      GEMINI_EMBEDDING_TIMEOUT_SECONDS: ${GEMINI_EMBEDDING_TIMEOUT_SECONDS:-5}
       # AI worker는 async SQLAlchemy DSN 사용
       DATABASE_URL: ${AI_DATABASE_URL}
       # AI 빌더는 카카오 API도 직접 호출함

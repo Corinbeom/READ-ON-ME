@@ -108,3 +108,22 @@ async def test_reviewed_exact_genre_is_retrieved_beyond_crowded_keyword_lane():
 
     assert "reviewed-sf" in {book["isbn"] for book in candidates}
     assert counts.reviewed_genre == 1
+
+
+@pytest.mark.asyncio
+async def test_gemini_retrieval_only_reads_gemini_vectors(monkeypatch):
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "gemini")
+
+    class FakeResult:
+        def mappings(self):
+            return []
+
+    class FakeDB:
+        async def execute(self, statement, params):
+            sql = str(statement)
+            assert "gemini_embedding <=> :embedding" in sql
+            assert "gemini_embedding IS NOT NULL" in sql
+            return FakeResult()
+
+    intent = IntentMetadata(raw_query="SF 소설 추천", genre="SF")
+    await retrieve_candidates(FakeDB(), [0.1], intent, ["SF"])

@@ -6,6 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.intent_classifier import IntentMetadata
+from app.services.embedding_backend import column as embedding_column
 
 
 VECTOR_LIMIT = 30
@@ -76,6 +77,7 @@ async def retrieve_candidates(
     exclude_author: str | None = None,
 ) -> tuple[list[dict[str, Any]], RetrievalCounts]:
     embedding_value = str(list(embedding))
+    vector_column = embedding_column()
     counts = RetrievalCounts()
     direct_author = intent.query_type == "author" and bool(intent.focus_author)
     exclusion = "COALESCE(REPLACE(authors, ' ', ''), '') NOT ILIKE :excluded_author"
@@ -89,11 +91,12 @@ async def retrieve_candidates(
     title_rows: list[dict[str, Any]] = []
     if not direct_author:
         vector_sql = text(f"""
-            SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
+            SELECT {_COLUMNS}, 1 - ({vector_column} <=> :embedding) AS similarity
             FROM book_corpus
             WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+              AND {vector_column} IS NOT NULL
               {f'AND {exclusion}' if excluded_pattern else ''}
-            ORDER BY embedding <=> :embedding
+            ORDER BY {vector_column} <=> :embedding
             LIMIT :limit
         """)
         vector_params = {"embedding": embedding_value, "limit": VECTOR_LIMIT}
@@ -106,9 +109,10 @@ async def retrieve_candidates(
 
         if keywords:
             keyword_sql = text(f"""
-                SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
+                SELECT {_COLUMNS}, 1 - ({vector_column} <=> :embedding) AS similarity
                 FROM book_corpus
                 WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+                  AND {vector_column} IS NOT NULL
                   AND (keyword = ANY(:keywords)
                    OR EXISTS (
                        SELECT 1 FROM jsonb_array_elements_text(tags) AS tag(value)
@@ -126,9 +130,10 @@ async def retrieve_candidates(
             )).mappings()]
         if (intent.genre or "").casefold() in {"sf", "판타지", "로맨스", "스릴러", "미스터리", "디스토피아"}:
             reviewed_sql = text(f"""
-                SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
+                SELECT {_COLUMNS}, 1 - ({vector_column} <=> :embedding) AS similarity
                 FROM book_corpus
                 WHERE recommendation_status = 'ACTIVE'
+                  AND {vector_column} IS NOT NULL
                   AND source = 'CURATED_SEED'
                   AND classification_version LIKE :review_suffix
                   AND (lower(keyword) = :genre
@@ -154,9 +159,10 @@ async def retrieve_candidates(
         if title_terms:
             title_condition = " OR ".join(f"title ILIKE :title_{index}" for index in range(len(title_terms)))
             title_sql = text(f"""
-                SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
+                SELECT {_COLUMNS}, 1 - ({vector_column} <=> :embedding) AS similarity
                 FROM book_corpus
                 WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+                  AND {vector_column} IS NOT NULL
                   AND ({title_condition})
                   {f'AND {exclusion}' if excluded_pattern else ''}
                 ORDER BY similarity DESC
@@ -176,9 +182,10 @@ async def retrieve_candidates(
     if direct_author:
         pattern = intent.focus_author.replace(" ", "").replace("%", "\\%").replace("_", "\\_")
         author_sql = text(f"""
-            SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
+            SELECT {_COLUMNS}, 1 - ({vector_column} <=> :embedding) AS similarity
             FROM book_corpus
             WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
+              AND {vector_column} IS NOT NULL
               AND REPLACE(authors, ' ', '') ILIKE :pattern ESCAPE '\\'
             ORDER BY similarity DESC
             LIMIT :limit
