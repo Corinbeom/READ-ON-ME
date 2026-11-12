@@ -285,11 +285,16 @@ async def _finish_book(job_id: str, status: str, reason: str | None = None, *, e
         else:
             job.status = status
         if classification_result:
-            job.progress = {
+            progress = {
                 "book_type": classification_result.get("book_type"),
                 "evidence_quote": classification_result.get("evidence_quote"),
                 "topic_similarity": round(similarity, 4) if job.source == "KAKAO_BATCH" else None,
             }
+            if status == "REVIEW_PENDING":
+                progress["proposed_keyword"] = classification[0]
+                progress["proposed_tags"] = classification[1]
+                progress["classification_model"] = corpus_tagger.model
+            job.progress = progress
         job.reject_reason = reason
         job.error_code = None
         job.updated_at = _now()
@@ -332,9 +337,11 @@ async def _process_book(job_id: str) -> None:
         if similar:
             await _finish_book(job_id, "REJECTED", "DUPLICATE_EDITION")
             return
-    embedding = await svc.get_embedding(build_book_text(book["title"], book["contents"], book.get("authors")))
-    if not embedding:
-        raise IngestionFailure("EMBEDDING_UNAVAILABLE")
+    embedding = None
+    if source != "CURATED_SEED":
+        embedding = await svc.get_embedding(build_book_text(book["title"], book["contents"], book.get("authors")))
+        if not embedding:
+            raise IngestionFailure("EMBEDDING_UNAVAILABLE")
     similarity = 0.0
     if source == "KAKAO_BATCH":
         scores = []
@@ -355,7 +362,79 @@ async def _process_book(job_id: str) -> None:
         code = corpus_tagger.last_error_code or "CLASSIFIER_UNAVAILABLE"
         raise IngestionFailure(code, retryable=code not in {"AUTH_ERROR", "NO_API_KEY"})
     status, reason, keyword, tags = validate_classification(book, result)
+    if source == "CURATED_SEED" and status == "ACTIVE":
+        status = "REVIEW_PENDING"
     await _finish_book(job_id, status, reason, embedding=embedding, classification=(keyword, tags), classification_result=result, similarity=similarity)
+
+
+async def review_curated_job(
+    db: AsyncSession, job_id: str, *, decision: str,
+    keyword: str | None = None, tags: list[str] | None = None, note: str | None = None,
+) -> str:
+    """Publish a reviewed classification or keep the candidate out of search."""
+    if decision not in {"approve", "hold"}:
+        raise ValueError("Decision must be approve or hold")
+    job = await db.get(CorpusIngestionJob, job_id, with_for_update=True, populate_existing=True)
+    if not job or job.source != "CURATED_SEED" or job.status != "REVIEW_PENDING":
+        raise ValueError("Only pending curated classifications can be reviewed")
+    progress = dict(job.progress or {})
+    if decision == "hold":
+        if not (note or "").strip():
+            raise ValueError("A hold requires a review note")
+        job.status = "HOLD"
+        job.reject_reason = "CURATED_REVIEW_HOLD"
+    else:
+        original_keyword = progress.get("proposed_keyword")
+        original_tags = progress.get("proposed_tags")
+        if not original_keyword or not isinstance(original_tags, list):
+            raise ValueError("Pending job has no validated classification")
+        if (keyword is None) != (tags is None):
+            raise ValueError("Provide keyword and tags together")
+        chosen_keyword = (keyword if keyword is not None else original_keyword).strip()
+        chosen_tags = tags if tags is not None else original_tags
+        invalid_keyword = (
+            not chosen_keyword or len(chosen_keyword) > 60
+            or chosen_keyword.casefold() in {"교육", "교재", "세트", "user_added"}
+        )
+        invalid_tags = (
+            not chosen_tags or len(chosen_tags) > 12
+            or any(not isinstance(tag, str) or not tag.strip() or len(tag.strip()) > 60
+                   for tag in chosen_tags)
+            or chosen_keyword not in chosen_tags
+        )
+        if invalid_keyword or invalid_tags:
+            raise ValueError("Approved keyword or tags are invalid")
+        if keyword is not None and not (note or "").strip():
+            raise ValueError("A classification override requires a review note")
+        book = dict(job.payload["book"])
+        if preflight_candidate(book):
+            raise ValueError("Book metadata no longer passes admission checks")
+        from app.services.book_ai_service import get_embedding
+        embedding = await get_embedding(build_book_text(book["title"], book["contents"], book.get("authors")))
+        if not embedding:
+            raise IngestionFailure("EMBEDDING_UNAVAILABLE")
+        existing = (await db.execute(select(BookCorpus.id).where(BookCorpus.isbn == job.isbn))).scalar_one_or_none()
+        if existing is not None:
+            raise ValueError("ISBN already exists in the corpus")
+        await db.execute(insert(BookCorpus).values(
+            title=book["title"], contents=book.get("contents"), isbn=job.isbn,
+            authors=format_authors(book.get("authors")), publisher=book.get("publisher"),
+            thumbnail=book.get("thumbnail"), keyword=chosen_keyword,
+            tags=list(dict.fromkeys(tag.strip() for tag in chosen_tags)),
+            similarity_score=0.0, embedding=embedding, recommendation_status="ACTIVE",
+            source=job.source, classification_version=f"{progress.get('classification_model') or corpus_tagger.model}:reviewed",
+            validated_at=_now(),
+        ))
+        job.status = "INDEXED"
+        job.reject_reason = None
+        progress["approved_keyword"] = chosen_keyword
+        progress["approved_tags"] = chosen_tags
+    progress["reviewed_at"] = _now().isoformat()
+    progress["review_note"] = (note or "").strip()[:500]
+    job.progress = progress
+    job.updated_at = _now()
+    await db.commit()
+    return job.status
 
 
 async def _claim_job() -> tuple[str, str] | None:

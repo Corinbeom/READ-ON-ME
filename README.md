@@ -97,12 +97,13 @@ uvicorn app.main:app --reload --port 8000
 - 추천 이유 누락의 재현 원인과 `LEGACY` 코퍼스 의존도는 [추천 품질 심층 점검](BookAppAI/evaluation/recommendation_depth_audit_2026-11-12.md)에 있습니다.
 - 검색·필터·Gemini 입력·최종 선택의 `ACTIVE`/`LEGACY` 비율과 이유 누락 원인은 [단계별 검색 점검](BookAppAI/evaluation/search_stage_audit_2026-11-12.md)에 있습니다.
 - 출처가 확인된 ISBN을 관리자 검토 후 소량 편입한 결과와 실제 검색 노출 한계는 [ISBN 편입 파일럿](BookAppAI/evaluation/curated_corpus_pilot_2026-11-12.md)에 있습니다.
+- AI 분류 이후 승인 전 대기·보류·태그 교정의 실기동 검증은 [관리자 검토 게이트 기록](BookAppAI/evaluation/curated_review_gate_2026-11-12.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용). 본문은 책 배열이며 `X-Search-Outcome`, `X-Search-Reason`, `X-Search-Basis` 헤더로 결과 상태를 전달합니다.
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)
 - 실패한 태깅 작업 재등록: API 키/오류를 해결하고 AI 서버를 재시작한 뒤 `python -m tools.queue_retag --retry-failed --limit 20`으로 확인하고 `--apply`를 붙입니다.
 - 검색 품질 샘플: `python -m tools.evaluate_search --url http://127.0.0.1:8000 --limit 5` (결과는 `/tmp/readonme-search-evaluation.json`). 요청 사이 기본 간격은 6초이며 결과에 요청 ID와 응답 시간이 기록됩니다. 알려진 오추천 사례는 `--cases evaluation/quality_cases.json --limit 5`로 확인합니다.
-- 관리자 ISBN 편입: AI 워커 환경에 `LIBRARY_BIGDATA_API_KEY`를 설정한 뒤 `python -m tools.curated_corpus discover --kdc 8 --start-date 2026-01-01 --end-date 2026-10-31 --pages 1 3 5`로 정보나루 인기대출 후보를 조회하거나, `--library-keyword 한국소설 --pages 1 3`으로 도서 검색 후보를 조회합니다. 출처 URL과 ISBN을 적은 수동 목록은 `--isbn-file /tmp/candidates.json`으로 검증할 수 있습니다. 검토 결과는 `/tmp/readonme-curated-candidates.json`에 저장됩니다. `python -m tools.curated_corpus queue --manifest /tmp/readonme-curated-candidates.json --isbns <ISBN>`으로 미리 보고, 같은 명령에 `--apply`를 붙여 선택한 책만 검수 큐에 접수합니다. 짧지만 책 중심인 정보나루 소개를 사용하려면 해당 ISBN을 `--naru-isbns <ISBN>`에 지정합니다. `QUEUED`는 편입 완료가 아니며 작업 상태와 최종 분류를 함께 확인해야 합니다.
+- 관리자 ISBN 편입: AI 워커 환경에 `LIBRARY_BIGDATA_API_KEY`를 설정한 뒤 `python -m tools.curated_corpus discover --kdc 8 --start-date 2026-01-01 --end-date 2026-10-31 --pages 1 3 5`로 정보나루 인기대출 후보를 조회하거나, `--library-keyword 한국소설 --pages 1 3`으로 도서 검색 후보를 조회합니다. 출처 URL과 ISBN을 적은 수동 목록은 `--isbn-file /tmp/candidates.json`으로 검증할 수 있습니다. 검토 결과는 `/tmp/readonme-curated-candidates.json`에 저장됩니다. `python -m tools.curated_corpus queue --manifest /tmp/readonme-curated-candidates.json --isbns <ISBN>`으로 미리 보고, 같은 명령에 `--apply`를 붙여 선택한 책만 검수 큐에 접수합니다. 짧지만 책 중심인 정보나루 소개를 사용하려면 해당 ISBN을 `--naru-isbns <ISBN>`에 지정합니다. AI 분류가 유효하면 작업은 `REVIEW_PENDING`이 되며 아직 검색 코퍼스에 들어가지 않습니다. `python -m tools.curated_corpus review --job-id <ID>`로 출처·소개·제안 태그를 확인한 뒤 `--decision approve --apply`로 승인하거나 `--decision hold --note '보류 이유' --apply`로 보류합니다. 태그를 교정해 승인하려면 `--decision approve --keyword SF --tags SF,소설,과학소설 --note '교정 근거' --apply`처럼 키워드·태그·근거를 함께 지정합니다. 승인은 임베딩을 생성하고 `ACTIVE`로 편입합니다. `QUEUED`와 `REVIEW_PENDING`은 편입 완료가 아닙니다.
 - 추천: `GET /recommendations/{userId}`
 
 ### 3. React Native 앱 (`BookAppFront`)

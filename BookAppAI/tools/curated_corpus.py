@@ -10,7 +10,8 @@ from sqlalchemy import select
 
 from app import database
 from app.models.book_corpus import BookCorpus
-from app.services import corpus_ingestion, curated_corpus
+from app.models.corpus_ingestion_job import CorpusIngestionJob
+from app.services import book_ai_service, corpus_ingestion, curated_corpus
 
 
 def _write(path: Path, value: object) -> None:
@@ -109,6 +110,42 @@ async def queue(args) -> None:
             await database.engine.dispose()
 
 
+async def review(args) -> None:
+    if args.apply and not args.decision:
+        raise ValueError("--apply requires --decision")
+    database.init_db()
+    embedding_started = False
+    try:
+        async with database.async_session() as db:
+            job = await db.get(CorpusIngestionJob, args.job_id)
+            if not job or job.source != "CURATED_SEED":
+                raise ValueError("Curated job not found")
+            book = job.payload.get("book") or {}
+            provenance = job.payload.get("provenance") or {}
+            print(json.dumps({
+                "job_id": job.id, "status": job.status, "isbn": job.isbn,
+                "title": book.get("title"), "authors": book.get("authors"),
+                "contents": book.get("contents"), "provenance": provenance,
+                "classification": job.progress,
+            }, ensure_ascii=False, indent=2))
+            if not args.apply:
+                return
+            if args.decision == "approve":
+                await book_ai_service.init_embedding_model()
+                embedding_started = True
+            status = await corpus_ingestion.review_curated_job(
+                db, args.job_id, decision=args.decision, keyword=args.keyword,
+                tags=args.tags.split(",") if args.tags is not None else None,
+                note=args.note,
+            )
+            print(f"review_result={status} job_id={args.job_id}")
+    finally:
+        if database.engine is not None:
+            await database.engine.dispose()
+        if embedding_started:
+            book_ai_service.shutdown_embedding_model()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -129,9 +166,16 @@ if __name__ == "__main__":
     intake.add_argument("--naru-isbns", default="", help="Selected ISBNs whose verified library synopsis should replace Kakao text")
     intake.add_argument("--apply", action="store_true")
     intake.add_argument("--delay", type=float, default=6.0)
+    decision = sub.add_parser("review", help="Inspect a classified curated job before publishing")
+    decision.add_argument("--job-id", required=True)
+    decision.add_argument("--decision", choices=["approve", "hold"])
+    decision.add_argument("--keyword", help="Reviewed replacement keyword")
+    decision.add_argument("--tags", help="Comma-separated reviewed replacement tags")
+    decision.add_argument("--note", help="Reason for a hold or classification override")
+    decision.add_argument("--apply", action="store_true")
     args = parser.parse_args()
     if hasattr(args, "limit") and (not 1 <= args.limit <= 20 or args.delay < 0):
         parser.error("limit must be 1–20 and delay nonnegative")
     if args.command == "queue" and args.delay < 0:
         parser.error("delay must be nonnegative")
-    asyncio.run(discover(args) if args.command == "discover" else queue(args))
+    asyncio.run({"discover": discover, "queue": queue, "review": review}[args.command](args))

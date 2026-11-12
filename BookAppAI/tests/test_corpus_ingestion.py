@@ -70,6 +70,135 @@ async def test_curated_intake_records_provenance_and_separate_source():
 
 
 @pytest.mark.asyncio
+async def test_curated_classification_waits_for_review_before_indexing(monkeypatch):
+    book = {"isbn": "9780000000002", "title": "별의 이야기", "authors": "작가",
+            "contents": "한 아이가 별을 찾아 떠나며 가족의 비밀을 알게 되는 장편소설입니다."}
+    job = SimpleNamespace(id="curated", isbn=book["isbn"], source="CURATED_SEED",
+                          payload={"book": book, "provenance": {"discovery_source": "LIBRARY"}})
+    monkeypatch.setattr(corpus_ingestion.database, "async_session", lambda: FakeSession(job))
+
+    async def no_similar(*args):
+        return None
+
+    async def no_embedding(*args):
+        raise AssertionError("Curated review must precede embedding")
+
+    async def classify(*args):
+        return {"book_type": "STORY", "primary_keyword": "소설", "tags": ["소설"],
+                "evidence_quote": "한 아이가 별을 찾아 떠나며 가족의 비밀을 알게 되는 장편소설입니다."}
+
+    finished = []
+
+    async def finish(*args, **kwargs):
+        finished.append((args, kwargs))
+
+    monkeypatch.setattr(book_ai_service, "find_similar_corpus_edition", no_similar)
+    monkeypatch.setattr(book_ai_service, "get_embedding", no_embedding)
+    monkeypatch.setattr(corpus_ingestion.corpus_tagger, "classify_book", classify)
+    monkeypatch.setattr(corpus_ingestion, "_finish_book", finish)
+    await corpus_ingestion._process_book("curated")
+    assert finished[0][0] == ("curated", "REVIEW_PENDING", None)
+    assert finished[0][1]["classification"] == ("소설", ["소설"])
+
+
+@pytest.mark.asyncio
+async def test_review_approval_publishes_corrected_tags_with_note(monkeypatch):
+    book = {"isbn": "9780000000002", "title": "별의 이야기", "authors": "작가",
+            "contents": "한 아이가 별을 찾아 떠나며 가족의 비밀을 알게 되는 장편소설입니다."}
+    job = SimpleNamespace(id="curated", isbn=book["isbn"], source="CURATED_SEED",
+                          status="REVIEW_PENDING", reject_reason=None, updated_at=None,
+                          payload={"book": book}, progress={
+                              "book_type": "STORY", "evidence_quote": book["contents"],
+                              "proposed_keyword": "동화", "proposed_tags": ["동화"],
+                              "classification_model": "test-model",
+                          })
+
+    class ReviewSession:
+        def __init__(self):
+            self.statements = []
+            self.committed = False
+
+        async def get(self, model, job_id, **kwargs):
+            assert kwargs["with_for_update"] is True
+            return job
+
+        async def execute(self, statement):
+            self.statements.append(statement)
+            return SimpleNamespace(scalar_one_or_none=lambda: None)
+
+        async def commit(self):
+            self.committed = True
+
+    async def vector(*args):
+        return [0.1]
+
+    monkeypatch.setattr(book_ai_service, "get_embedding", vector)
+    db = ReviewSession()
+    status = await corpus_ingestion.review_curated_job(
+        db, "curated", decision="approve", keyword="한국소설",
+        tags=["한국소설", "소설"], note="출판사에서 장편소설로 분류",
+    )
+    assert status == "INDEXED" and db.committed
+    params = db.statements[1].compile(dialect=postgresql.dialect()).params
+    assert params["keyword"] == "한국소설"
+    assert params["tags"] == ["한국소설", "소설"]
+    assert params["recommendation_status"] == "ACTIVE"
+    assert job.progress["review_note"] == "출판사에서 장편소설로 분류"
+
+
+@pytest.mark.asyncio
+async def test_review_hold_never_inserts_corpus_row():
+    job = SimpleNamespace(id="curated", isbn="9780000000002", source="CURATED_SEED",
+                          status="REVIEW_PENDING", reject_reason=None, updated_at=None,
+                          payload={"book": {}}, progress={"proposed_keyword": "동화"})
+
+    class HoldSession:
+        def __init__(self):
+            self.committed = False
+
+        async def get(self, model, job_id, **kwargs):
+            return job
+
+        async def execute(self, statement):
+            raise AssertionError("A held book must not be inserted")
+
+        async def commit(self):
+            self.committed = True
+
+    db = HoldSession()
+    status = await corpus_ingestion.review_curated_job(db, "curated", decision="hold", note="분류 근거 부족")
+    assert status == "HOLD" and db.committed
+    assert job.reject_reason == "CURATED_REVIEW_HOLD"
+
+
+@pytest.mark.asyncio
+async def test_review_rejects_override_without_matching_tag_or_note():
+    job = SimpleNamespace(
+        id="curated", isbn="9780000000002", source="CURATED_SEED", status="REVIEW_PENDING",
+        payload={"book": {}}, progress={"proposed_keyword": "소설", "proposed_tags": ["소설"]},
+    )
+
+    class ReviewSession:
+        async def get(self, model, job_id, **kwargs):
+            return job
+
+        async def execute(self, statement):
+            raise AssertionError("Invalid approval must not query or insert the corpus")
+
+        async def commit(self):
+            raise AssertionError("Invalid approval must not commit")
+
+    with pytest.raises(ValueError, match="invalid"):
+        await corpus_ingestion.review_curated_job(
+            ReviewSession(), "curated", decision="approve", keyword="SF", tags=["소설"], note="근거",
+        )
+    with pytest.raises(ValueError, match="requires a review note"):
+        await corpus_ingestion.review_curated_job(
+            ReviewSession(), "curated", decision="approve", keyword="SF", tags=["SF", "소설"],
+        )
+
+
+@pytest.mark.asyncio
 async def test_pilot_batch_stops_after_five_new_books(monkeypatch):
     job = SimpleNamespace(
         id="pilot", payload={"keywords": ["pilot"], "max_pages_per_term": 1, "max_new_books": 5},
