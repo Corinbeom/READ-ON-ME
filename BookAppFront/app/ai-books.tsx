@@ -206,6 +206,7 @@ export default function AiBookSelectionScreen() {
   const openDetail = (isbn: string) => router.push(`/book/${isbn}`);
   const books = job?.status === 'SUCCEEDED' ? (job.results ?? []).slice(0, 5) : [];
   const compareBooks = books.filter((book) => selectedIsbns.includes(book.isbn));
+  const hasFallback = job?.result_outcome === 'FALLBACK' || books.some((book) => book.ranking_status === 'FALLBACK');
   const chosenBook = books.find((book) => book.isbn === chosenIsbn);
   const showCompareAction = job?.status === 'SUCCEEDED' && step === 'results' && selectedIsbns.length === 2;
 
@@ -330,7 +331,9 @@ export default function AiBookSelectionScreen() {
             <View style={styles.stageMascot}><BookmarkMascot state="comparing" size={128} /></View>
             <Text style={styles.eyebrow}>COMPARE TWO BOOKS</Text>
             <Text style={styles.title}>두 권을 살펴볼까요?</Text>
-            <Text style={styles.description}>추천 이유와 책 소개의 근거를 차례로 확인해 보세요. 마음이 가는 한 권을 직접 고를 수 있어요.</Text>
+            <Text style={styles.description}>{hasFallback
+              ? '두 권의 제목과 저자를 살펴보고, 책 상세에서 소개를 확인해 보세요. 마음이 가는 한 권을 고를 수 있어요.'
+              : '추천 이유와 책 소개의 근거를 차례로 확인해 보세요. 마음이 가는 한 권을 직접 고를 수 있어요.'}</Text>
             {compareBooks.map((book, index) => (
               <AiBookChoiceCard key={`${book.isbn}-${index}`} book={book} position={index + 1} showEvidence onDetails={() => openDetail(book.isbn)} onChoose={() => chooseBook(book.isbn)} />
             ))}
@@ -345,14 +348,19 @@ export default function AiBookSelectionScreen() {
                 <Text style={styles.title}>한 권을 골라요</Text>
               </View>
             </View>
-            <Text style={styles.description}>두 권을 고르면 추천 이유를 비교할 수 있어요. 바로 한 권을 결정해도 좋아요.</Text>
+            <Text style={styles.description}>{hasFallback
+              ? '책을 살펴보고 마음에 드는 한 권을 골라보세요.'
+              : '두 권을 고르면 추천 이유를 비교할 수 있어요. 바로 한 권을 결정해도 좋아요.'}</Text>
             <View style={styles.queryBox}><Text style={styles.queryLabel}>찾은 조건</Text><Text style={styles.queryText} numberOfLines={2}>{job.query}</Text></View>
-            {job.result_outcome === 'FALLBACK' || books.some((book) => book.ranking_status === 'FALLBACK') ? (
-              <Text style={styles.helperText}>{job.result_basis === 'SHARED_THEMES'
-                ? 'AI 재정렬이 어려워 기준 작가의 작품과 공통 주제가 확인된 책을 골랐어요.'
-                : 'AI 재정렬이 어려워 검색 결과를 기준으로 책을 골랐어요.'}</Text>
+            {hasFallback ? (
+              <View style={styles.fallbackNotice} accessibilityRole="summary">
+                <Text style={styles.fallbackTitle}>AI 추천 이유를 지금은 보여드릴 수 없어요</Text>
+                <Text style={styles.fallbackText}>{job.result_basis === 'SHARED_THEMES'
+                  ? '기준 작가와 공통 주제가 있는 책이에요. 상세에서 소개를 확인해 주세요.'
+                  : '조건에 맞는 책을 찾았어요. 상세에서 소개를 확인해 주세요.'}</Text>
+              </View>
             ) : null}
-            <Text style={styles.countText}>추천 후보 {books.length}권</Text>
+            <Text style={styles.countText}>{hasFallback ? '찾은 책' : '추천 후보'} {books.length}권</Text>
             {books.map((book, index) => (
               <AiBookChoiceCard
                 key={`${book.isbn}-${index}`}
@@ -410,6 +418,9 @@ const getStyles = (theme: 'light' | 'dark') => {
     exampleText: { color: c.inkSoft, fontFamily: 'Pretendard-SemiBold', fontSize: 11 },
     errorText: { alignSelf: 'stretch', color: c.danger, fontFamily: 'NotoSerifKR-Regular', fontSize: 12, lineHeight: 18, marginBottom: 12 },
     helperText: { alignSelf: 'stretch', color: c.inkSoft, fontFamily: 'Pretendard-SemiBold', fontSize: 11, lineHeight: 18, marginTop: 16, marginBottom: 14 },
+    fallbackNotice: { alignSelf: 'stretch', backgroundColor: c.surface2, borderLeftWidth: 2, borderLeftColor: c.inkSoft, paddingHorizontal: 12, paddingVertical: 11, marginBottom: 18 },
+    fallbackTitle: { color: c.text, fontFamily: 'Pretendard-SemiBold', fontSize: 12, lineHeight: 18 },
+    fallbackText: { color: c.inkSoft, fontFamily: 'NotoSerifKR-Regular', fontSize: 11, lineHeight: 17, marginTop: 5 },
     queryBox: { alignSelf: 'stretch', borderLeftWidth: 2, borderLeftColor: c.text, paddingLeft: 12, paddingVertical: 4, marginBottom: 22 },
     queryLabel: { color: c.inkSoft, fontFamily: 'Pretendard-SemiBold', fontSize: 10, marginBottom: 6 },
     queryText: { color: c.text, fontFamily: 'NotoSerifKR-Regular', fontSize: 13, lineHeight: 20 },

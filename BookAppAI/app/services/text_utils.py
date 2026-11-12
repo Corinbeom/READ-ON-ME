@@ -232,6 +232,9 @@ MULTI_BOOK_SET_TITLE = re.compile(r"(?<!마인드)세트|(?:전|총)\s*\d+\s*권
 SCHOOL_ANTHOLOGY_TITLE = re.compile(r"단편소설\s*\d+|중장편소설\s*베스트|선집|모음집|앤솔로지", re.IGNORECASE)
 SCHOOL_ANTHOLOGY_CONTEXT = re.compile(r"중고생|학교\s*현장|문학\s*교과서|문학\s*필독서|수업용", re.IGNORECASE)
 SCHOOL_ANTHOLOGY_FORM = re.compile(r"모음집|선집|작품.{0,12}수록|작품.{0,12}엮", re.IGNORECASE)
+SCHOOL_ANTHOLOGY_REQUEST_TERMS = (
+    "선집", "모음집", "앤솔로지", "중고생", "청소년", "10대", "중학생", "고등학생", "필독서", "교과서",
+)
 NEW_FICTION_OR_POETRY = re.compile(
     r"(?:첫|신작|새로운|[두세네다섯여섯일곱여덟아홉열0-9]+\s*번째).{0,8}"
     r"(?:장편소설|단편소설|소설집|시집)",
@@ -297,6 +300,10 @@ def is_school_anthology(book: dict) -> bool:
         SCHOOL_ANTHOLOGY_CONTEXT.search(f"{title} {intro}")
         and (SCHOOL_ANTHOLOGY_TITLE.search(title) or SCHOOL_ANTHOLOGY_FORM.search(intro))
     )
+
+
+def requests_school_anthology(query: str) -> bool:
+    return any(term in query for term in SCHOOL_ANTHOLOGY_REQUEST_TERMS) or bool(SCHOOL_ANTHOLOGY_TITLE.search(query))
 
 
 def _has_any(text: str, terms: tuple[str, ...]) -> bool:

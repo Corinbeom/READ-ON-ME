@@ -12,7 +12,10 @@ from typing import Any, Dict, List, Optional
 import httpx
 
 from app.services import llm_cooldown
-from app.services.text_utils import has_fiction_evidence, infer_book_form, is_search_candidate
+from app.services.text_utils import (
+    has_fiction_evidence, infer_book_form, is_school_anthology,
+    is_search_candidate, requests_school_anthology,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +210,8 @@ async def rerank_with_gemini(
                 and is_search_candidate(book, genre=genre, requested_form="STORY")
             )
         ]
+    if genre == "소설" and not requests_school_anthology(query):
+        fallback_candidates = [book for book in fallback_candidates if not is_school_anthology(book)]
     if general_intro:
         # Keep the original top-five boundary: rejected training books must not
         # be replaced by lower-ranked candidates merely to fill five slots.

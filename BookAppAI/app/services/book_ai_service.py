@@ -22,7 +22,7 @@ from app.services.prompt_templates import PromptTemplateBuilder
 from app.services.reference_search import find_reference_anchor, has_theme_evidence, is_verified_similar_fallback
 from app.services.reranker import rerank_with_gemini
 from app.services.search_retrieval import retrieve_candidates
-from app.services.text_utils import is_school_anthology, is_search_candidate
+from app.services.text_utils import is_school_anthology, is_search_candidate, requests_school_anthology
 from app.services.embedding_backend import provider as embedding_provider, gemini_embed
 
 # --- Configuration ---
@@ -155,14 +155,9 @@ def _deduplicate_results(results: list) -> list:
     return sorted(seen.values(), key=lambda row: (-(row.get("retrieval_score") or 0), row.get("isbn") or ""))
 
 
-_ANTHOLOGY_REQUEST_TERMS = ("선집", "모음집", "앤솔로지", "중고생", "필독서", "교과서")
-
-
 def _prefer_general_novels(books: list[dict], intent) -> list[dict]:
     """Keep school anthologies available, but rank other novels first for broad requests."""
-    if intent.query_type != "general" or intent.genre != "소설" or any(
-        term in intent.raw_query for term in _ANTHOLOGY_REQUEST_TERMS
-    ):
+    if intent.query_type != "general" or intent.genre != "소설" or requests_school_anthology(intent.raw_query):
         return books
     return sorted(books, key=is_school_anthology)
 

@@ -97,6 +97,57 @@ def test_general_novel_search_prefers_regular_books_without_removing_school_anth
     ]
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("provider_status", [200, 503])
+async def test_general_novel_search_keeps_school_anthology_out_of_fallback(monkeypatch, provider_status):
+    original_client = httpx.AsyncClient
+    school = {"isbn": "school", **_book(
+        "한국단편소설 40", "한국 단편 소설을 수록한 중고생 문학 필독서로, 작품마다 주인공의 삶을 그립니다.", "소설", ["소설"],
+    )}
+    novel = {"isbn": "novel", **_book(
+        "밝은 밤", "가족의 기억과 관계를 그린 장편소설입니다.", "소설", ["소설"],
+    )}
+
+    def respond(request):
+        if provider_status == 503:
+            return httpx.Response(503)
+        selection = [{"isbn": "novel", "reason": "가족의 기억과 관계를 그린 이야기입니다.",
+                      "evidence_quote": "가족의 기억과 관계를 그린 장편소설입니다."}]
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{
+            "text": json.dumps(selection, ensure_ascii=False),
+        }]}}]})
+
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original_client(
+        transport=httpx.MockTransport(respond), timeout=kwargs.get("timeout"),
+    ))
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", "test-key")
+    outcome = {}
+    result = await reranker.rerank_with_gemini(
+        "한국소설 추천해줘", [school, novel], "STORY", genre="소설", outcome=outcome,
+    )
+    assert [book["isbn"] for book in result] == ["novel"]
+    assert outcome["status"] == ("MODEL" if provider_status == 200 else "FALLBACK")
+    assert bool(result[0].get("reason")) is (provider_status == 200)
+
+
+@pytest.mark.asyncio
+async def test_school_anthology_fallback_requires_explicit_request(monkeypatch):
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    school = {"isbn": "school", **_book(
+        "한국단편소설 40", "한국 단편 소설을 수록한 중고생 문학 필독서로, 작품마다 주인공의 삶을 그립니다.", "소설", ["소설"],
+    )}
+    broad_outcome = {}
+    assert await reranker.rerank_with_gemini(
+        "한국소설 추천해줘", [school], "STORY", genre="소설", outcome=broad_outcome,
+    ) == []
+    assert broad_outcome == {"status": "DEGRADED_EMPTY", "reason_code": "NO_API_KEY"}
+    for query in ("중고생 소설 선집 추천", "청소년 소설 추천", "한국단편소설 40 추천"):
+        explicit = await reranker.rerank_with_gemini(
+            query, [school], "STORY", genre="소설",
+        )
+        assert [book["isbn"] for book in explicit] == ["school"]
+
+
 def test_narrow_genre_model_input_includes_reviewed_exact_matches_without_changing_fallback_order():
     ranked = [{"isbn": str(index), "source": "LEGACY"} for index in range(12)]
     reviewed = {

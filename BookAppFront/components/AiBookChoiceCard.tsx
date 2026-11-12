@@ -70,7 +70,9 @@ export default function AiBookChoiceCard({
               <Text style={styles.reasonLabel}>추천 이유</Text>
               <Text style={styles.reason}>{reason}</Text>
             </View>
-          ) : <Text style={styles.noReason}>추천 이유를 확인할 수 없어요. 책 소개를 살펴보고 골라주세요.</Text>}
+          ) : <Text style={styles.noReason}>{book.ranking_status === 'FALLBACK'
+            ? 'AI 추천 이유는 제공되지 않아요. 책 상세에서 소개를 확인해 주세요.'
+            : '확인 가능한 추천 이유가 없어요. 책 상세에서 소개를 확인해 주세요.'}</Text>}
         </View>
       </View>
       {showEvidence && reason ? (
