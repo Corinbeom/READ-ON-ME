@@ -46,6 +46,9 @@ async def run(url: str, cases: list[dict], limit: int, delay: float, output: Pat
             records.append({
                 "request_id": request_id,
                 "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+                "search_outcome": response.headers.get("X-Search-Outcome"),
+                "search_reason": response.headers.get("X-Search-Reason"),
+                "search_basis": response.headers.get("X-Search-Basis"),
                 "query": case["query"],
                 "expected": {key: value for key, value in case.items() if key != "query"},
                 "returned": len(books),
