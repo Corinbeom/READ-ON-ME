@@ -33,6 +33,7 @@ SCHOOL_CURRICULUM_TERMS = (
     "고교학점제", "학교 수업용",
 )
 VERIFIED_STORY_GENRES = {"SF", "판타지", "로맨스", "스릴러", "미스터리", "디스토피아"}
+REVIEWED_GENRE_KEYS = {genre.casefold() for genre in VERIFIED_STORY_GENRES}
 
 SELECTION_SCHEMA = {
     "type": "ARRAY",
@@ -94,6 +95,38 @@ def _is_training_book(book: Dict[str, Any], allow_school_curriculum: bool = Fals
     )
     school_curriculum = any(term in description[:500] for term in SCHOOL_CURRICULUM_TERMS)
     return (has_exercises and targets_trainees) or academic_manual or (school_curriculum and not allow_school_curriculum)
+
+
+def _reviewed_genre_match(book: Dict[str, Any], genre: str) -> bool:
+    if (book.get("source") != "CURATED_SEED"
+            or book.get("recommendation_status") != "ACTIVE"
+            or not str(book.get("classification_version") or "").endswith(":reviewed")):
+        return False
+    labels = [book.get("keyword"), *(book.get("tags") if isinstance(book.get("tags"), list) else [])]
+    return genre.casefold() in {label.casefold() for label in labels if isinstance(label, str)}
+
+
+def _select_model_input(candidates: List[Dict[str, Any]], genre: str | None) -> List[Dict[str, Any]]:
+    top = candidates[:RERANK_CANDIDATE_LIMIT]
+    if not genre or genre.casefold() not in REVIEWED_GENRE_KEYS or len(top) < RERANK_CANDIDATE_LIMIT:
+        return top
+    reviewed = [book for book in candidates if _reviewed_genre_match(book, genre)]
+    if not reviewed:
+        return top
+    selected = top[:RERANK_CANDIDATE_LIMIT - 2]
+    selected_isbns = {book.get("isbn") for book in selected}
+    for book in reviewed:
+        if len(selected) >= RERANK_CANDIDATE_LIMIT or book.get("isbn") in selected_isbns:
+            continue
+        selected.append(book)
+        selected_isbns.add(book.get("isbn"))
+    for book in top[RERANK_CANDIDATE_LIMIT - 2:]:
+        if len(selected) >= RERANK_CANDIDATE_LIMIT:
+            break
+        if book.get("isbn") not in selected_isbns:
+            selected.append(book)
+            selected_isbns.add(book.get("isbn"))
+    return selected
 
 
 def _parse_selection(
@@ -213,7 +246,7 @@ async def rerank_with_gemini(
             outcome.update(status="NO_MATCH", reason_code="NO_ELIGIBLE_CANDIDATES")
         logger.info("Reranker skipped request_id=%s reason=NO_ELIGIBLE_CANDIDATES", trace_id)
         return []
-    top = model_candidates[:RERANK_CANDIDATE_LIMIT]
+    top = _select_model_input(model_candidates, genre)
     if diagnostics is not None:
         diagnostics["model_input_isbns"] = [book["isbn"] for book in top]
     evidence_by_isbn = {str(book["isbn"]): _book_evidence(book) for book in top if book.get("isbn")}

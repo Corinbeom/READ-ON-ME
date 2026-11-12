@@ -97,6 +97,27 @@ def test_general_novel_search_prefers_regular_books_without_removing_school_anth
     ]
 
 
+def test_narrow_genre_model_input_includes_reviewed_exact_matches_without_changing_fallback_order():
+    ranked = [{"isbn": str(index), "source": "LEGACY"} for index in range(12)]
+    reviewed = {
+        "isbn": "reviewed", "source": "CURATED_SEED", "recommendation_status": "ACTIVE",
+        "classification_version": "model:reviewed", "keyword": "SF", "tags": ["SF", "소설"],
+    }
+    candidates = [*ranked, reviewed]
+    top = reranker._select_model_input(candidates, "SF")
+    assert len(top) == 10
+    assert [book["isbn"] for book in top[:8]] == [str(index) for index in range(8)]
+    assert [book["isbn"] for book in top[8:]] == ["reviewed", "8"]
+    assert "reviewed" in {book["isbn"] for book in reranker._select_model_input(candidates, "sf")}
+    assert [book["isbn"] for book in candidates[:5]] == [str(index) for index in range(5)]
+    assert [book["isbn"] for book in reranker._select_model_input(candidates, "소설")] == [
+        str(index) for index in range(10)
+    ]
+    assert [book["isbn"] for book in reranker._select_model_input(
+        [*ranked, {**reviewed, "classification_version": "model"}], "SF",
+    )] == [str(index) for index in range(10)]
+
+
 def test_recommendations_exclude_multi_book_sets_without_rejecting_single_books():
     description = "서로 다른 인물들이 성장하며 따뜻한 관계를 만들어 가는 이야기입니다."
     assert not is_search_candidate(_book("어린이 자기계발 동화 시리즈 세트(전30권)", description, "문학", ["동화"]))

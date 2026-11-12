@@ -10,6 +10,7 @@ from app.services.intent_classifier import IntentMetadata
 
 VECTOR_LIMIT = 30
 KEYWORD_LIMIT = 20
+REVIEWED_GENRE_LIMIT = 5
 AUTHOR_LIMIT = 50
 TITLE_LIMIT = 20
 MIN_SIMILARITY = 0.4
@@ -22,13 +23,14 @@ TITLE_GENRE_TERMS = {
     "디스토피아": ("디스토피아",),
 }
 
-_COLUMNS = "id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags"
+_COLUMNS = "id, title, contents, isbn, authors, publisher, thumbnail, keyword, tags, source, classification_version, recommendation_status"
 
 
 @dataclass
 class RetrievalCounts:
     vector: int = 0
     keyword: int = 0
+    reviewed_genre: int = 0
     author: int = 0
     title: int = 0
     merged: int = 0
@@ -83,6 +85,7 @@ async def retrieve_candidates(
         excluded_pattern = f"%{compact}%"
     vector_rows: list[dict[str, Any]] = []
     keyword_rows: list[dict[str, Any]] = []
+    reviewed_genre_rows: list[dict[str, Any]] = []
     title_rows: list[dict[str, Any]] = []
     if not direct_author:
         vector_sql = text(f"""
@@ -121,6 +124,32 @@ async def retrieve_candidates(
             keyword_rows = [dict(row) for row in (await db.execute(
                 keyword_sql, keyword_params,
             )).mappings()]
+        if (intent.genre or "").casefold() in {"sf", "판타지", "로맨스", "스릴러", "미스터리", "디스토피아"}:
+            reviewed_sql = text(f"""
+                SELECT {_COLUMNS}, 1 - (embedding <=> :embedding) AS similarity
+                FROM book_corpus
+                WHERE recommendation_status = 'ACTIVE'
+                  AND source = 'CURATED_SEED'
+                  AND classification_version LIKE :review_suffix
+                  AND (lower(keyword) = :genre
+                   OR EXISTS (
+                       SELECT 1 FROM jsonb_array_elements_text(tags) AS tag(value)
+                       WHERE lower(tag.value) = :genre
+                   ))
+                  {f'AND {exclusion}' if excluded_pattern else ''}
+                ORDER BY similarity DESC
+                LIMIT :limit
+            """)
+            reviewed_params = {
+                "embedding": embedding_value, "genre": intent.genre.casefold(),
+                "review_suffix": "%:reviewed", "limit": REVIEWED_GENRE_LIMIT,
+            }
+            if excluded_pattern:
+                reviewed_params["excluded_author"] = excluded_pattern
+            reviewed_genre_rows = [dict(row) for row in (await db.execute(
+                reviewed_sql, reviewed_params,
+            )).mappings()]
+            counts.reviewed_genre = len(reviewed_genre_rows)
         title_terms = TITLE_GENRE_TERMS.get((intent.genre or "").casefold())
         if title_terms:
             title_condition = " OR ".join(f"title ILIKE :title_{index}" for index in range(len(title_terms)))
@@ -161,7 +190,7 @@ async def retrieve_candidates(
         author_rows = [row for row in author_rows if _author_matches(row.get("authors"), intent.focus_author)]
     counts.author = len(author_rows)
 
-    lanes = [author_rows] if direct_author else [vector_rows, keyword_rows]
+    lanes = [author_rows] if direct_author else [vector_rows, keyword_rows, reviewed_genre_rows]
     merged = _merge_and_score(lanes, keywords, 0.0 if direct_author else MIN_SIMILARITY)
     if title_rows:
         by_isbn = {book["isbn"]: book for book in merged}

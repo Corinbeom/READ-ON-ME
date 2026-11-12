@@ -98,6 +98,7 @@ uvicorn app.main:app --reload --port 8000
 - 검색·필터·Gemini 입력·최종 선택의 `ACTIVE`/`LEGACY` 비율과 이유 누락 원인은 [단계별 검색 점검](BookAppAI/evaluation/search_stage_audit_2026-11-12.md)에 있습니다.
 - 출처가 확인된 ISBN을 관리자 검토 후 소량 편입한 결과와 실제 검색 노출 한계는 [ISBN 편입 파일럿](BookAppAI/evaluation/curated_corpus_pilot_2026-11-12.md)에 있습니다.
 - AI 분류 이후 승인 전 대기·보류·태그 교정의 실기동 검증은 [관리자 검토 게이트 기록](BookAppAI/evaluation/curated_review_gate_2026-11-12.md)에 있습니다.
+- 검토 승인한 장르 도서가 검색 후보에 들어오도록 한 조정과 실제 추천 결과는 [승인 도서 검색 검증](BookAppAI/evaluation/reviewed_genre_retrieval_2026-11-12.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용). 본문은 책 배열이며 `X-Search-Outcome`, `X-Search-Reason`, `X-Search-Basis` 헤더로 결과 상태를 전달합니다.
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)

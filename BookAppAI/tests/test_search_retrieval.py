@@ -74,3 +74,37 @@ async def test_explicit_genre_title_rescues_low_similarity_book():
     assert [book["isbn"] for book in candidates] == ["real-romance"]
     assert candidates[0]["retrieval_score"] >= 0.55
     assert counts.title == 1
+
+
+@pytest.mark.asyncio
+async def test_reviewed_exact_genre_is_retrieved_beyond_crowded_keyword_lane():
+    class FakeResult:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def mappings(self):
+            return self.rows
+
+    reviewed = {
+        **_row("reviewed-sf", 0.49, keyword="SF"),
+        "source": "CURATED_SEED", "classification_version": "model:reviewed",
+        "recommendation_status": "ACTIVE",
+    }
+
+    class FakeDB:
+        async def execute(self, statement, params):
+            sql = str(statement)
+            if "classification_version LIKE" in sql:
+                assert params["genre"] == "sf"
+                assert params["review_suffix"] == "%:reviewed"
+                assert params["limit"] == 5
+                return FakeResult([reviewed])
+            if "title ILIKE" in sql:
+                return FakeResult([])
+            return FakeResult([_row(f"legacy-{n}", 0.7, keyword="SF") for n in range(20)])
+
+    intent = IntentMetadata(raw_query="SF 소설 추천", genre="SF", requested_form="STORY")
+    candidates, counts = await retrieve_candidates(FakeDB(), [0.1], intent, ["SF"])
+
+    assert "reviewed-sf" in {book["isbn"] for book in candidates}
+    assert counts.reviewed_genre == 1
