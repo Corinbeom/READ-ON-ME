@@ -101,7 +101,7 @@ Gemini 임베딩 모드에서는 `pip install -r requirements.txt`로 로컬 모
 - 출처가 확인된 ISBN을 관리자 검토 후 소량 편입한 결과와 실제 검색 노출 한계는 [ISBN 편입 파일럿](BookAppAI/evaluation/curated_corpus_pilot_2026-11-12.md)에 있습니다.
 - AI 분류 이후 승인 전 대기·보류·태그 교정의 실기동 검증은 [관리자 검토 게이트 기록](BookAppAI/evaluation/curated_review_gate_2026-11-12.md)에 있습니다.
 - 검토 승인한 장르 도서가 검색 후보에 들어오도록 한 조정과 실제 추천 결과는 [승인 도서 검색 검증](BookAppAI/evaluation/reviewed_genre_retrieval_2026-11-12.md)에 있습니다.
-- 기존 임베딩과 Gemini API를 같은 179권·10개 질의에서 비교한 결과는 [Gemini 임베딩 파일럿](BookAppAI/evaluation/gemini_embedding_pilot_2026-11-12.md)에, 달라진 후보 60건의 수동 판정은 [후속 적합도 평가](BookAppAI/evaluation/gemini_embedding_relevance_review_2026-11-12.md)에 있습니다. 운영 임베딩은 변경하지 않았습니다.
+- 기존 임베딩과 Gemini API를 같은 179권·10개 질의에서 비교한 결과는 [Gemini 임베딩 파일럿](BookAppAI/evaluation/gemini_embedding_pilot_2026-11-12.md)에, 달라진 후보 60건의 수동 판정은 [후속 적합도 평가](BookAppAI/evaluation/gemini_embedding_relevance_review_2026-11-12.md)에 있습니다. 파일럿 이후 Gemini 전용 벡터 열과 전환 절차를 구현했으며, 실제 제공자는 `EMBEDDING_PROVIDER` 설정으로 선택합니다.
 - 후보의 장르·형식·한국소설 조건을 보완한 뒤 같은 표본으로 다시 비교한 결과와 남은 국적 메타데이터 문제는 [후보 선별 및 임베딩 A/B 평가](BookAppAI/evaluation/search_candidate_constraints_ab_2026-11-12.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용). 본문은 책 배열이며 `X-Search-Outcome`, `X-Search-Reason`, `X-Search-Basis` 헤더로 결과 상태를 전달합니다.
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
