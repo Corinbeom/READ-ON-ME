@@ -35,6 +35,38 @@ def test_batch_book_uniqueness_is_scoped_to_run():
     assert "source = 'KAKAO_BATCH'" in indexes['uq_corpus_batch_book_run']
     assert '(isbn)' in indexes['uq_corpus_user_book_isbn']
     assert "source = 'USER_LIBRARY'" in indexes['uq_corpus_user_book_isbn']
+    assert '(isbn)' in indexes['uq_corpus_curated_book_isbn']
+    assert "source = 'CURATED_SEED'" in indexes['uq_corpus_curated_book_isbn']
+
+
+@pytest.mark.asyncio
+async def test_curated_intake_records_provenance_and_separate_source():
+    job = SimpleNamespace(id="curated-job", status="PENDING", payload={})
+
+    class CuratedSession:
+        def __init__(self):
+            self.statements = []
+
+        async def execute(self, statement):
+            self.statements.append(statement)
+            count = len(self.statements)
+            value = "curated-job" if count == 2 else job if count == 3 else None
+            return SimpleNamespace(scalar_one_or_none=lambda: value, scalar_one=lambda: value)
+
+        async def commit(self):
+            pass
+
+    db = CuratedSession()
+    source = {"discovery_source": "PUBLISHER_CATALOG", "source_url": "https://example.org/book"}
+    status, returned = await corpus_ingestion.enqueue_book(
+        db, {"isbn": "9780000000002", "title": "별의 소설", "authors": ["작가"],
+             "contents": "어느 작은 행성의 이야기를 담은 소설입니다."},
+        source="CURATED_SEED", provenance=source,
+    )
+    assert status == "QUEUED" and returned is job
+    insert_params = db.statements[1].compile(dialect=postgresql.dialect()).params
+    assert insert_params["source"] == "CURATED_SEED"
+    assert insert_params["payload"]["provenance"] == source
 
 
 @pytest.mark.asyncio

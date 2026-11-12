@@ -98,6 +98,7 @@ async def enqueue_book(
     db: AsyncSession, book: dict[str, Any], *, source: str, run_id: str | None = None,
     discovery_keyword: str | None = None, commit: bool = True,
     known_corpus_isbns: set[str] | None = None,
+    provenance: dict[str, Any] | None = None,
 ) -> tuple[str, CorpusIngestionJob | None]:
     if source == "KAKAO_BATCH" and not run_id:
         raise ValueError("Kakao batch candidates require a run ID")
@@ -113,6 +114,10 @@ async def enqueue_book(
     book = {**book, "isbn": isbn}
     book["authors"] = format_authors(book.get("authors"))
     payload = {"book": book, "discovery_keywords": [discovery_keyword] if discovery_keyword else []}
+    if source == "CURATED_SEED":
+        if not provenance or not provenance.get("discovery_source"):
+            raise ValueError("Curated candidates require discovery provenance")
+        payload["provenance"] = provenance
     job_id = str(uuid.uuid4())
     created = (await db.execute(
         insert(CorpusIngestionJob).values(
@@ -137,18 +142,19 @@ async def enqueue_book(
         new_topic = bool(discovery_keyword and discovery_keyword not in old_keywords)
         requeued = job.status in {"FAILED", "HOLD", "REJECTED"} and (
             better_description or source == "USER_LIBRARY"
+            or (source == "CURATED_SEED" and better_description)
             or (job.reject_reason == "LOW_TOPIC_SIMILARITY" and new_topic)
         )
         merged_book = _merge_book_metadata(old_book, book, prefer_new=source == "USER_LIBRARY")
         if requeued:
-            job.payload = {"book": merged_book, "discovery_keywords": keywords}
+            job.payload = {**old_payload, **payload, "book": merged_book, "discovery_keywords": keywords}
             job.status = "PENDING"
             job.attempts = 0
             job.error_code = None
             job.reject_reason = None
             job.next_attempt_at = _now()
         elif job.status in {"PENDING", "RETRY"} and (better_description or merged_book != old_book or keywords != old_keywords):
-            job.payload = {**old_payload, "book": merged_book, "discovery_keywords": keywords}
+            job.payload = {**old_payload, **payload, "book": merged_book, "discovery_keywords": keywords}
         elif keywords != old_keywords:
             job.payload = {**old_payload, "discovery_keywords": keywords}
     if commit:

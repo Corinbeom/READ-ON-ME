@@ -9,7 +9,7 @@ class CorpusIngestionJob(Base):
 
     id = Column(String(36), primary_key=True)
     job_type = Column(String(10), nullable=False)  # BATCH | BOOK
-    source = Column(String(20), nullable=False)  # KAKAO_BATCH | USER_LIBRARY
+    source = Column(String(20), nullable=False)  # KAKAO_BATCH | USER_LIBRARY | CURATED_SEED
     isbn = Column(String(20), nullable=True)
     run_id = Column(String(36), ForeignKey("corpus_ingestion_jobs.id"), nullable=True)
     status = Column(String(20), nullable=False, default="PENDING")
@@ -28,4 +28,6 @@ class CorpusIngestionJob(Base):
               postgresql_where=(job_type == "BOOK") & (source == "KAKAO_BATCH")),
         Index("uq_corpus_user_book_isbn", "isbn", unique=True,
               postgresql_where=(job_type == "BOOK") & (source == "USER_LIBRARY")),
+        Index("uq_corpus_curated_book_isbn", "isbn", unique=True,
+              postgresql_where=(job_type == "BOOK") & (source == "CURATED_SEED")),
     )

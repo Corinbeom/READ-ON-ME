@@ -96,11 +96,13 @@ uvicorn app.main:app --reload --port 8000
 - 결과 상태를 함께 수집한 최신 12개 질의 재점검과 다른 작가 유사 검색 결과는 [추천 품질 재점검](BookAppAI/evaluation/search_quality_recheck_2026-11-12.md)에 있습니다.
 - 추천 이유 누락의 재현 원인과 `LEGACY` 코퍼스 의존도는 [추천 품질 심층 점검](BookAppAI/evaluation/recommendation_depth_audit_2026-11-12.md)에 있습니다.
 - 검색·필터·Gemini 입력·최종 선택의 `ACTIVE`/`LEGACY` 비율과 이유 누락 원인은 [단계별 검색 점검](BookAppAI/evaluation/search_stage_audit_2026-11-12.md)에 있습니다.
+- 출처가 확인된 ISBN을 관리자 검토 후 소량 편입한 결과와 실제 검색 노출 한계는 [ISBN 편입 파일럿](BookAppAI/evaluation/curated_corpus_pilot_2026-11-12.md)에 있습니다.
 - AI 검색: `POST /api/ai/search` (`X-Internal-Token` 필요, 개발 환경에서는 로컬 요청 허용). 본문은 책 배열이며 `X-Search-Outcome`, `X-Search-Reason`, `X-Search-Basis` 헤더로 결과 상태를 전달합니다.
 - DB 스키마: FastAPI 시작 시 Alembic이 마이그레이션을 적용합니다. 첫 실행에는 DB DDL 권한이 필요합니다.
 - 재태깅 대상 미리 보기: `python -m tools.queue_retag --limit 20` (`--apply`를 붙이면 큐에 등록)
 - 실패한 태깅 작업 재등록: API 키/오류를 해결하고 AI 서버를 재시작한 뒤 `python -m tools.queue_retag --retry-failed --limit 20`으로 확인하고 `--apply`를 붙입니다.
 - 검색 품질 샘플: `python -m tools.evaluate_search --url http://127.0.0.1:8000 --limit 5` (결과는 `/tmp/readonme-search-evaluation.json`). 요청 사이 기본 간격은 6초이며 결과에 요청 ID와 응답 시간이 기록됩니다. 알려진 오추천 사례는 `--cases evaluation/quality_cases.json --limit 5`로 확인합니다.
+- 관리자 ISBN 편입: `python -m tools.curated_corpus discover --kdc 8 --start-date 2026-01-01 --end-date 2026-10-31 --pages 1 3 5`는 정보나루 주제별 인기대출 목록에서 후보를 찾아 카카오 ISBN 정보와 대조한 뒤 `/tmp/readonme-curated-candidates.json`에 기록합니다. 정보나루 키가 없으면 `--isbn-file /tmp/candidates.json`으로 출처 URL과 ISBN이 담긴 목록을 검증할 수 있습니다. 목록을 읽은 뒤 `python -m tools.curated_corpus queue --manifest /tmp/readonme-curated-candidates.json --isbns <ISBN>`으로 미리 보고, 같은 명령에 `--apply`를 붙여 선택한 책만 기존 검수 큐에 접수합니다. `202`나 `QUEUED`는 편입 완료가 아니며 작업 상태가 `INDEXED`가 되어야 합니다.
 - 추천: `GET /recommendations/{userId}`
 
 ### 3. React Native 앱 (`BookAppFront`)
