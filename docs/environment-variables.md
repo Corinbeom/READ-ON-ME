@@ -10,6 +10,8 @@
 
 Gemini 태깅과 검색 재정렬의 기본 모델은 `gemini-3.5-flash-lite`입니다. 필요하면 AI 서비스의 `GEMINI_FAST_MODEL`, `GEMINI_DETAILED_MODEL`, `GEMINI_CLASSIFIER_MODEL`로 각각 변경할 수 있습니다. 모델을 바꾼 뒤에는 AI 서버를 재시작해야 합니다.
 
+`GROQ_API_KEY`는 선택 설정입니다. 설정하면 Gemini 추천 후보 재정렬이 429, 5xx, 연결 오류 또는 타임아웃으로 실패하거나 재정렬 쿨다운 중일 때 Groq을 한 번 호출합니다. 기본 모델은 `openai/gpt-oss-120b`이며 `GROQ_RERANK_MODEL`로 변경할 수 있지만 엄격한 JSON 스키마 출력 지원 모델이어야 합니다. `GROQ_RERANK_TIMEOUT_SECONDS` 기본값은 8초입니다. Groq 응답에도 ISBN·도서 소개 인용 검증을 적용하며, Groq도 실패하면 기존 규칙 기반 결과를 반환합니다. 두 제공자의 쿨다운은 별도이고 Groq 429 응답의 `Retry-After`는 최대 5분까지 반영합니다. Groq 인증·요청 형식 오류는 서버 재시작 전까지 다시 호출하지 않습니다. 성공 호출의 입력·출력 토큰 수는 모델별로 로그에 남깁니다. Groq 키가 없으면 호출하지 않습니다. Gemini가 정상적으로 빈 결과를 반환하거나 잘못된 요청(400)을 반환한 경우에는 Groq으로 전환하지 않습니다. Gemini 임베딩 오류는 재정렬 전에 발생하므로 이 설정으로 복구되지 않습니다.
+
 임베딩 제공자는 AI 서비스의 `EMBEDDING_PROVIDER`로 선택합니다. 기본값 `local`은 기존 SentenceTransformer와 `embedding` 열을 사용합니다. `gemini`는 `gemini-embedding-001`의 768차원 벡터를 `gemini_embedding` 열에 저장하고 검색합니다. `GEMINI_EMBEDDING_TIMEOUT_SECONDS`의 기본값은 5초입니다. Gemini 모드에서 임베딩 요청이 실패하면 검색은 `503`을 반환하고 도서 편입 작업은 기존 재시도 정책을 따릅니다. Docker 빌드 인자에도 같은 제공자를 전달하므로 Gemini 모드의 이미지에는 로컬 모델 패키지를 설치하지 않습니다. 제공자를 바꿀 때는 이미지를 다시 빌드해야 합니다.
 
 AI 코퍼스 수집의 `CORPUS_SIMILARITY_THRESHOLD` 기본값은 `0.45`입니다. 카카오 키워드 후보가 주제 프롬프트와 이 값보다 낮은 유사도를 보이면 Gemini 분류 전에 제외합니다. 사용자 서재에서 추가한 책에는 이 키워드 필터를 적용하지 않습니다. 데이터 수집은 서버 시작 시 자동 실행되지 않으며 내부 토큰으로 보호된 `POST /api/books/fetch-and-filter`를 호출해야 합니다.

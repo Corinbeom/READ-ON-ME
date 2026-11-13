@@ -67,6 +67,9 @@ services:
     environment:
       # 예: Gemini key, DB 접근 필요하면 Supabase 연결 등
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_RERANK_MODEL: ${GROQ_RERANK_MODEL:-openai/gpt-oss-120b}
+      GROQ_RERANK_TIMEOUT_SECONDS: ${GROQ_RERANK_TIMEOUT_SECONDS:-8}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
       GEMINI_EMBEDDING_TIMEOUT_SECONDS: ${GEMINI_EMBEDDING_TIMEOUT_SECONDS:-5}
       # AI worker는 async SQLAlchemy DSN 사용

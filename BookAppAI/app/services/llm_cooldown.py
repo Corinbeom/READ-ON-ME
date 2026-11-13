@@ -8,6 +8,34 @@ _blocked_until = 0.0
 _transient_failures = 0
 
 
+class ProviderCooldown:
+    """Keep an independent failure window for an optional LLM provider."""
+
+    def __init__(self) -> None:
+        self.blocked_until = 0.0
+        self.transient_failures = 0
+
+    def available(self) -> bool:
+        return time.monotonic() >= self.blocked_until
+
+    def rate_limited(self, retry_after: float | None = None) -> None:
+        delay = max(COOLDOWN_SECONDS, min(retry_after or 0, 300))
+        self.blocked_until = max(self.blocked_until, time.monotonic() + delay)
+
+    def transient_failure(self) -> None:
+        self.transient_failures += 1
+        if self.transient_failures >= TRANSIENT_FAILURE_THRESHOLD:
+            self.blocked_until = max(self.blocked_until, time.monotonic() + TRANSIENT_COOLDOWN_SECONDS)
+            self.transient_failures = 0
+
+    def succeeded(self) -> None:
+        self.transient_failures = 0
+
+    def disable(self) -> None:
+        """Stop retrying a configuration error until the process is restarted."""
+        self.blocked_until = float("inf")
+
+
 def available() -> bool:
     return time.monotonic() >= _blocked_until
 

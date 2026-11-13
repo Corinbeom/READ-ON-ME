@@ -32,7 +32,7 @@ export default function AiBookChoiceCard({
   const thumbnail = book.thumbnail?.trim();
   const title = book.title?.trim() || '제목 정보 없음';
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors?.trim();
-  const reason = book.ranking_status === 'GEMINI' && book.reason?.trim() && book.reason_evidence?.trim()
+  const reason = (book.ranking_status === 'GEMINI' || book.ranking_status === 'GROQ') && book.reason?.trim() && book.reason_evidence?.trim()
     ? book.reason.trim()
     : null;
 

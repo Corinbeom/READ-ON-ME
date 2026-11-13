@@ -88,7 +88,7 @@ export interface AiSearchBook {
   thumbnail?: string | null;
   reason?: string | null;
   reason_evidence?: string | null;
-  ranking_status?: 'GEMINI' | 'FALLBACK';
+  ranking_status?: 'GEMINI' | 'GROQ' | 'FALLBACK';
 }
 
 export interface AiSearchJob {
