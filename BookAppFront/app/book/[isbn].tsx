@@ -1,3 +1,4 @@
+import { secureImageUri } from '@/src/utils/imageUri';
 
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +12,6 @@ import {
   TextInput,
   FlatList,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -190,7 +190,7 @@ export default function BookDetailScreen() {
   };
 
   const handleDeleteReview = (reviewId: number) => {
-    Alert.alert('리뷰 삭제', '정말로 삭제하시겠습니까?', [
+    customAlert('리뷰 삭제', '정말로 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       {
         text: '삭제',
@@ -213,7 +213,7 @@ export default function BookDetailScreen() {
 
   const handleReviewLongPress = (review: Review) => {
     if (!isAuthenticated || !user || review.authorId !== user.id) return;
-    Alert.alert('리뷰 관리', '선택한 리뷰를 수정하거나 삭제할 수 있습니다.', [
+    customAlert('리뷰 관리', '선택한 리뷰를 수정하거나 삭제할 수 있습니다.', [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => handleDeleteReview(review.id) },
       { text: '수정', onPress: () => handleStartEditingReview(review) },
@@ -271,7 +271,7 @@ export default function BookDetailScreen() {
             {/* ── Cover ── */}
             <View style={styles.coverSection}>
               {book?.thumbnail ? (
-                <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" />
+                <Image source={{ uri: secureImageUri(book.thumbnail) }} style={styles.cover} resizeMode="cover" />
               ) : (
                 <View style={[styles.cover, styles.coverPlaceholder]} />
               )}

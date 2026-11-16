@@ -1,13 +1,12 @@
+import customAlert from '@/src/utils/alert';
 import React, { useState } from 'react';
 import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Image,
-  Dimensions,
   Text,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -20,7 +19,6 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 
-const screenWidth = Dimensions.get('window').width;
 
 
 // Dynamic stylesheet function
@@ -37,8 +35,9 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       paddingHorizontal: 24,
     },
     logo: {
-      width: screenWidth * 0.55,   // 전체 화면 폭의 55%
-      height: (screenWidth * 0.55) / 4.7, // 원본 비율 유지 (470:100)
+      width: '55%',
+      maxWidth: 320,
+      aspectRatio: 4.7,
       resizeMode: 'contain',
       alignSelf: 'center',
       marginBottom: 48,
@@ -107,7 +106,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('알림', '이메일과 비밀번호를 입력해주세요.');
+      customAlert('알림', '이메일과 비밀번호를 입력해주세요.');
       return;
     }
 
@@ -116,14 +115,14 @@ export default function LoginScreen() {
       const result = await dispatch(signIn({ email, password }));
       
       if (signIn.fulfilled.match(result)) {
-        Alert.alert('성공', '로그인되었습니다.', [
+        customAlert('성공', '로그인되었습니다.', [
           { text: '확인', onPress: () => router.replace('/') }
         ]);
       } else {
-        Alert.alert('로그인 실패', '이메일 또는 비밀번호를 확인해주세요.');
+        customAlert('로그인 실패', '이메일 또는 비밀번호를 확인해주세요.');
       }
     } catch {
-      Alert.alert('오류', '로그인에 실패했습니다.');
+      customAlert('오류', '로그인에 실패했습니다.');
     } finally {
       setLoading(false);
     }

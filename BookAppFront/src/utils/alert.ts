@@ -1,25 +1,41 @@
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, type AlertButton, type AlertOptions } from 'react-native';
 
-const alertPolyfill = (title: string, description?: string, options?: any[], extra?: any) => {
-  if (Platform.OS === 'web') {
-    const message = [title, description].filter(Boolean).join('\n');
-    if (options && options.length > 0) {
-      // For simplicity, we'll just use window.alert for now.
-      // A more robust polyfill would use window.confirm for options.
-      window.alert(message);
-      // If there's an 'OK' or default option, call its onPress.
-      const defaultOption = options.find(opt => opt.style !== 'cancel');
-      if (defaultOption && defaultOption.onPress) {
-        defaultOption.onPress();
-      }
-    } else {
-      window.alert(message);
-    }
-  } else {
-    Alert.alert(title, description, options, extra);
-  }
+export interface WebAlertRequest {
+  id: number;
+  title: string;
+  message?: string;
+  buttons: AlertButton[];
+  options?: AlertOptions;
+}
+
+let nextId = 0;
+let queue: WebAlertRequest[] = [];
+const listeners = new Set<() => void>();
+
+export const getWebAlert = () => queue[0] ?? null;
+export const getServerWebAlert = () => null;
+export const subscribeWebAlerts = (listener: () => void) => {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
 };
 
-const customAlert = Platform.OS === 'web' ? alertPolyfill : Alert.alert;
+export function closeWebAlert(id: number, buttonIndex?: number) {
+  const request = getWebAlert();
+  if (!request || request.id !== id) return;
+  queue = queue.slice(1);
+  listeners.forEach(listener => listener());
+  if (buttonIndex !== undefined) request.buttons[buttonIndex]?.onPress?.();
+  else request.options?.onDismiss?.();
+}
+
+const customAlert: typeof Alert.alert = (title, message, buttons, options) => {
+  if (Platform.OS !== 'web') {
+    Alert.alert(title, message, buttons, options);
+    return;
+  }
+  queue = [...queue, { id: ++nextId, title, message,
+    buttons: buttons?.length ? buttons : [{ text: '확인' }], options }];
+  listeners.forEach(listener => listener());
+};
 
 export default customAlert;

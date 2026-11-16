@@ -1,6 +1,7 @@
 
 import { StyleSheet, Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { SCREEN_LAYOUT } from './screenLayout';
 
 export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
   const c = Colors[colorScheme];
@@ -11,23 +12,9 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       backgroundColor: c.background,
     },
 
+    content: { paddingBottom: SCREEN_LAYOUT.bottomPadding },
+
     // ── Masthead ──────────────────────────────────────────
-    masthead: {
-      paddingTop: Platform.OS === 'ios' ? 60 : 40,
-      paddingHorizontal: 22,
-      paddingBottom: 12,
-      backgroundColor: c.background,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-end',
-    },
-    headerTitle: {
-      fontSize: 28,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-      letterSpacing: -0.5,
-    },
     logoutButton: {},
     logoutButtonText: {
       fontSize: 11,
@@ -42,7 +29,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: c.line,
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 8,
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -58,7 +45,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── Login Prompt ───────────────────────────────────────
     loginSection: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 48,
       borderBottomWidth: 1,
       borderBottomColor: c.line,
@@ -122,7 +109,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'baseline',
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 20,
       borderBottomWidth: 1,
       borderBottomColor: c.line,
@@ -154,7 +141,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── Section Header ─────────────────────────────────────
     sectionHeader: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingTop: 28,
       paddingBottom: 16,
       flexDirection: 'row',
@@ -171,12 +158,12 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
     sectionDividerTop: {
       height: 2,
       backgroundColor: c.text,
-      marginHorizontal: 22,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
     },
     sectionDivider: {
       height: 1,
       backgroundColor: c.line,
-      marginHorizontal: 22,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
     },
 
     // ── Notification Items ─────────────────────────────────
@@ -215,7 +202,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
     },
     notificationSection: { backgroundColor: c.background },
     notificationItem: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 14,
       flexDirection: 'row',
       alignItems: 'center',
@@ -257,7 +244,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
     },
     recentReviewsListContent: {},
     reviewItemContainer: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 14,
       flexDirection: 'row',
       alignItems: 'flex-start',
@@ -305,20 +292,20 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── Misc ───────────────────────────────────────────────
     emptySectionText: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 20,
       color: c.inkSoft,
       fontFamily: 'NotoSerifKR-Regular',
       fontSize: 13,
     },
     loadingText: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 20,
       color: c.inkSoft,
       fontFamily: 'NotoSerifKR-Regular',
     },
     errorText: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 10,
       color: c.danger,
       fontFamily: 'NotoSerifKR-Regular',
@@ -343,7 +330,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'baseline',
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingTop: 24,
       paddingBottom: 16,
       borderBottomWidth: 1,

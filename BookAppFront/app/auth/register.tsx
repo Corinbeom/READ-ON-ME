@@ -1,15 +1,14 @@
+import customAlert from '@/src/utils/alert';
 import React, { useState, useCallback } from 'react';
 import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Image,
   View,
-  Dimensions,
   Text,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -21,7 +20,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-const screenWidth = Dimensions.get('window').width;
 
 // Validation rules
 const validationRules = {
@@ -37,8 +35,9 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     container: { flex: 1, backgroundColor: colors.background },
     scrollContainer: { flexGrow: 1 },
     content: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
-    logo: { width: screenWidth * 0.55,   // 전체 화면 폭의 55%
-      height: (screenWidth * 0.55) / 4.7, // 원본 비율 유지 (470:100)
+    logo: { width: '55%',
+      maxWidth: 320,
+      aspectRatio: 4.7,
       resizeMode: 'contain',
       alignSelf: 'center',
       marginBottom: 48, },
@@ -107,7 +106,7 @@ export default function RegisterScreen() {
     try {
       const result = await dispatch(signUp({ nickname, email, password, birth_year: birthYear }));
       if (signUp.fulfilled.match(result)) {
-        Alert.alert('성공', '회원가입이 완료되었습니다!', [{ text: '로그인하기', onPress: () => router.replace('/auth/login') }]);
+        customAlert('성공', '회원가입이 완료되었습니다!', [{ text: '로그인하기', onPress: () => router.replace('/auth/login') }]);
       } else {
         const payload = result.payload as any;
         if (payload?.errors) {
@@ -116,14 +115,14 @@ export default function RegisterScreen() {
         } else if (payload?.code) {
           const field = payload.code === 'EMAIL_DUPLICATE' ? 'email' : payload.code === 'NICKNAME_DUPLICATE' ? 'nickname' : '';
           if (field) setErrors(prev => ({ ...prev, [field]: payload.message }));
-          else Alert.alert('회원가입 실패', payload.message || '알 수 없는 오류가 발생했습니다.');
+          else customAlert('회원가입 실패', payload.message || '알 수 없는 오류가 발생했습니다.');
         } else {
-          Alert.alert('회원가입 실패', payload?.message || '회원가입에 실패했습니다');
+          customAlert('회원가입 실패', payload?.message || '회원가입에 실패했습니다');
         }
       }
     } catch (error) {
       console.error('Register error:', error);
-      Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
+      customAlert('오류', '회원가입 중 오류가 발생했습니다');
     }
   };
 

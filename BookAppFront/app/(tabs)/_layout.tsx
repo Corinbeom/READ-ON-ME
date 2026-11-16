@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
+import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 function EdTabIcon({ label, focused, color }: { label: string; focused: boolean; color: string }) {
@@ -30,8 +31,8 @@ export default function TabLayout() {
           backgroundColor: colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.line,
-          height: Platform.OS === 'ios' ? 80 : 60 + insets.bottom,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8 + insets.bottom,
+          height: SCREEN_LAYOUT.tabBarHeight + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
         },
       }}
     >

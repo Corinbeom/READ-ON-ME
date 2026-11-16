@@ -27,28 +27,31 @@ const resolveDevHost = (): string => {
   return 'localhost';
 };
 
-// 📍 환경별 Base URL 설정
+// Expo inlines EXPO_PUBLIC variables at build time; only public URLs belong here.
 export const API_BASE_URL = (() => {
-  const host = resolveDevHost();
-  return `http://${host}:8080`;
-})();
-
-// 📍 FastAPI 서버를 위한 Base URL 설정
-const RECOMMENDATION_API_BASE_URL = (() => {
-  const host = resolveDevHost();
-  return `http://${host}:8000`;
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configured) {
+    let url: URL;
+    try {
+      url = new URL(configured);
+    } catch {
+      throw new Error('EXPO_PUBLIC_API_URL must be an absolute API URL.');
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+      throw new Error('EXPO_PUBLIC_API_URL must be an HTTP(S) URL without credentials, query, or fragment.');
+    }
+    if (!__DEV__ && (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) {
+      throw new Error('Release builds require an external HTTPS EXPO_PUBLIC_API_URL.');
+    }
+    return configured.replace(/\/+$/, '');
+  }
+  if (!__DEV__) throw new Error('Set EXPO_PUBLIC_API_URL before building for release.');
+  return `http://${resolveDevHost()}:8080`;
 })();
 
 // 📍 공통 Axios 인스턴스
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
-});
-
-// 📍 추천 API를 위한 별도 Axios 인스턴스
-export const recommendationApiInstance = axios.create({
-  baseURL: RECOMMENDATION_API_BASE_URL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });

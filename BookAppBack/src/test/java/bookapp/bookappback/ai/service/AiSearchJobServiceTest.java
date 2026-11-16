@@ -43,14 +43,27 @@ class AiSearchJobServiceTest {
     @Autowired AiSearchJobService service;
     @Autowired AiSearchJobRepository repository;
     @MockBean AiSearchService searchService;
+    @MockBean org.springframework.data.redis.core.StringRedisTemplate rateLimitRedis;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
     @Autowired AiSearchController controller;
 
     @BeforeEach
+    @SuppressWarnings("unchecked")
     void reset() {
+        var operations = (org.springframework.data.redis.core.ValueOperations<String, String>) org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(rateLimitRedis.opsForValue()).thenReturn(operations);
+        when(operations.increment(anyString())).thenReturn(1L);
         repository.deleteAll();
         ReflectionTestUtils.setField(service, "dispatchEnabled", false);
+    }
+
+    @Test
+    void anonymousAiEndpointsAreDenied() throws Exception {
+        for (String path : new String[]{"/api/ai/search", "/api/ai/jobs"}) {
+            mvc.perform(post(path).contentType(MediaType.APPLICATION_JSON).content("{\"query\":\"책 추천\"}"))
+                    .andExpect(status().isForbidden());
+        }
     }
 
     @Test

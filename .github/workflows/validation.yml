@@ -49,3 +49,7 @@ jobs:
       - run: npm ci
       - run: npm run lint -- --max-warnings 0
       - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:web
+        env:
+          EXPO_PUBLIC_API_URL: https://api.example.invalid

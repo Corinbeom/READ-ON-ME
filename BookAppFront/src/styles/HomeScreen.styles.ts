@@ -1,5 +1,6 @@
 import { StyleSheet, Platform } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { SCREEN_LAYOUT } from './screenLayout';
 
 export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
   const c = Colors[colorScheme];
@@ -10,24 +11,11 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       backgroundColor: c.background,
     },
 
+    content: { paddingBottom: SCREEN_LAYOUT.bottomPadding },
+
     // ── Masthead ──────────────────────────────────────────
-    masthead: {
-      paddingTop: Platform.OS === 'ios' ? 60 : 40,
-      paddingHorizontal: 22,
-      paddingBottom: 12,
-      backgroundColor: c.background,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'flex-end',
-    },
-    mastheadTitle: {
-      fontSize: 28,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-      letterSpacing: -0.5,
-    },
     mastheadRight: {
+      marginLeft: 'auto',
       flexDirection: 'row',
       alignItems: 'center',
       gap: 16,
@@ -38,7 +26,7 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
       borderTopWidth: 1,
       borderBottomWidth: 1,
       borderColor: c.line,
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 8,
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -101,7 +89,7 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── AI Section ────────────────────────────────────────
     aiSection: {
-      marginHorizontal: 22,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
       marginTop: 28,
       paddingBottom: 22,
       borderBottomWidth: 1,
@@ -139,7 +127,7 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── Section Header ────────────────────────────────────
     sectionHeader: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingTop: 28,
       paddingBottom: 16,
       flexDirection: 'row',
@@ -161,10 +149,10 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
     sectionDivider: {
       height: 1,
       backgroundColor: c.line,
-      marginHorizontal: 22,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
     },
     birthYearHint: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingBottom: 12,
       fontSize: 11,
       color: c.inkFaint,
@@ -230,7 +218,7 @@ export const getHomeScreenStyles = (colorScheme: 'light' | 'dark') => {
     headerContainer: { backgroundColor: c.background },
     headerContentWrapper: { flexDirection: 'row', justifyContent: 'space-between' },
     authContainer: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    chatBubble: { marginHorizontal: 22, marginTop: 20 },
+    chatBubble: { marginHorizontal: SCREEN_LAYOUT.gutter, marginTop: 20 },
     chatEmoji: { fontSize: 20 },
     chatTextWrapper: { flex: 1 },
     chatTitle: { fontSize: 15, fontFamily: 'Pretendard-SemiBold', color: c.text },

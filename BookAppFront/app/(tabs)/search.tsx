@@ -1,3 +1,4 @@
+import { secureImageUri } from '@/src/utils/imageUri';
 import React, { useState, useRef } from 'react';
 import {
   TextInput,
@@ -15,7 +16,8 @@ import { KakaoBook } from '../../src/types/kakaoBook';
 import customAlert from '../../src/utils/alert';
 import { getIsbn13 } from '../../src/utils/bookUtils';
 import { Colors } from '@/constants/Colors';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import TabScreen, { TabHeader } from '@/components/TabScreen';
+import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { bookApi } from '@/src/services/api';
 
@@ -30,24 +32,9 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
 
-    // ── Masthead ──────────────────────────────────────────
-    masthead: {
-      paddingTop: 4,
-      paddingHorizontal: 22,
-      paddingBottom: 12,
-      backgroundColor: c.background,
-    },
-    mastheadTitle: {
-      fontSize: 28,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-      letterSpacing: -0.5,
-    },
-
     // ── Search Bar ────────────────────────────────────────
     searchSection: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingBottom: 16,
       borderBottomWidth: 1,
       borderBottomColor: c.line,
@@ -82,10 +69,11 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
 
     // ── Book List ─────────────────────────────────────────
     bookList: { flex: 1 },
+    content: { paddingBottom: SCREEN_LAYOUT.bottomPadding },
     bookItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 16,
       backgroundColor: c.background,
     },
@@ -122,12 +110,12 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     divider: {
       height: 1,
       backgroundColor: c.line,
-      marginHorizontal: 22,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
     },
     dividerTop: {
       height: 2,
       backgroundColor: c.text,
-      marginHorizontal: 22,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
     },
     emptyContainer: {
       alignItems: 'center',
@@ -146,14 +134,14 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
       color: c.inkSoft,
       letterSpacing: 0.2,
       textTransform: 'uppercase',
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingTop: 20,
       paddingBottom: 14,
     },
 
     // ── Idle State ────────────────────────────────────────
     idleContainer: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingTop: 40,
     },
     idleHint: {
@@ -168,7 +156,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     suggestionItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 14,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingVertical: 10,
     },
     suggestionThumbnail: {
@@ -194,7 +182,7 @@ const getStyles = (colorScheme: 'light' | 'dark') => {
     suggestionDivider: {
       height: 1,
       backgroundColor: c.line,
-      marginHorizontal: 14,
+      marginHorizontal: SCREEN_LAYOUT.gutter,
     },
   });
 };
@@ -264,7 +252,7 @@ export default function SearchScreen() {
     const isbn13 = getIsbn13(item);
     const bookContent = (
       <TouchableOpacity style={styles.bookItem} activeOpacity={0.8} disabled={!isbn13}>
-        <Image source={{ uri: item.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
+        <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.thumbnail} resizeMode="cover" />
         <View style={styles.bookInfo}>
           <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.authors} numberOfLines={1}>{item.authors.join(', ')}</Text>
@@ -276,11 +264,9 @@ export default function SearchScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <TabScreen testID="search-tab-screen">
       {/* ── Masthead ── */}
-      <View style={styles.masthead}>
-        <Text style={styles.mastheadTitle}>검색.</Text>
-      </View>
+      <TabHeader title="검색." />
 
       {/* ── Search Bar ── */}
       <View style={styles.searchSection}>
@@ -310,7 +296,7 @@ export default function SearchScreen() {
                 onPress={() => handleSuggestionPress(item)}
                 activeOpacity={0.7}
               >
-                <Image source={{ uri: item.thumbnail }} style={styles.suggestionThumbnail} resizeMode="cover" />
+                <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.suggestionThumbnail} resizeMode="cover" />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.suggestionTitle} numberOfLines={1}>{item.title}</Text>
                   <Text style={styles.suggestionAuthor} numberOfLines={1}>{item.authors.join(', ')}</Text>
@@ -321,6 +307,7 @@ export default function SearchScreen() {
         }
         keyExtractor={(item) => item.isbn || item.title}
         style={styles.bookList}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         ItemSeparatorComponent={() => <View style={styles.divider} />}
         ListHeaderComponent={
@@ -349,6 +336,6 @@ export default function SearchScreen() {
           ) : null
         }
       />
-    </SafeAreaView>
+    </TabScreen>
   );
 }

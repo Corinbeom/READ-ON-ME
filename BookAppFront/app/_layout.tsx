@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, View } from 'react-native';
 import 'react-native-reanimated';
 import { Provider, useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +13,8 @@ import { store, AppDispatch } from '../src/store';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '@/components/ThemedView';
 import NotificationListener from '@/components/NotificationListener';
+import WebAlertHost from '@/components/WebAlertHost';
+import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { getProfile, setToken, logout } from '@/src/store/authSlice';
 
 function SessionRestorer() {
@@ -57,9 +60,11 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <ThemedView style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.surface2 }}>
+      <ThemedView style={[{ flex: 1 }, Platform.OS === 'web' && { width: '100%', maxWidth: SCREEN_LAYOUT.maxWidth, alignSelf: 'center' }]}>
         <SessionRestorer />
         <NotificationListener />
+        <WebAlertHost />
         <Stack
           screenOptions={{
             headerStyle: {
@@ -93,6 +98,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </ThemedView>
+      </View>
     </Provider>
   );
 }

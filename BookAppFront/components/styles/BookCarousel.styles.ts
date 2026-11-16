@@ -1,5 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
+import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 
 export const getBookCarouselStyles = (colorScheme: 'light' | 'dark') => {
   const c = Colors[colorScheme];
@@ -12,7 +13,7 @@ export const getBookCarouselStyles = (colorScheme: 'light' | 'dark') => {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       marginBottom: 12,
     },
     headerTitle: {
@@ -22,7 +23,7 @@ export const getBookCarouselStyles = (colorScheme: 'light' | 'dark') => {
       letterSpacing: -0.3,
     },
     listContentContainer: {
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
       paddingBottom: 8,
       gap: 16,
     },
@@ -63,7 +64,7 @@ export const getBookCarouselStyles = (colorScheme: 'light' | 'dark') => {
       fontStyle: 'italic',
       paddingVertical: 16,
       lineHeight: 22,
-      paddingHorizontal: 22,
+      paddingHorizontal: SCREEN_LAYOUT.gutter,
     },
   });
 };

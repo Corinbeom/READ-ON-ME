@@ -1,6 +1,10 @@
+import TabScreen, { TabHeader } from '@/components/TabScreen';
+import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
+import { secureImageUri } from '@/src/utils/imageUri';
+import customAlert from '@/src/utils/alert';
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, Alert, FlatList, Image, ScrollView, Modal, Animated, Easing } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, Image, ScrollView, Modal, Animated, Easing } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/src/store';
 import { logout } from '@/src/store/authSlice';
@@ -108,7 +112,7 @@ export default function MyLibraryScreen() {
   }, [readingKeywords, keywordAnimValues]);
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말로 로그아웃 하시겠습니까?', [
+    customAlert('로그아웃', '정말로 로그아웃 하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       { text: '로그아웃', style: 'destructive', onPress: () => {
         dispatch(logout());
@@ -145,7 +149,7 @@ export default function MyLibraryScreen() {
   const renderBookItem = ({ item }: { item: BookDto }) => (
     <Link href={`/book/${item.isbn13}`} asChild>
       <TouchableOpacity style={styles.bookItemContainer} onPress={() => setModalVisible(false)}>
-        <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} resizeMode="cover" />
+        <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.bookThumbnail} resizeMode="cover" />
         <View style={styles.bookInfoContainer}>
           <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.bookAuthor} numberOfLines={1}>
@@ -161,7 +165,7 @@ export default function MyLibraryScreen() {
       style={styles.reviewItemContainer}
       onPress={() => { setModalVisible(false); router.push(`/book/${item.book.isbn13}`); }}
     >
-      <Image source={{ uri: item.book.thumbnail }} style={styles.reviewBookThumbnail} resizeMode="cover" />
+      <Image source={{ uri: secureImageUri(item.book.thumbnail) }} style={styles.reviewBookThumbnail} resizeMode="cover" />
       <View style={styles.reviewInfoContainer}>
         <Text style={styles.reviewItemTitle}>{item.book.title}</Text>
         <Text style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</Text>
@@ -179,17 +183,17 @@ export default function MyLibraryScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <TabScreen testID="library-tab-screen">
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
       {/* ── Masthead ── */}
-      <View style={styles.masthead}>
-        <Text style={styles.headerTitle}>서재.</Text>
+      <TabHeader title="서재.">
         {isAuthenticated && (
           <TouchableOpacity onPress={handleLogout}>
             <Text style={styles.logoutButtonText}>로그아웃</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </TabHeader>
 
       {/* ── Profile Bar / Login Prompt ── */}
       {isAuthenticated && user ? (
@@ -231,7 +235,7 @@ export default function MyLibraryScreen() {
 
           {/* ── Reading Keywords ── */}
           {readingKeywords && (readingKeywords.keywords.length > 0 || readingKeywords.analyzed > 0) && (
-            <View style={{ paddingHorizontal: 22, paddingTop: 28, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: c.line }}>
+            <View style={{ paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: 28, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: c.line }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
                 <Text style={{ fontSize: 20, fontFamily: 'NotoSerifKR-Regular', color: c.text, letterSpacing: -0.3 }}>
                   나의 독서 키워드
@@ -373,7 +377,6 @@ export default function MyLibraryScreen() {
         </>
       )}
 
-      <View style={{ height: 40 }} />
 
       {/* ── Modal ── */}
       <Modal
@@ -424,5 +427,6 @@ export default function MyLibraryScreen() {
         </View>
       </Modal>
     </ScrollView>
+    </TabScreen>
   );
 }

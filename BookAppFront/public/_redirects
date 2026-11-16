@@ -1,0 +1,2 @@
+/assets/node_modules/* /assets/vendor/:splat 200
+/book/:isbn /book/[isbn] 200

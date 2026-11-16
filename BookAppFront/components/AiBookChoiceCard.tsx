@@ -4,6 +4,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import type { AiSearchBook } from '@/src/services/api';
+import { secureImageUri } from '@/src/utils/imageUri';
 
 export default function AiBookChoiceCard({
   book,
@@ -29,7 +30,7 @@ export default function AiBookChoiceCard({
   const theme = useColorScheme() ?? 'dark';
   const styles = getStyles(theme);
   const [imageFailed, setImageFailed] = useState(false);
-  const thumbnail = book.thumbnail?.trim();
+  const thumbnail = secureImageUri(book.thumbnail);
   const title = book.title?.trim() || '제목 정보 없음';
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors?.trim();
   const reason = (book.ranking_status === 'GEMINI' || book.ranking_status === 'GROQ') && book.reason?.trim() && book.reason_evidence?.trim()
