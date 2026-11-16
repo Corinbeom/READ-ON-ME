@@ -67,3 +67,12 @@ Home examples prefill `/ai-books` through the `prompt` route parameter. Selectin
 See [home discovery validation](qa/home-ai-discovery-2026-11-16.md) for the tested flows and remaining device coverage.
 
 UI follow-up tasks, including floating bottom navigation, are tracked in [UI improvements](UI_IMPROVEMENTS.md).
+
+
+## Search discovery and recent queries
+
+The search tab offers title/author search, the last eight successful queries stored on the device, and AI discovery entry points. Autocomplete does not add history. Queries can be replayed, removed individually, or cleared together. History writes are serialized to protect deletion during slow reads/writes.
+
+`hooks/useBookSearch.ts` cancels superseded requests and ignores stale responses. Search failures are shown inline with retry; empty results have a separate state. The optional `bookApi.searchBooks` request flag `handleErrorLocally` suppresses duplicate global alerts only for callers that handle their own errors. Cancelled Axios requests never show a global alert.
+
+See [search discovery validation](qa/search-discovery-2026-11-16.md).

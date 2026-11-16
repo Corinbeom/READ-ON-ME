@@ -1,5 +1,5 @@
 // BookAppFront/src/services/api.ts
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, isCancel } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -122,8 +122,10 @@ export const aiJobApi = {
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    if (isCancel(error)) return Promise.reject(error);
     const url = error.config?.url ?? '';
-    const isSilent = silentPaths.some((path) => url.includes(path));
+    const handledLocally = error.config && 'handleErrorLocally' in error.config && error.config.handleErrorLocally === true;
+    const isSilent = handledLocally || silentPaths.some((path) => url.includes(path));
     if (!isSilent) {
       const message = handleApiError(error);
       customAlert('오류', message);
@@ -160,7 +162,7 @@ export const bookApi = {
     size?: number;
     sort?: 'accuracy' | 'latest';
     target?: 'title' | 'isbn' | 'publisher' | 'person';
-  }) => api.get('/api/books/search', { params }),
+  }, options?: { signal?: AbortSignal; handleErrorLocally?: boolean }) => api.get('/api/books/search', { params, ...options }),
 
   getBookDetail: (isbn: string) => api.get(`/api/books/detail/${isbn}`),
   getPopularBooks: () => api.get('/api/books/popular'),
