@@ -48,3 +48,22 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+
+## Shared UI rules
+
+Main screens use `components/TabScreen.tsx` and `src/styles/screenLayout.ts`: a centered web canvas up to 640px wide, 24px horizontal gutters, and a 440px maximum width for authentication forms/dialogs. Native screens keep safe area insets.
+
+Use `src/styles/designTokens.ts` for spacing, type sizes and control dimensions. `components/ui/AppButton.tsx` provides primary, secondary, ghost and destructive buttons (minimum height 48px, compact 44px). `AppTextInput.tsx` and `FormField` keep inputs, persistent field labels, hints and validation errors consistent. `ScreenState` provides loading/empty/error presentation.
+
+`components/navigation/MainTabBar.tsx` renders icon + label navigation with a 64px full-cell target, selected state and keyboard focus. Keep tab links and navigation events intact when changing its presentation. Home typing state stays inside `HomeAiPrompt`, separate from book lists.
+
+See [UI consistency validation](qa/ui-consistency-2026-11-16.md) for the responsive and interaction checks.
+
+## Home AI discovery
+
+Home examples prefill `/ai-books` through the `prompt` route parameter. Selecting an example does not submit a search. Authentication preserves that condition using the fixed `returnTo=ai-books` flow. `src/utils/aiSearchEntry.ts` keeps explicit new drafts separate from completed results and protects queued/running searches. After a job is saved locally, the entry prompt is removed so a refresh resumes the submitted job.
+
+See [home discovery validation](qa/home-ai-discovery-2026-11-16.md) for the tested flows and remaining device coverage.
+
+UI follow-up tasks, including floating bottom navigation, are tracked in [UI improvements](UI_IMPROVEMENTS.md).

@@ -3,11 +3,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Pressable,
   View,
   Text,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Bell } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
@@ -15,6 +14,7 @@ import { bookApi, recommendationApi } from '@/src/services/api';
 import { Book } from '@/src/types/book';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
+import AppButton from '@/components/ui/AppButton';
 import HomeAiPrompt from '@/components/HomeAiPrompt';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -126,27 +126,13 @@ export default function HomeScreen() {
               style={styles.notificationBellButton}
               accessibilityLabel="알림 확인"
             >
-              <Ionicons
-                name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
-                size={22}
-                color={c.text}
-              />
+              <Bell size={22} color={c.text} aria-hidden />
               {hasUnreadNotifications && <View style={styles.notificationDot} />}
             </TouchableOpacity>
           ) : (
             <View style={styles.authButtons}>
-              <TouchableOpacity
-                style={styles.loginButton}
-                onPress={() => router.push('/auth/login')}
-              >
-                <Text style={styles.loginButtonText}>로그인</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.registerButton}
-                onPress={() => router.push('/auth/register')}
-              >
-                <Text style={styles.registerButtonText}>회원가입</Text>
-              </TouchableOpacity>
+              <AppButton title="로그인" variant="secondary" compact onPress={() => router.push('/auth/login')} />
+              <AppButton title="회원가입" compact onPress={() => router.push('/auth/register')} />
             </View>
           )}
         </View>
@@ -194,11 +180,7 @@ export default function HomeScreen() {
                 ? '나와 같은 취향의 사람들이 읽은 책'
                 : `${user?.nickname}님을 위한 인기 도서`}
             </Text>
-            <Pressable onPress={() => setModalVisible(true)}>
-              <Text style={[styles.sectionCount, { textDecorationLine: 'underline' }]}>
-                추천 기준 ?
-              </Text>
-            </Pressable>
+            <AppButton title="추천 기준" variant="ghost" compact onPress={() => setModalVisible(true)} />
           </View>
           <View style={styles.sectionDivider} />
           <BookCarousel
@@ -223,12 +205,7 @@ export default function HomeScreen() {
             <Text style={styles.modalText}>
               비슷한 독서 취향을 가진 사용자들이 읽은 책을 보여드립니다.
             </Text>
-            <Pressable
-              style={[styles.button, styles.buttonClose]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.textStyle}>닫기</Text>
-            </Pressable>
+            <AppButton title="닫기" onPress={() => setModalVisible(false)} />
           </View>
         </View>
       </Modal>

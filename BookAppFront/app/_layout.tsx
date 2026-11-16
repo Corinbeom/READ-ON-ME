@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/ThemedView';
 import NotificationListener from '@/components/NotificationListener';
 import WebAlertHost from '@/components/WebAlertHost';
 import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
+import { Typography } from '@/src/styles/designTokens';
 import { getProfile, setToken, logout } from '@/src/store/authSlice';
 
 function SessionRestorer() {
@@ -74,11 +75,14 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerStyle: {
-              backgroundColor: colors.card,
+              backgroundColor: colors.background,
             },
             headerTintColor: colors.text,
+            headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
             headerTitleStyle: {
-              fontFamily: 'Pretendard-SemiBold',
+              fontFamily: Typography.section.fontFamily,
+              fontSize: Typography.section.fontSize,
             },
           }}
         >

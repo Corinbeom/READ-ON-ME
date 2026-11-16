@@ -1,7 +1,11 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Typography } from '@/src/styles/designTokens';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { secureImageUri } from '@/src/utils/imageUri';
 import customAlert from '@/src/utils/alert';
+import AppButton from '@/components/ui/AppButton';
+import ScreenState from '@/components/ui/ScreenState';
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, FlatList, Image, ScrollView, Modal, Animated, Easing } from 'react-native';
@@ -35,6 +39,7 @@ interface UserLibraryResponse {
 
 export default function MyLibraryScreen() {
   const dispatch = useDispatch<AppDispatch>();
+  const insets = useSafeAreaInsets();
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { items: notifications, unreadCount } = useSelector((state: RootState) => state.notifications);
 
@@ -189,9 +194,7 @@ export default function MyLibraryScreen() {
       {/* ── Masthead ── */}
       <TabHeader title="서재.">
         {isAuthenticated && (
-          <TouchableOpacity onPress={handleLogout}>
-            <Text style={styles.logoutButtonText}>로그아웃</Text>
-          </TouchableOpacity>
+          <AppButton title="로그아웃" variant="ghost" compact onPress={handleLogout} />
         )}
       </TabHeader>
 
@@ -206,12 +209,8 @@ export default function MyLibraryScreen() {
           <View style={styles.profileBar}>
             <Text style={styles.profileBarText}>Read On Me</Text>
           </View>
-          <View style={styles.loginSection}>
-            <Text style={styles.loginPromptText}>로그인하여 내 서재를 관리하세요.</Text>
-            <TouchableOpacity style={styles.loginButton} onPress={() => router.push('/auth/login')}>
-              <Text style={styles.loginButtonText}>로그인</Text>
-            </TouchableOpacity>
-          </View>
+          <ScreenState title="나만의 서재를 만들어보세요" description="로그인하면 읽고 싶은 책과 독서 기록을 한곳에 모을 수 있어요."
+            action="로그인하기" onAction={() => router.push('/auth/login')} />
         </>
       )}
 
@@ -224,6 +223,8 @@ export default function MyLibraryScreen() {
                 {index > 0 && <View style={styles.statDivider} />}
                 <TouchableOpacity
                   style={styles.statItem}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.label} ${item.count}권`}
                   onPress={() => openBookListModal(item.label, item.books)}
                 >
                   <Text style={styles.statCount}>{item.count}</Text>
@@ -236,19 +237,19 @@ export default function MyLibraryScreen() {
           {/* ── Reading Keywords ── */}
           {readingKeywords && (readingKeywords.keywords.length > 0 || readingKeywords.analyzed > 0) && (
             <View style={{ paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: 28, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: c.line }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
-                <Text style={{ fontSize: 20, fontFamily: 'NotoSerifKR-Regular', color: c.text, letterSpacing: -0.3 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+                <Text style={{ ...Typography.section, color: c.text, flexShrink: 1, letterSpacing: -0.3 }}>
                   나의 독서 키워드
                 </Text>
                 {readingKeywords.analyzed > 0 && (
-                  <Text style={{ fontSize: 10, fontFamily: 'Pretendard-SemiBold', color: c.inkFaint, letterSpacing: 0.15, textTransform: 'uppercase' }}>
+                  <Text style={{ ...Typography.caption, color: c.inkSoft, letterSpacing: 0.15, textTransform: 'uppercase' }}>
                     {readingKeywords.analyzed}권 분석
                   </Text>
                 )}
               </View>
               <View style={{ height: 2, backgroundColor: c.text, marginBottom: 20 }} />
               {readingKeywords.keywords.length === 0 ? (
-                <Text style={{ fontSize: 13, fontFamily: 'NotoSerifKR-Regular', color: c.inkSoft, fontStyle: 'italic' }}>
+                <Text style={{ ...Typography.body, color: c.inkSoft, fontStyle: 'italic' }}>
                   독서 활동이 쌓이면 키워드가 생성돼요
                 </Text>
               ) : (() => {
@@ -262,10 +263,10 @@ export default function MyLibraryScreen() {
                     { left: '75%', top: 58,  rotate: '-13deg' , size: 13, color: c.inkFaint }, // rank 6
                     { left: '35%', top: 172, rotate: '6deg'   , size: 13, color: c.inkFaint }, // rank 7
                     { left: '2%',  top: 168, rotate: '-5deg'  , size: 12, color: c.inkFaint }, // rank 8
-                    { left: '65%', top: 170, rotate: '9deg'   , size: 11, color: c.inkFaint }, // rank 9
-                    { left: '73%', top: 8,   rotate: '-10deg' , size: 11, color: c.inkFaint }, // rank 10
-                    { left: '22%', top: 4,   rotate: '4deg'   , size: 11, color: c.inkFaint }, // rank 11
-                    { left: '42%', top: 198, rotate: '-4deg'  , size: 10, color: c.inkFaint }, // rank 12
+                    { left: '65%', top: 170, rotate: '9deg'   , size: 12, color: c.inkFaint }, // rank 9
+                    { left: '73%', top: 8,   rotate: '-10deg' , size: 12, color: c.inkFaint }, // rank 10
+                    { left: '22%', top: 4,   rotate: '4deg'   , size: 12, color: c.inkFaint }, // rank 11
+                    { left: '42%', top: 198, rotate: '-4deg'  , size: 12, color: c.inkFaint }, // rank 12
                   ] as const;
 
                   return (
@@ -328,9 +329,7 @@ export default function MyLibraryScreen() {
                 <Text style={styles.notificationBadge}>{unreadCount}개 새 알림</Text>
               )}
               {hasUnreadNotifications && (
-                <TouchableOpacity onPress={handleMarkAllNotifications}>
-                  <Text style={styles.notificationMarkAll}>모두 읽음</Text>
-                </TouchableOpacity>
+                <AppButton title="모두 읽음" compact variant="ghost" onPress={handleMarkAllNotifications} />
               )}
             </View>
           </View>
@@ -386,12 +385,10 @@ export default function MyLibraryScreen() {
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
             <View style={styles.modalTitleRow}>
               <Text style={styles.modalTitle}>{modalTitle}</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Text style={styles.modalCloseButtonText}>닫기</Text>
-              </TouchableOpacity>
+              <AppButton title="닫기" variant="ghost" compact onPress={() => setModalVisible(false)} />
             </View>
 
             {loadingLibrary ? (

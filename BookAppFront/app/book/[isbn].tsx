@@ -1,17 +1,20 @@
+import AppButton from '@/components/ui/AppButton';
+import AppTextInput from '@/components/ui/AppTextInput';
+import ScreenState from '@/components/ui/ScreenState';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { Spacing } from '@/src/styles/designTokens';
 import { secureImageUri } from '@/src/utils/imageUri';
 
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import {
-  ActivityIndicator,
   Image,
   View,
   Text,
   TouchableOpacity,
-  TextInput,
   FlatList,
-  ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -35,6 +38,8 @@ const REVIEW_MAX_LENGTH = 500;
 export default function BookDetailScreen() {
   const { isbn } = useLocalSearchParams<{ isbn?: string }>();
   const dispatch = useDispatch<AppDispatch>();
+  const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
 
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getBookDetailScreenStyles(colorScheme);
@@ -43,6 +48,7 @@ export default function BookDetailScreen() {
   const { reviews, loading: reviewsLoading } = useSelector((state: RootState) => state.reviews);
 
   const [loading, setLoading] = useState(true);
+  const [savingStatus, setSavingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<BookDto | null>(null);
   const [newReviewComment, setNewReviewComment] = useState('');
@@ -163,12 +169,16 @@ export default function BookDetailScreen() {
       customAlert('알림', '로그인이 필요합니다.');
       return;
     }
+    if (savingStatus) return;
+    setSavingStatus(true);
     try {
       await bookApi.updateBookStatus(book.id, status);
       setUserBookStatus(status);
     } catch (error) {
       console.error('Failed to update book status:', error);
       customAlert('오류', '책 상태 변경에 실패했습니다.');
+    } finally {
+      setSavingStatus(false);
     }
   };
 
@@ -231,9 +241,9 @@ export default function BookDetailScreen() {
   ];
 
   const renderStar = (onPress: (star: number) => void, currentRating: number) => (
-    <View style={styles.ratingWrapper}>
+    <View style={styles.ratingWrapper} role="radiogroup" accessibilityLabel="별점">
       {[1, 2, 3, 4, 5].map((star) => (
-        <TouchableOpacity key={star} onPress={() => onPress(star)} style={styles.ratingTouchArea}>
+        <TouchableOpacity key={star} onPress={() => onPress(star)} style={styles.ratingTouchArea} accessibilityRole="radio" accessibilityState={{ checked: currentRating === star }} accessibilityLabel={`${star}점`}>
           <Text style={currentRating >= star ? styles.starFilled : styles.starEmpty}>★</Text>
         </TouchableOpacity>
       ))}
@@ -243,14 +253,14 @@ export default function BookDetailScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={styles.meta.color} />
+        <ScreenState loading title="책 정보를 불러오고 있어요" />
       </View>
     );
   }
   if (error) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.meta}>{error}</Text>
+        <ScreenState title="책 정보를 불러오지 못했어요" description={error} action="다시 시도" onAction={() => { void fetchBookDetails(normalizedIsbn); }} />
       </View>
     );
   }
@@ -259,11 +269,12 @@ export default function BookDetailScreen() {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
     >
       <Stack.Screen options={{ title: book?.title || '책 상세' }} />
       <FlatList
         ref={flatListRef}
+        contentContainerStyle={{ paddingBottom: Spacing.xl + insets.bottom }}
         keyboardShouldPersistTaps="handled"
         style={{ backgroundColor: styles.container.backgroundColor }}
         ListHeaderComponent={
@@ -295,14 +306,8 @@ export default function BookDetailScreen() {
                 {book?.contents || '소개 정보가 없습니다.'}
               </Text>
               {book?.contents && book.contents.length > 200 && (
-                <TouchableOpacity
-                  onPress={() => setIsDescriptionExpanded((prev) => !prev)}
-                  style={styles.descriptionToggle}
-                >
-                  <Text style={styles.descriptionToggleText}>
-                    {isDescriptionExpanded ? '접기' : '더보기'}
-                  </Text>
-                </TouchableOpacity>
+                <AppButton compact variant="ghost" title={isDescriptionExpanded ? '접기' : '더보기'}
+                  style={{ alignSelf: 'flex-start' }} onPress={() => setIsDescriptionExpanded((prev) => !prev)} />
               )}
             </View>
 
@@ -310,20 +315,16 @@ export default function BookDetailScreen() {
             {isAuthenticated && (
               <View style={styles.statusSection}>
                 <Text style={styles.statusLabel}>내 서재</Text>
-                <View style={styles.segmentedControl}>
+                <View style={styles.segmentedControl} role="radiogroup" accessibilityLabel="읽기 상태">
                   {statusOptions.map((option, index) => {
                     const isActive = userBookStatus === option.value;
                     return (
                       <React.Fragment key={option.value}>
                         {index > 0 && <View style={styles.segmentDivider} />}
-                        <TouchableOpacity
-                          style={[styles.segmentButton, isActive && styles.segmentButtonActive]}
-                          onPress={() => handleUpdateBookStatus(option.value)}
-                        >
-                          <Text style={[styles.segmentButtonText, isActive && styles.segmentButtonTextActive]}>
-                            {option.label}
-                          </Text>
-                        </TouchableOpacity>
+                        <AppButton compact title={option.label} variant={isActive ? 'primary' : 'ghost'}
+                          style={styles.segmentButton} disabled={savingStatus}
+                          accessibilityRole="radio" accessibilityState={{ checked: isActive }}
+                          onPress={() => { void handleUpdateBookStatus(option.value); }} />
                       </React.Fragment>
                     );
                   })}
@@ -335,16 +336,8 @@ export default function BookDetailScreen() {
             <View style={styles.reviewHeaderRow}>
               <Text style={styles.reviewSectionTitle}>리뷰</Text>
               <View style={styles.sortContainer}>
-                <TouchableOpacity onPress={() => setSort('latest')}>
-                  <Text style={[styles.sortButtonText, sort === 'latest' && styles.sortButtonTextActive]}>
-                    최신순
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setSort('likes')}>
-                  <Text style={[styles.sortButtonText, sort === 'likes' && styles.sortButtonTextActive]}>
-                    좋아요순
-                  </Text>
-                </TouchableOpacity>
+                <AppButton compact title="최신순" variant={sort === 'latest' ? 'secondary' : 'ghost'} accessibilityState={{ selected: sort === 'latest' }} onPress={() => setSort('latest')} />
+                <AppButton compact title="좋아요순" variant={sort === 'likes' ? 'secondary' : 'ghost'} accessibilityState={{ selected: sort === 'likes' }} onPress={() => setSort('likes')} />
               </View>
             </View>
 
@@ -363,13 +356,7 @@ export default function BookDetailScreen() {
         renderItem={({ item }: { item: Review }) => {
           const isOwnReview = user?.id === item.authorId;
           return (
-            <TouchableOpacity
-              activeOpacity={0.95}
-              disabled={!isOwnReview}
-              onLongPress={() => handleReviewLongPress(item)}
-              delayLongPress={250}
-            >
-              <View style={[styles.reviewItem, isOwnReview && styles.reviewItemOwn]}>
+            <View style={[styles.reviewItem, isOwnReview && styles.reviewItemOwn]}>
                 <View style={styles.reviewHeader}>
                   <Text style={styles.reviewAuthor}>{item.author}</Text>
                   <Text style={styles.reviewRating}>{'★'.repeat(item.rating)}</Text>
@@ -377,14 +364,13 @@ export default function BookDetailScreen() {
                 <Text style={styles.reviewCommentText}>{item.comment}</Text>
                 <View style={styles.reviewFooter}>
                   <Text style={styles.reviewDate}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-                  <TouchableOpacity style={styles.likeButton} onPress={() => handleLikePress(item.id)}>
-                    <Text style={[styles.likeText, item.isLikedByCurrentUser && styles.likeTextLiked]}>
-                      도움이 돼요 {item.likeCount > 0 ? item.likeCount : ''}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.reviewActions}>
+                    {isOwnReview ? <AppButton compact variant="ghost" title="리뷰 관리" onPress={() => handleReviewLongPress(item)} /> : null}
+                    <AppButton compact variant={item.isLikedByCurrentUser ? 'secondary' : 'ghost'}
+                      title={`도움이 돼요${item.likeCount > 0 ? ` ${item.likeCount}` : ''}`} onPress={() => handleLikePress(item.id)} />
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+            </View>
           );
         }}
         ListFooterComponent={
@@ -394,18 +380,12 @@ export default function BookDetailScreen() {
                 {isEditingReview && (
                   <View style={styles.editingBanner}>
                     <Text style={styles.editingBannerText}>내 리뷰를 수정하는 중입니다</Text>
-                    <TouchableOpacity style={styles.cancelEditButton} onPress={handleCancelEditing}>
-                      <Text style={styles.cancelEditButtonText}>취소</Text>
-                    </TouchableOpacity>
+                    <AppButton compact variant="ghost" title="취소" onPress={handleCancelEditing} />
                   </View>
                 )}
-                <ScrollView
-                  style={styles.reviewInputScrollWrapper}
-                  bounces={false}
-                  nestedScrollEnabled
-                >
-                  <TextInput
+                  <AppTextInput
                     style={styles.reviewInput}
+                    accessibilityLabel="리뷰 내용"
                     placeholder={isEditingReview ? '리뷰를 수정해주세요...' : '리뷰를 남겨주세요...'}
                     placeholderTextColor={styles.meta.color}
                     value={newReviewComment}
@@ -416,14 +396,11 @@ export default function BookDetailScreen() {
                       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 300);
                     }}
                   />
-                </ScrollView>
                 <Text style={styles.reviewCharCount}>
                   {newReviewComment.length}/{REVIEW_MAX_LENGTH}
                 </Text>
                 {renderStar(setNewReviewRating, newReviewRating)}
-                <TouchableOpacity style={styles.submitButton} onPress={handleReviewSubmit}>
-                  <Text style={styles.submitButtonText}>{submitButtonLabel}</Text>
-                </TouchableOpacity>
+                <AppButton title={submitButtonLabel} onPress={handleReviewSubmit} loading={reviewsLoading} />
               </>
             ) : !isAuthenticated ? (
               <Text style={styles.loginPrompt}>리뷰를 작성하려면 로그인이 필요합니다.</Text>

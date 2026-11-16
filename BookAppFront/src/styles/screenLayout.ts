@@ -1,9 +1,12 @@
+import { Spacing, Typography, UI } from './designTokens';
+
 export const SCREEN_LAYOUT = {
   maxWidth: 640,
-  gutter: 22,
-  bottomPadding: 40,
-  headerFontSize: 28,
-  headerLineHeight: 40,
-  headerBottomPadding: 12,
-  tabBarHeight: 60,
+  formMaxWidth: 440,
+  gutter: Spacing.lg,
+  bottomPadding: Spacing.xl,
+  headerFontSize: Typography.display.fontSize,
+  headerLineHeight: Typography.display.lineHeight,
+  headerBottomPadding: Spacing.sm,
+  tabBarHeight: UI.tabHeight,
 } as const;

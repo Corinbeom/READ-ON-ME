@@ -1,7 +1,10 @@
+import AppTextInput from '@/components/ui/AppTextInput';
+import AppButton from '@/components/ui/AppButton';
+import ScreenState from '@/components/ui/ScreenState';
+import { Typography, UI } from '@/src/styles/designTokens';
 import { secureImageUri } from '@/src/utils/imageUri';
 import React, { useState, useRef } from 'react';
 import {
-  TextInput,
   TouchableOpacity,
   FlatList,
   StyleSheet,
@@ -9,7 +12,6 @@ import {
   ActivityIndicator,
   View,
   Text,
-  Platform,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { KakaoBook } from '../../src/types/kakaoBook';
@@ -30,160 +32,25 @@ interface SearchResponse {
 const getStyles = (colorScheme: 'light' | 'dark') => {
   const c = Colors[colorScheme];
   return StyleSheet.create({
-    container: { flex: 1, backgroundColor: c.background },
-
-    // ── Search Bar ────────────────────────────────────────
-    searchSection: {
-      paddingHorizontal: SCREEN_LAYOUT.gutter,
-      paddingBottom: 16,
-      borderBottomWidth: 1,
-      borderBottomColor: c.line,
-    },
-    searchRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderWidth: 1,
-      borderColor: c.line,
-    },
-    searchInput: {
-      flex: 1,
-      fontSize: 15,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-    },
-    searchButton: {
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      borderLeftWidth: 1,
-      borderLeftColor: c.line,
-    },
-    searchButtonText: {
-      fontSize: 11,
-      fontFamily: 'Pretendard-SemiBold',
-      color: c.text,
-      letterSpacing: 0.15,
-      textTransform: 'uppercase',
-    },
-
-    // ── Book List ─────────────────────────────────────────
+    searchSection: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: c.line },
+    searchRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: c.line, borderRadius: UI.controlRadius, overflow: 'hidden', backgroundColor: c.card },
+    searchInput: { flex: 1 },
+    searchButton: { borderRadius: 0 },
     bookList: { flex: 1 },
     content: { paddingBottom: SCREEN_LAYOUT.bottomPadding },
-    bookItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: SCREEN_LAYOUT.gutter,
-      paddingVertical: 16,
-      backgroundColor: c.background,
-    },
-    thumbnail: {
-      width: 52,
-      height: 74,
-      borderRadius: 0,
-      backgroundColor: c.surface2,
-    },
-    bookInfo: {
-      flex: 1,
-      marginLeft: 16,
-    },
-    title: {
-      fontSize: 14,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      marginBottom: 4,
-      lineHeight: 20,
-      letterSpacing: -0.2,
-    },
-    authors: {
-      fontSize: 11,
-      fontFamily: 'Pretendard-SemiBold',
-      color: c.inkSoft,
-      letterSpacing: 0.1,
-      textTransform: 'uppercase',
-    },
-    chevron: {
-      fontSize: 14,
-      color: c.inkFaint,
-      fontFamily: 'Pretendard-SemiBold',
-    },
-    divider: {
-      height: 1,
-      backgroundColor: c.line,
-      marginHorizontal: SCREEN_LAYOUT.gutter,
-    },
-    dividerTop: {
-      height: 2,
-      backgroundColor: c.text,
-      marginHorizontal: SCREEN_LAYOUT.gutter,
-    },
-    emptyContainer: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 40,
-    },
-    emptyText: {
-      fontSize: 14,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.inkSoft,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-    },
-    resultLabel: {
-      fontSize: 10,
-      fontFamily: 'Pretendard-SemiBold',
-      color: c.inkSoft,
-      letterSpacing: 0.2,
-      textTransform: 'uppercase',
-      paddingHorizontal: SCREEN_LAYOUT.gutter,
-      paddingTop: 20,
-      paddingBottom: 14,
-    },
-
-    // ── Idle State ────────────────────────────────────────
-    idleContainer: {
-      paddingHorizontal: SCREEN_LAYOUT.gutter,
-      paddingTop: 40,
-    },
-    idleHint: {
-      fontSize: 13,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.inkSoft,
-      fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
-      lineHeight: 22,
-    },
-
-    // ── Autocomplete ──────────────────────────────────────
-    suggestionItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: SCREEN_LAYOUT.gutter,
-      paddingVertical: 10,
-    },
-    suggestionThumbnail: {
-      width: 28,
-      height: 40,
-      backgroundColor: c.surface2,
-      marginRight: 12,
-    },
-    suggestionTitle: {
-      fontSize: 13,
-      fontFamily: 'NotoSerifKR-Regular',
-      color: c.text,
-      flex: 1,
-    },
-    suggestionAuthor: {
-      fontSize: 10,
-      fontFamily: 'Pretendard-SemiBold',
-      color: c.inkSoft,
-      letterSpacing: 0.1,
-      textTransform: 'uppercase',
-      marginTop: 2,
-    },
-    suggestionDivider: {
-      height: 1,
-      backgroundColor: c.line,
-      marginHorizontal: SCREEN_LAYOUT.gutter,
-    },
+    bookItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: 16, backgroundColor: c.background },
+    thumbnail: { width: 52, height: 74, borderRadius: 0, backgroundColor: c.surface2 },
+    bookInfo: { flex: 1, marginLeft: 16 },
+    title: { ...Typography.bookTitle, color: c.text, marginBottom: 4, letterSpacing: -0.2 },
+    authors: { ...Typography.caption, color: c.inkSoft, letterSpacing: 0.1, textTransform: 'uppercase' },
+    chevron: { fontSize: 14, color: c.inkFaint, fontFamily: 'Pretendard-SemiBold' },
+    divider: { height: 1, backgroundColor: c.line, marginHorizontal: SCREEN_LAYOUT.gutter },
+    dividerTop: { height: 2, backgroundColor: c.text, marginHorizontal: SCREEN_LAYOUT.gutter },
+    resultLabel: { ...Typography.caption, color: c.inkSoft, letterSpacing: 0.2, textTransform: 'uppercase', paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: 20, paddingBottom: 14 },
+    suggestionItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: 10, minHeight: 64 },
+    suggestionThumbnail: { width: 28, height: 40, backgroundColor: c.surface2, marginRight: 12 },
+    suggestionTitle: { ...Typography.label, color: c.text, flex: 1 },
+    suggestionAuthor: { ...Typography.caption, color: c.inkSoft, letterSpacing: 0.1, textTransform: 'uppercase', marginTop: 2 },
   });
 };
 
@@ -271,18 +138,17 @@ export default function SearchScreen() {
       {/* ── Search Bar ── */}
       <View style={styles.searchSection}>
         <View style={styles.searchRow}>
-          <TextInput
+          <AppTextInput inline
             style={styles.searchInput}
             placeholder="제목 또는 저자"
+            accessibilityLabel="제목 또는 저자"
             placeholderTextColor={Colors[colorScheme].inkFaint}
             value={searchQuery}
             onChangeText={handleTextChange}
             onSubmitEditing={() => searchBooks()}
             returnKeyType="search"
           />
-          <TouchableOpacity style={styles.searchButton} onPress={() => searchBooks()}>
-            <Text style={styles.searchButtonText}>검색</Text>
-          </TouchableOpacity>
+          <AppButton title="검색" onPress={() => searchBooks()} style={styles.searchButton} />
         </View>
       </View>
 
@@ -315,11 +181,7 @@ export default function SearchScreen() {
           loading ? (
             <ActivityIndicator style={{ marginVertical: 32 }} color={Colors[colorScheme].inkSoft} />
           ) : !hasSearched ? (
-            <View style={styles.idleContainer}>
-              <Text style={styles.idleHint}>
-                제목 또는 저자 이름으로{'\n'}원하는 책을 찾아보세요.
-              </Text>
-            </View>
+            <ScreenState title="어떤 책을 찾고 있나요?" description="제목 또는 저자 이름으로 원하는 책을 찾아보세요." />
           ) : books.length > 0 ? (
             <>
               <Text style={styles.resultLabel}>{books.length}건의 검색 결과</Text>
@@ -330,9 +192,7 @@ export default function SearchScreen() {
         ListEmptyComponent={
           showSuggestions || loading ? null :
           hasSearched ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>검색 결과가 없습니다.</Text>
-            </View>
+            <ScreenState title="검색 결과가 없어요" description="다른 제목이나 저자 이름으로 다시 찾아보세요." />
           ) : null
         }
       />

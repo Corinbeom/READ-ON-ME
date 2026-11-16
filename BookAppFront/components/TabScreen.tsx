@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
+import { Spacing, Typography, UI } from '@/src/styles/designTokens';
 
 export default function TabScreen({ children, testID }: { children: ReactNode; testID: string }) {
   const colorScheme = useColorScheme() ?? 'light';
@@ -37,15 +38,14 @@ const styles = StyleSheet.create({
     paddingBottom: SCREEN_LAYOUT.headerBottomPadding,
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: Spacing.sm,
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   title: {
     flexShrink: 0,
-    fontSize: SCREEN_LAYOUT.headerFontSize,
-    lineHeight: SCREEN_LAYOUT.headerLineHeight,
-    fontFamily: 'NotoSerifKR-Regular',
+    minHeight: UI.compactControlHeight,
+    ...Typography.display,
     fontStyle: Platform.OS === 'android' ? 'normal' : 'italic',
     letterSpacing: -0.5,
   },

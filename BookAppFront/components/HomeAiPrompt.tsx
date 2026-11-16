@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useIsFocused } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import BookmarkMascot from '@/components/BookmarkMascot';
+import AppButton from '@/components/ui/AppButton';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
+import { AI_SEARCH_EXAMPLES } from '@/src/constants/aiSearchExamples';
+import { aiSearchHref } from '@/src/utils/aiSearchEntry';
 
 const PROMPTS = [
   '스릴러 소설 추천해줘',
@@ -51,24 +54,26 @@ export default function HomeAiPrompt() {
   }, [focused]);
 
   return (
-    <TouchableOpacity
-      style={styles.aiSection}
-      onPress={() => router.push('/ai-books')}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityLabel="AI 사서와 책 고르기"
-    >
+    <View style={styles.aiSection} testID="home-ai-discovery">
       <View style={styles.aiContent}>
         <View style={styles.aiCopy}>
-          <Text style={styles.aiLabel}>AI 사서</Text>
-          <Text style={styles.aiPromptText}>오늘 읽을 한 권을 골라볼까요?</Text>
-          <Text testID="home-typing-prompt" style={styles.aiPromptText} numberOfLines={1}>
-            {typedText}<Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
-          </Text>
-          <Text style={styles.aiSubText}>책을 찾고, 비교하고, 한 권 고르기 →</Text>
+          <Text style={styles.aiLabel}>AI 사서와 책 고르기</Text>
+          <Text accessibilityRole="header" style={styles.aiTitle}>오늘은 어떤 책을{`\n`}읽고 싶으세요?</Text>
         </View>
-        <BookmarkMascot state="idle" size={68} compact />
+        <BookmarkMascot state="idle" size={80} compact />
       </View>
-    </TouchableOpacity>
+      <Text style={styles.aiDescription}>기분이나 취향을 알려주세요.{`\n`}어울리는 책을 함께 골라드릴게요.</Text>
+      <Text testID="home-typing-prompt" aria-hidden style={styles.aiPromptText} numberOfLines={1}>
+        예: {typedText}<Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
+      </Text>
+      <AppButton title="나에게 맞는 책 찾기" onPress={() => router.push(aiSearchHref())} />
+      <View style={styles.aiExamples}>
+        {AI_SEARCH_EXAMPLES.map((example) => (
+          <AppButton key={example.label} compact variant="secondary" title={example.label}
+            style={styles.aiExample} accessibilityHint="선택한 조건을 추천 화면에 미리 입력합니다."
+            onPress={() => router.push(aiSearchHref(example.query))} />
+        ))}
+      </View>
+    </View>
   );
 }
