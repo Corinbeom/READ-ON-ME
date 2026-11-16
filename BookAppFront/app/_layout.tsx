@@ -1,4 +1,4 @@
-import { useFonts } from 'expo-font';
+import { FontDisplay, useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -40,19 +40,25 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme() ?? 'light';
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
-    'NotoSerifKR-Regular': require('../assets/fonts/NotoSerifKR-Regular.ttf'),
+  const [loaded, fontError] = useFonts({
+    SpaceMono: { uri: require('../assets/fonts/SpaceMono-Regular.ttf'), display: FontDisplay.SWAP },
+    'Pretendard-SemiBold': { uri: require('../assets/fonts/Pretendard-SemiBold.otf'), display: FontDisplay.SWAP },
+    'NotoSerifKR-Regular': { uri: require('../assets/fonts/NotoSerifKR-Regular.ttf'), display: FontDisplay.SWAP },
   });
 
   useEffect(() => {
-    if (loaded) {
+    if (Platform.OS === 'web' || loaded || fontError) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, fontError]);
 
-  if (!loaded) {
+  useEffect(() => {
+    if (fontError) console.warn('Custom fonts could not load; using system fonts.');
+  }, [fontError]);
+
+  // Web must remain usable while fonts download. Native keeps its splash
+  // until fonts finish, and can continue with system fonts if loading fails.
+  if (Platform.OS !== 'web' && !loaded && !fontError) {
     return null;
   }
 

@@ -50,3 +50,5 @@ chmod 600 readonme-backup.dump
 ```
 
 백업에는 사용자 데이터가 포함되므로 접근을 제한한다. 외부 별도 저장소의 자동 백업과 복원 훈련은 아직 구성하지 않았다. `down -v`는 DB·인증서 볼륨을 삭제하므로 사용하지 않는다. 재배포에는 `up -d`를 사용하고, 이미지 교체 전 백업을 남긴다. 장애 시 restart 횟수·OOM·메모리와 스왑·공급자 API 한도를 확인한다. `/api/library/all`과 actuator·API 문서 경로는 공개 프록시에서 차단한다.
+
+웹 시작 폰트는 `font-display: swap`을 사용한다. HTML 준비 단계가 모든 정적 경로에서 폰트 preload를 제거해 Safari가 폰트 다운로드를 기다리며 첫 화면을 숨기는 현상을 피한다. 이미지 preload와 font-face 규칙은 유지한다. 배포 검증기는 폰트 설정과 preload를 검사하며, 회귀 테스트는 `npm test`에 포함한다.
