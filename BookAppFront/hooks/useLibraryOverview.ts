@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
+import { useSelector } from 'react-redux';
+import type { RootState } from '@/src/store';
 import { bookApi, reviewApi, userApi } from '@/src/services/api';
 import type { Review } from '@/src/types/review';
 import { loadLibraryOverview, type ReadingKeywords, type UserLibrary } from '@/src/utils/libraryOverview';
@@ -22,6 +24,7 @@ const empty: Overview = {
 export function useLibraryOverview(isAuthenticated: boolean, userId?: number) {
   const [state, setState] = useState<Overview>(empty);
   const [attempt, setAttempt] = useState(0);
+  const revision = useSelector((state: RootState) => state.libraryStatus.revision);
   useFocusEffect(useCallback(() => {
     if (!isAuthenticated || !userId) {
       setState(empty);
@@ -59,7 +62,7 @@ export function useLibraryOverview(isAuthenticated: boolean, userId?: number) {
       keywords: ({ data, error }) => update(data ? { keywords: data, keywordsError: '' } : { keywordsError: error }),
     }, controller.signal).then(() => update({ refreshing: false }));
     return () => controller.abort();
-  }, [attempt, isAuthenticated, userId]));
+  }, [attempt, isAuthenticated, userId, revision]));
   const current = isAuthenticated && state.ownerId === userId ? state : empty;
   return { ...current, reload: () => setAttempt((value) => value + 1) };
 }

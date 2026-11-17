@@ -68,3 +68,12 @@ test('library sections handle their own errors without changing default callers'
   await assert.rejects(bookApi.getUserLibrary());
   assert.equal(alerts.length, 1);
 });
+
+test('library status writes can recover inline without duplicate global alerts', async () => {
+  const { api, bookApi, alerts } = loadApi();
+  failRequests(api);
+  await assert.rejects(bookApi.updateBookStatus(12, 'READING', { handleErrorLocally: true }));
+  assert.equal(alerts.length, 0);
+  await assert.rejects(bookApi.updateBookStatus(12, 'READING'));
+  assert.equal(alerts.length, 1);
+});

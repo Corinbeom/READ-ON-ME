@@ -172,8 +172,8 @@ export const bookApi = {
 
   getBookEditions: (isbn: string) => api.get(`/api/books/${isbn}/editions`),
 
-  updateBookStatus: (bookId: number, status: ReadingStatus) =>
-    api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() } }),
+  updateBookStatus: (bookId: number, status: ReadingStatus, options?: LocalRequestOptions) =>
+    api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() }, ...options }),
 
   getUserLibrary: (options?: LocalRequestOptions) => api.get('/api/library', options),
 

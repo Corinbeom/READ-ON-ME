@@ -87,3 +87,14 @@ An empty library offers search and AI discovery. Guest login and the signup/logi
 `hooks/useLibraryOverview.ts` loads books, reviews and keywords independently with local error handling and retry. It preserves same-user data while refreshing on focus, aborts obsolete requests and gates cached data by user ID. Loading or a failed library request is never presented as a successful empty library. This change adds no dependencies or environment variables.
 
 See [library validation](qa/library-shelves-2026-11-17.md).
+
+
+## Library save feedback
+
+Book detail uses `components/BookLibraryStatus.tsx` and `src/store/libraryStatusSlice.ts` to show the confirmed reading status, inline loading/success feedback and a shortcut to the library. Selection changes only after a successful write. Status lookup and writes block duplicate requests, and selecting the current status does not write again.
+
+Lookup failures are distinct from an unsaved book. A failed write preserves the last confirmed selection and offers retry of the intended status or a fresh server lookup, since a timeout may occur after the server saved the change. Errors are handled inline without a second global alert. Other API consumers retain their existing default error handling.
+
+Status state is keyed by account and book, cleared on logout/new login, and protected by request IDs. Writes continue across screen changes; refocusing book detail does not start a conflicting read while a write is pending. A successful write also refreshes the library when it is visible, covering navigation back before a slow save finishes. No API, database, dependency or environment changes are required.
+
+See [save feedback validation](qa/library-save-feedback-2026-11-17.md).

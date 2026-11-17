@@ -1,4 +1,5 @@
 import AppButton from '@/components/ui/AppButton';
+import BookLibraryStatus from '@/components/BookLibraryStatus';
 import AppTextInput from '@/components/ui/AppTextInput';
 import ScreenState from '@/components/ui/ScreenState';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -28,7 +29,6 @@ import {
   toggleLikeForReview,
 } from '@/src/store/reviewSlice';
 import { Review } from '@/src/types/review';
-import { ReadingStatus } from '@/src/types/readingStatus';
 import { getBookDetailScreenStyles } from '../../src/styles/BookDetailScreen.styles';
 import { BookDto } from '../../src/types/BookDto';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -48,13 +48,11 @@ export default function BookDetailScreen() {
   const { reviews, loading: reviewsLoading } = useSelector((state: RootState) => state.reviews);
 
   const [loading, setLoading] = useState(true);
-  const [savingStatus, setSavingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<BookDto | null>(null);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [sort, setSort] = useState('latest');
-  const [userBookStatus, setUserBookStatus] = useState<ReadingStatus | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -78,27 +76,6 @@ export default function BookDetailScreen() {
       dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
     }
   }, [book, dispatch, sort]);
-
-  useEffect(() => {
-    const fetchUserBookStatus = async () => {
-      if (!isAuthenticated || !book?.id) return;
-      try {
-        const response = await bookApi.getUserLibrary();
-        const foundStatus =
-          response.data.toReadBooks.find((b: BookDto) => b.id === book.id)
-            ? ReadingStatus.TO_READ
-            : response.data.readingBooks.find((b: BookDto) => b.id === book.id)
-            ? ReadingStatus.READING
-            : response.data.completedBooks.find((b: BookDto) => b.id === book.id)
-            ? ReadingStatus.COMPLETED
-            : null;
-        setUserBookStatus(foundStatus);
-      } catch (error) {
-        console.error('Failed to fetch user book status:', error);
-      }
-    };
-    fetchUserBookStatus();
-  }, [isAuthenticated, book]);
 
   const fetchBookDetails = async (currentIsbn: string) => {
     setLoading(true);
@@ -164,24 +141,6 @@ export default function BookDetailScreen() {
     dispatch(toggleLikeForReview(reviewId));
   };
 
-  const handleUpdateBookStatus = async (status: ReadingStatus) => {
-    if (!isAuthenticated || !book?.id) {
-      customAlert('알림', '로그인이 필요합니다.');
-      return;
-    }
-    if (savingStatus) return;
-    setSavingStatus(true);
-    try {
-      await bookApi.updateBookStatus(book.id, status);
-      setUserBookStatus(status);
-    } catch (error) {
-      console.error('Failed to update book status:', error);
-      customAlert('오류', '책 상태 변경에 실패했습니다.');
-    } finally {
-      setSavingStatus(false);
-    }
-  };
-
   const userHasReviewed = useMemo(() => {
     if (!isAuthenticated || !user) return false;
     return reviews.some((review) => review.authorId === user.id);
@@ -233,12 +192,6 @@ export default function BookDetailScreen() {
   const isEditingReview = editingReviewId !== null;
   const canWriteReview = isAuthenticated && (!userHasReviewed || isEditingReview);
   const submitButtonLabel = isEditingReview ? '수정 완료' : '등록';
-
-  const statusOptions: { value: ReadingStatus; label: string }[] = [
-    { value: ReadingStatus.TO_READ, label: '읽고 싶어요' },
-    { value: ReadingStatus.READING, label: '읽는 중' },
-    { value: ReadingStatus.COMPLETED, label: '완독' },
-  ];
 
   const renderStar = (onPress: (star: number) => void, currentRating: number) => (
     <View style={styles.ratingWrapper} role="radiogroup" accessibilityLabel="별점">
@@ -311,26 +264,7 @@ export default function BookDetailScreen() {
               )}
             </View>
 
-            {/* ── Reading Status ── */}
-            {isAuthenticated && (
-              <View style={styles.statusSection}>
-                <Text style={styles.statusLabel}>내 서재</Text>
-                <View style={styles.segmentedControl} role="radiogroup" accessibilityLabel="읽기 상태">
-                  {statusOptions.map((option, index) => {
-                    const isActive = userBookStatus === option.value;
-                    return (
-                      <React.Fragment key={option.value}>
-                        {index > 0 && <View style={styles.segmentDivider} />}
-                        <AppButton compact title={option.label} variant={isActive ? 'primary' : 'ghost'}
-                          style={styles.segmentButton} disabled={savingStatus}
-                          accessibilityRole="radio" accessibilityState={{ checked: isActive }}
-                          onPress={() => { void handleUpdateBookStatus(option.value); }} />
-                      </React.Fragment>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
+            {isAuthenticated && user && book ? <BookLibraryStatus bookId={book.id} userId={user.id} /> : null}
 
             {/* ── Reviews Header ── */}
             <View style={styles.reviewHeaderRow}>
