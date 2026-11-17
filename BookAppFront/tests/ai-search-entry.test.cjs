@@ -9,7 +9,7 @@ const source = readFileSync(path.join(__dirname, '../src/utils/aiSearchEntry.ts'
 const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
 const context = { exports: {} };
 vm.runInNewContext(outputText, context);
-const { normalizeAiPrompt, aiSearchHref, aiAuthParams, resolveAiSearchEntry } = context.exports;
+const { normalizeAiPrompt, aiSearchHref, authReturnParams, resolveAiSearchEntry } = context.exports;
 
 test('route prompts accept Korean text and repeated params but obey the input length limit', () => {
   assert.equal(normalizeAiPrompt(['  위로가 되는 책  ', '다른 조건']), '위로가 되는 책');
@@ -20,11 +20,11 @@ test('route prompts accept Korean text and repeated params but obey the input le
 });
 
 test('authentication preserves the recommendation condition and rejects arbitrary return destinations', () => {
-  const flow = aiAuthParams('ai-books', '  짧은 에세이  ');
+  const flow = authReturnParams('ai-books', '  짧은 에세이  ');
   assert.equal(flow.prompt, '짧은 에세이');
   assert.equal(aiSearchHref(flow.prompt).pathname, '/ai-books');
   for (const destination of [undefined, '/my-library', 'https://example.com', '//example.com']) {
-    assert.equal(aiAuthParams(destination, '조건').returnTo, undefined);
+    assert.equal(authReturnParams(destination, '조건').returnTo, undefined);
   }
 });
 
@@ -60,4 +60,11 @@ test('reopening the same pending condition resumes it without offering a duplica
   const entry = resolveAiSearchEntry('같은 조건', { status: 'RUNNING', query: '같은 조건' });
   assert.equal(entry.deferredPrompt, '');
   assert.equal(entry.job.status, 'RUNNING');
+});
+
+
+test('library authentication returns to the shelf without carrying an unrelated AI prompt', () => {
+  const flow = authReturnParams('my-library', 'AI 조건');
+  assert.equal(flow.returnTo, 'my-library');
+  assert.equal(flow.prompt, undefined);
 });

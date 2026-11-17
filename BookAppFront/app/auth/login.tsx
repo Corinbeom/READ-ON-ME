@@ -7,11 +7,11 @@ import type { AppDispatch } from '@/src/store';
 import AuthScreen from '@/components/AuthScreen';
 import AppButton from '@/components/ui/AppButton';
 import { FormField } from '@/components/ui/AppTextInput';
-import { aiAuthParams, aiSearchHref } from '@/src/utils/aiSearchEntry';
+import { authReturnParams, aiSearchHref } from '@/src/utils/aiSearchEntry';
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[] }>();
-  const returnParams = aiAuthParams(params.returnTo, params.prompt);
+  const returnParams = authReturnParams(params.returnTo, params.prompt);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,8 @@ export default function LoginScreen() {
       if (signIn.fulfilled.match(result)) {
         customAlert('성공', '로그인되었습니다.', [
           { text: '확인', onPress: () => {
-            if (returnParams.returnTo) router.dismissTo(aiSearchHref(returnParams.prompt));
+            if (returnParams.returnTo === 'my-library') router.dismissTo('/my-library');
+            else if (returnParams.returnTo === 'ai-books') router.dismissTo(aiSearchHref(returnParams.prompt));
             else router.replace('/');
           } }
         ]);

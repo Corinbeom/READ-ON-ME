@@ -10,7 +10,8 @@ export function aiSearchHref(prompt?: unknown) {
     : { pathname: '/ai-books' as const };
 }
 
-export function aiAuthParams(returnTo: unknown, prompt: unknown) {
+export function authReturnParams(returnTo: unknown, prompt: unknown) {
+  if (returnTo === 'my-library') return { returnTo: 'my-library' as const };
   return returnTo === 'ai-books'
     ? { returnTo: 'ai-books' as const, prompt: normalizeAiPrompt(prompt) }
     : {};

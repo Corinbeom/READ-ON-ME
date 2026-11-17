@@ -1,7 +1,4 @@
-import { Book } from '../types/book';
-import { KakaoBook } from '../types/kakaoBook'; // Import KakaoBook
-
-export const getIsbn13 = (item: Book | KakaoBook): string => {
+export const getIsbn13 = (item: { isbn13?: string; isbn10?: string; isbn?: string }): string => {
   const rawIsbn = 'isbn13' in item
     ? `${item.isbn13 || ''} ${item.isbn10 || ''}`
     : item.isbn || '';

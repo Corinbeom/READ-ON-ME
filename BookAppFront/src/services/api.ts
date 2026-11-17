@@ -155,6 +155,8 @@ export const authApi = {
 };
 
 // 🔹 책 관련 API
+type LocalRequestOptions = { signal?: AbortSignal; handleErrorLocally?: boolean };
+
 export const bookApi = {
   searchBooks: (params: {
     query: string;
@@ -162,7 +164,7 @@ export const bookApi = {
     size?: number;
     sort?: 'accuracy' | 'latest';
     target?: 'title' | 'isbn' | 'publisher' | 'person';
-  }, options?: { signal?: AbortSignal; handleErrorLocally?: boolean }) => api.get('/api/books/search', { params, ...options }),
+  }, options?: LocalRequestOptions) => api.get('/api/books/search', { params, ...options }),
 
   getBookDetail: (isbn: string) => api.get(`/api/books/detail/${isbn}`),
   getPopularBooks: () => api.get('/api/books/popular'),
@@ -173,7 +175,7 @@ export const bookApi = {
   updateBookStatus: (bookId: number, status: ReadingStatus) =>
     api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() } }),
 
-  getUserLibrary: () => api.get('/api/library'),
+  getUserLibrary: (options?: LocalRequestOptions) => api.get('/api/library', options),
 
   getBooksByIds: (ids: number[]) => api.post('/api/books/details', ids),
 
@@ -196,7 +198,7 @@ export const reviewApi = {
 
   toggleReviewLike: (reviewId: number) => api.post(`/api/books/review/${reviewId}/like`),
 
-  getMyReviews: () => api.get('/api/reviews/my'), // New method to fetch user's reviews
+  getMyReviews: (options?: LocalRequestOptions) => api.get('/api/reviews/my', options),
 }; 
 
 // 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
@@ -207,7 +209,7 @@ export const recommendationApi = {
 
 // 👤 유저 관련 API
 export const userApi = {
-  getReadingKeywords: () => api.get('/api/users/reading-keywords'),
+  getReadingKeywords: (options?: LocalRequestOptions) => api.get('/api/users/reading-keywords', options),
 };
 
 // 🔔 알림 관련 API

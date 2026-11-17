@@ -10,7 +10,7 @@ import AppButton from '@/components/ui/AppButton';
 import { FormField } from '@/components/ui/AppTextInput';
 import { ThemedText } from '@/components/ThemedText';
 import { Spacing, Typography } from '@/src/styles/designTokens';
-import { aiAuthParams } from '@/src/utils/aiSearchEntry';
+import { authReturnParams } from '@/src/utils/aiSearchEntry';
 
 const validationRules = {
   nickname: { minLength: 2, maxLength: 10, message: '닉네임은 2-10자 사이여야 합니다' },
@@ -20,7 +20,7 @@ const validationRules = {
 
 export default function RegisterScreen() {
   const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[] }>();
-  const returnParams = aiAuthParams(params.returnTo, params.prompt);
+  const returnParams = authReturnParams(params.returnTo, params.prompt);
   const [nickname, setNickName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

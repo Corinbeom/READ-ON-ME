@@ -55,3 +55,16 @@ test('search consumers without local error handling retain the existing global a
   await assert.rejects(bookApi.searchBooks({ query: '1984' }));
   assert.equal(alerts.length, 1);
 });
+
+
+test('library sections handle their own errors without changing default callers', async () => {
+  const { api, bookApi, reviewApi, userApi, alerts } = loadApi();
+  failRequests(api);
+  const options = { signal: new AbortController().signal, handleErrorLocally: true };
+  for (const request of [bookApi.getUserLibrary, reviewApi.getMyReviews, userApi.getReadingKeywords]) {
+    await assert.rejects(request(options));
+  }
+  assert.equal(alerts.length, 0);
+  await assert.rejects(bookApi.getUserLibrary());
+  assert.equal(alerts.length, 1);
+});
