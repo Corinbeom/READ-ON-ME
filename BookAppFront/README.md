@@ -56,7 +56,7 @@ Main screens use `components/TabScreen.tsx` and `src/styles/screenLayout.ts`: a 
 
 Use `src/styles/designTokens.ts` for spacing, type sizes and control dimensions. `components/ui/AppButton.tsx` provides primary, secondary, ghost and destructive buttons (minimum height 48px, compact 44px). `AppTextInput.tsx` and `FormField` keep inputs, persistent field labels, hints and validation errors consistent. `ScreenState` provides loading/empty/error presentation.
 
-`components/navigation/MainTabBar.tsx` renders icon + label navigation with a 64px full-cell target, selected state and keyboard focus. Keep tab links and navigation events intact when changing its presentation. Home typing state stays inside `HomeAiPrompt`, separate from book lists.
+`components/navigation/MainTabBar.tsx` renders floating icon + label navigation with a 64px full-cell target, selected state and keyboard focus. Theme-aware styles live in `components/styles/MainTabBar.styles.ts`; the capsule is up to 480px wide with 16px side gutters and a 12px gap above the bottom safe area. Its normal layout space reserves the full height so lists can scroll their final items clear of the menu. Keep tab links and navigation events intact when changing its presentation. Home typing state stays inside `HomeAiPrompt`, separate from book lists.
 
 See [UI consistency validation](qa/ui-consistency-2026-11-16.md) for the responsive and interaction checks.
 
@@ -66,7 +66,7 @@ Home examples prefill `/ai-books` through the `prompt` route parameter. Selectin
 
 See [home discovery validation](qa/home-ai-discovery-2026-11-16.md) for the tested flows and remaining device coverage.
 
-UI follow-up tasks, including floating bottom navigation, are tracked in [UI improvements](UI_IMPROVEMENTS.md).
+UI progress and follow-up tasks are tracked in [UI improvements](UI_IMPROVEMENTS.md). See [floating navigation validation](qa/floating-tabs-2026-11-17.md) for layout, hit targets and keyboard checks.
 
 
 ## Search discovery and recent queries
