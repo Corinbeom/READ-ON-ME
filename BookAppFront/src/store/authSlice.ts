@@ -51,7 +51,6 @@ export const signIn = createAsyncThunk(
 
       // ✅ AsyncStorage에 토큰 저장
       await AsyncStorage.setItem('accessToken', access_token);
-      console.log('🔐 로그인 성공 — 토큰 저장 완료:', access_token);
 
       return { token: access_token, user };
     } catch (error: any) {

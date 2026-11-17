@@ -1,0 +1,20 @@
+{
+	default_sni {$API_HOST}
+}
+
+{$API_HOST} {
+    tls {
+        issuer acme https://acme-v02.api.letsencrypt.org/directory {
+            profile shortlived
+        }
+    }
+    @internal path /api/library/all /actuator/* /h2-console* /v3/api-docs* /swagger-ui*
+    respond @internal 404
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+    }
+    reverse_proxy backend:8080 {
+        flush_interval -1
+    }
+}

@@ -1,0 +1,92 @@
+name: readonme-beta
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    mem_limit: 192m
+    environment:
+      POSTGRES_DB: readonme
+      POSTGRES_USER: readonme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?required}
+    command: [postgres, -c, shared_buffers=32MB, -c, work_mem=2MB, -c, maintenance_work_mem=32MB, -c, max_connections=30]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U readonme -d readonme]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    mem_limit: 48m
+    command: [redis-server, --maxmemory, 16mb, --maxmemory-policy, noeviction, --save, "", --appendonly, "no"]
+  backend:
+    image: readonme-back:beta-20261116
+    restart: unless-stopped
+    mem_limit: 448m
+    memswap_limit: 768m
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://postgres:5432/readonme
+      DB_USERNAME: readonme
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?required}
+      REDIS_URL: redis://redis:6379
+      AI_BASE_URL: http://ai:8000
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?required}
+      JWT_SECRET: ${JWT_SECRET:?required}
+      JWT_EXPIRED: "3600000"
+      KAKAO_API_KEY: ${KAKAO_API_KEY:?required}
+      KAKAO_API_URL: https://dapi.kakao.com/v3/search/book
+      LIBRARY_BIGDATA_API_KEY: ${LIBRARY_BIGDATA_API_KEY:-}
+      CORS_URL: ${WEB_ORIGIN:?required}
+      AI_SEARCH_MAX_CONCURRENT: "1"
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "4"
+      SERVER_TOMCAT_THREADS_MAX: "40"
+      SERVER_TOMCAT_THREADS_MIN_SPARE: "2"
+      JAVA_OPTS: -Xms64m -Xmx192m -XX:MaxMetaspaceSize=128m -XX:ReservedCodeCacheSize=32m -XX:MaxDirectMemorySize=32m -Xss512k -XX:ActiveProcessorCount=1
+    ports: [127.0.0.1:18080:8080]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --max-time, "5", http://127.0.0.1:8080/actuator/health]
+      interval: 20s
+      timeout: 10s
+      start_period: 600s
+      retries: 6
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+  ai:
+    image: readonme-ai:beta-20261115
+    restart: unless-stopped
+    mem_limit: 192m
+    memswap_limit: 384m
+    environment:
+      APP_ENV: prod
+      EMBEDDING_PROVIDER: gemini
+      DATABASE_URL: postgresql+asyncpg://readonme:${POSTGRES_PASSWORD:?required}@postgres:5432/readonme
+      SPRING_BOOT_URL: http://backend:8080
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?required}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      KAKAO_API_KEY: ${KAKAO_API_KEY:?required}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?required}
+      LIBRARY_BIGDATA_API_KEY: ${LIBRARY_BIGDATA_API_KEY:-}
+      OPENBLAS_NUM_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+    depends_on:
+      postgres: {condition: service_healthy}
+      backend: {condition: service_healthy}
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    mem_limit: 96m
+    environment:
+      API_HOST: ${API_HOST:?required}
+      GOMEMLIMIT: 64MiB
+    ports: [80:80, 443:443]
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+volumes:
+  pgdata:
+  caddydata:
+  caddyconfig:

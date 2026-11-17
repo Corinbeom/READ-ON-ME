@@ -6,6 +6,7 @@ import { getIsbn13 } from '../src/utils/bookUtils';
 import { getBookCarouselStyles } from './styles/BookCarousel.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+import { secureImageUri } from '@/src/utils/imageUri';
 
 interface BookCarouselProps {
   title: React.ReactNode;
@@ -27,9 +28,9 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
   const renderBookItem = ({ item }: { item: Book }) => {
     const isbn13 = getIsbn13(item);
 
-    const BookContent = () => (
+    const bookContent = (
       <>
-        <Image source={{ uri: item.thumbnail }} style={styles.bookThumbnail} resizeMode="cover" />
+        <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.bookThumbnail} resizeMode="cover" />
         <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.bookAuthor} numberOfLines={1}>
           {Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || item.publisher}
@@ -40,7 +41,7 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
     if (!isbn13) {
       return (
         <View style={styles.bookItem}>
-          <BookContent />
+          {bookContent}
         </View>
       );
     }
@@ -48,7 +49,7 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
     return (
       <Link href={`/book/${isbn13}`} asChild>
         <TouchableOpacity style={styles.bookItem} activeOpacity={0.8}>
-          <BookContent />
+          {bookContent}
         </TouchableOpacity>
       </Link>
     );

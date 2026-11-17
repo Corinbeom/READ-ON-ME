@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-readonme}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - readonme_pgdata:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -17,7 +17,7 @@ services:
     image: redis:7-alpine
     container_name: readonme-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     restart: unless-stopped
 
   backend:
@@ -55,7 +55,7 @@ services:
       - redis
       - ai
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
 
   ai:

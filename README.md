@@ -6,7 +6,7 @@
 
 | 경로 | 설명 | 주요 기술 |
 | --- | --- | --- |
-| `BookAppFront/` | Expo Router 기반 모바일 앱. 로그인/라이브러리/리뷰/알림/AI 책 선택 화면 제공. | React Native 0.81, Expo 54, TypeScript |
+| `BookAppFront/` | Expo Router 기반 모바일 앱과 웹. 로그인/라이브러리/리뷰/알림/AI 책 선택 화면 제공. | React Native 0.81, Expo 54, TypeScript |
 | `BookAppBack/` | 핵심 API 서버. 카카오 도서 검색, JWT 인증, 리뷰·알림, Redis 캐싱, AI 연동을 담당. | Spring Boot 3, Java 17, Gradle |
 | `BookAppAI/` | 카카오 검색 결과를 확장·임베딩·벡터 검색하는 AI 워커. | FastAPI, SQLAlchemy, pgvector, Gemini 또는 SentenceTransformers |
 
@@ -124,7 +124,12 @@ npx expo start
 - `i` / `a` / `w`로 iOS, Android, Web 실행
 - 린트: `npm run lint`
 - 타입 검사: `npm run typecheck`
-- 실제 기기 사용 시 `src/services/api.ts`의 호스트 주소를 로컬 네트워크 IP로 조정하세요.
+- 웹 확인창 회귀 검사: `npm test`
+- 브라우저에서 실행하려면 `npm run web -- --port 8081` 후 `http://localhost:8081`에 접속합니다. Spring과 AI 서버도 실행해야 합니다.
+- 개발 서버 주소는 Expo 호스트에서 찾습니다. 실제 기기에서 수동 지정하려면 `BookAppFront/.env.local`에 `EXPO_PUBLIC_API_HOST=<로컬 IP>`를 설정합니다.
+- 배포용 API 주소는 `EXPO_PUBLIC_API_URL=https://<Spring API 도메인>`으로 설정합니다. 웹 정적 빌드는 URL이 없거나 HTTPS가 아니면 실패합니다. 네이티브 배포 앱도 실행 시 같은 설정을 검사합니다. 이 값은 공개되는 클라이언트 설정이므로 API 키나 비밀값을 넣지 않습니다. Expo 환경변수 변경 후에는 개발 서버를 재시작하거나 다시 빌드해야 합니다.
+- 웹 정적 빌드: `EXPO_PUBLIC_API_URL=https://<Spring API 도메인> npm run build:web`. Spring의 `CORS_URL`에는 실제 웹 접속 주소를 허용해야 합니다. 임의 ISBN의 책 상세 링크를 새로 여는 동작은 선택한 호스팅의 경로 처리 설정과 함께 확인해야 합니다.
+- 로컬 웹의 실제 검색·책 선택·서재 저장 검증은 [웹 베타 검증 기록](BookAppFront/qa/web-beta-validation-2026-11-15.md)을 참고하세요.
 
 ### 4. (선택) Docker 이미지
 
@@ -166,6 +171,10 @@ docker compose up --build
 ---
 
 ## 개발 팁
+
+- Spring의 직접 AI 검색과 검색 작업 접수는 로그인이 필요하며 두 경로가 사용자별 분당 20회 제한을 공유합니다. 작업 상태 조회는 이 제한에 포함하지 않습니다. 익명 도서 검색은 연결 IP별 분당 60회로 제한하며 임의 `X-Forwarded-For`를 신뢰하지 않습니다. 공용 프록시 뒤의 익명 사용자는 프록시 연결 IP의 한도를 공유할 수 있습니다. Redis 장애 시 제한 대상 요청은 `503`과 `Retry-After: 5`로 거절합니다.
+- Compose의 DB·Redis·Spring·AI 호스트 포트는 모두 `127.0.0.1`에 바인딩됩니다. 외부 베타에는 HTTPS 역방향 프록시를 연결해야 하며 DB·Redis 포트를 인터넷에 공개하지 않습니다.
+- 웹 베타: https://read-on-me-beta.pages.dev, API: https://152.67.222.15. 기능 PR 검증 후 main으로 병합하면 GitHub Actions의 전체 검사와 웹 빌드를 통과한 동일 artifact를 Cloudflare Pages에 자동 배포합니다. 공개 `/release.json`으로 배포된 main 커밋을 확인할 수 있습니다. `public/_redirects`는 임의 ISBN 상세 주소를 웹 라우트로 전달합니다. 최초 Actions 인증 설정과 서버 기동·마이그레이션·백업 절차는 [배포 안내](deploy/README.md), 첫 자동 배포 확인은 [검증 기록](BookAppFront/qa/main-pages-deployment-2026-11-17.md)을 참고합니다.
 
 - 임베딩 제공자는 `EMBEDDING_PROVIDER=local`(기본값) 또는 `gemini`로 선택합니다. Gemini 모드는 로컬 SentenceTransformer를 메모리에 올리지 않으며, 서버 재시작 후 적용됩니다. 기존 코퍼스가 있는 DB에서는 [임베딩 전환 절차](docs/environment-variables.md#gemini-임베딩-전환)를 먼저 완료해야 합니다.
 - AI 검색은 한 Spring 인스턴스에서 실행 2건과 대기 10건으로 제한합니다. 대기열이 가득 차면 `503`과 `Retry-After: 5`를 반환합니다. 재시작 시 대기 작업은 재개하고 실행 중이던 작업은 실패로 표시합니다.

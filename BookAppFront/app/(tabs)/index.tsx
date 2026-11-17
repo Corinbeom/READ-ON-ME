@@ -3,11 +3,10 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  Pressable,
   View,
   Text,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Bell } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
@@ -15,7 +14,9 @@ import { bookApi, recommendationApi } from '@/src/services/api';
 import { Book } from '@/src/types/book';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
-import BookmarkMascot from '@/components/BookmarkMascot';
+import AppButton from '@/components/ui/AppButton';
+import HomeAiPrompt from '@/components/HomeAiPrompt';
+import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
@@ -42,14 +43,6 @@ const mapLibraryBookToBook = (item: LibraryBook, index: number): Book => ({
   isbn13: item.isbn13 || '',
   contents: '', url: '', isbn10: '', datetime: '', price: 0, sale_price: 0, status: '',
 });
-const AI_PROMPTS = [
-  '스릴러 소설 추천해줘',
-  '잠 못 드는 밤에 읽을 책',
-  '나 요즘 좀 지쳐있어. 위로가 되는 책',
-  '일본 소설 입문으로 뭐가 좋아?',
-  '짧은 에세이 하나 추천해줘',
-  '성장하는 주인공 나오는 소설',
-];
 
 export default function HomeScreen() {
   const [naruBooks, setNaruBooks] = useState<Book[]>([]);
@@ -58,12 +51,6 @@ export default function HomeScreen() {
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
   const [recommendationType, setRecommendationType] = useState<string>('personalized');
   const [modalVisible, setModalVisible] = useState(false);
-
-  // ── 타이핑 애니메이션 ──────────────────────────────────
-  const [typedText, setTypedText]     = useState('');
-  const [promptIdx, setPromptIdx]     = useState(0);
-  const [isTyping, setIsTyping]       = useState(true);
-  const [cursorOn, setCursorOn]       = useState(true);
 
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { unreadCount } = useSelector((state: RootState) => state.notifications);
@@ -123,44 +110,15 @@ export default function HomeScreen() {
     return () => { active = false; };
   }, [isAuthenticated, userId]);
 
-  // 타이핑 → 대기 → 지우기 → 다음 프롬프트 사이클
-  useEffect(() => {
-    const current = AI_PROMPTS[promptIdx];
-    let t: ReturnType<typeof setTimeout>;
-
-    if (isTyping) {
-      if (typedText.length < current.length) {
-        t = setTimeout(() => setTypedText(current.slice(0, typedText.length + 1)), 75);
-      } else {
-        t = setTimeout(() => setIsTyping(false), 2000); // 완성 후 대기
-      }
-    } else {
-      if (typedText.length > 0) {
-        t = setTimeout(() => setTypedText(t => t.slice(0, -1)), 35); // 지우기 (더 빠르게)
-      } else {
-        setPromptIdx(i => (i + 1) % AI_PROMPTS.length);
-        setIsTyping(true);
-      }
-    }
-
-    return () => clearTimeout(t);
-  }, [typedText, isTyping, promptIdx]);
-
-  // 커서 깜빡임
-  useEffect(() => {
-    const id = setInterval(() => setCursorOn(v => !v), 530);
-    return () => clearInterval(id);
-  }, []);
-
   const now = new Date();
   const issueLabel = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`;
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <TabScreen testID="home-tab-screen">
+    <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
       {/* ── Masthead ── */}
-      <View style={styles.masthead}>
-        <Text style={styles.mastheadTitle}>Read On Me</Text>
+      <TabHeader title="Read On Me">
         <View style={styles.mastheadRight}>
           {isAuthenticated ? (
             <TouchableOpacity
@@ -168,31 +126,17 @@ export default function HomeScreen() {
               style={styles.notificationBellButton}
               accessibilityLabel="알림 확인"
             >
-              <Ionicons
-                name={hasUnreadNotifications ? 'notifications' : 'notifications-outline'}
-                size={22}
-                color={c.text}
-              />
+              <Bell size={22} color={c.text} aria-hidden />
               {hasUnreadNotifications && <View style={styles.notificationDot} />}
             </TouchableOpacity>
           ) : (
             <View style={styles.authButtons}>
-              <TouchableOpacity
-                style={styles.loginButton}
-                onPress={() => router.push('/auth/login')}
-              >
-                <Text style={styles.loginButtonText}>로그인</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.registerButton}
-                onPress={() => router.push('/auth/register')}
-              >
-                <Text style={styles.registerButtonText}>회원가입</Text>
-              </TouchableOpacity>
+              <AppButton title="로그인" variant="secondary" compact onPress={() => router.push('/auth/login')} />
+              <AppButton title="회원가입" compact onPress={() => router.push('/auth/register')} />
             </View>
           )}
         </View>
-      </View>
+      </TabHeader>
 
       {/* ── Issue Bar ── */}
       <View style={styles.issueBar}>
@@ -200,27 +144,7 @@ export default function HomeScreen() {
         <Text style={styles.issueBarText}>이번 주 화제</Text>
       </View>
 
-      {/* ── AI Prompt Section ── */}
-      <TouchableOpacity
-        style={styles.aiSection}
-        onPress={() => router.push('/ai-books')}
-        activeOpacity={0.7}
-        accessibilityRole="button"
-        accessibilityLabel="AI 사서와 책 고르기"
-      >
-        <View style={styles.aiContent}>
-          <View style={styles.aiCopy}>
-            <Text style={styles.aiLabel}>AI 사서</Text>
-            <Text style={styles.aiPromptText}>
-              오늘 읽을 한 권을 골라볼까요?{'\n'}
-              <Text>{typedText}</Text>
-              <Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
-            </Text>
-            <Text style={styles.aiSubText}>책을 찾고, 비교하고, 한 권 고르기 →</Text>
-          </View>
-          <BookmarkMascot state="idle" size={68} compact />
-        </View>
-      </TouchableOpacity>
+      <HomeAiPrompt />
 
       {/* ── 인기 책 (도서관 정보나루) ── */}
       <View>
@@ -256,11 +180,7 @@ export default function HomeScreen() {
                 ? '나와 같은 취향의 사람들이 읽은 책'
                 : `${user?.nickname}님을 위한 인기 도서`}
             </Text>
-            <Pressable onPress={() => setModalVisible(true)}>
-              <Text style={[styles.sectionCount, { textDecorationLine: 'underline' }]}>
-                추천 기준 ?
-              </Text>
-            </Pressable>
+            <AppButton title="추천 기준" variant="ghost" compact onPress={() => setModalVisible(true)} />
           </View>
           <View style={styles.sectionDivider} />
           <BookCarousel
@@ -285,17 +205,12 @@ export default function HomeScreen() {
             <Text style={styles.modalText}>
               비슷한 독서 취향을 가진 사용자들이 읽은 책을 보여드립니다.
             </Text>
-            <Pressable
-              style={[styles.button, styles.buttonClose]}
-              onPress={() => setModalVisible(false)}
-            >
-              <Text style={styles.textStyle}>닫기</Text>
-            </Pressable>
+            <AppButton title="닫기" onPress={() => setModalVisible(false)} />
           </View>
         </View>
       </Modal>
 
-      <View style={{ height: 40 }} />
     </ScrollView>
+    </TabScreen>
   );
 }

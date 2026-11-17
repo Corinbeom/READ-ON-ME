@@ -1,8 +1,9 @@
-import { useFonts } from 'expo-font';
+import { FontDisplay, useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { Platform, View } from 'react-native';
 import 'react-native-reanimated';
 import { Provider, useDispatch } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -12,6 +13,9 @@ import { store, AppDispatch } from '../src/store';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '@/components/ThemedView';
 import NotificationListener from '@/components/NotificationListener';
+import WebAlertHost from '@/components/WebAlertHost';
+import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
+import { Typography } from '@/src/styles/designTokens';
 import { getProfile, setToken, logout } from '@/src/store/authSlice';
 
 function SessionRestorer() {
@@ -37,19 +41,25 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const colorScheme = useColorScheme() ?? 'light';
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
-    'NotoSerifKR-Regular': require('../assets/fonts/NotoSerifKR-Regular.ttf'),
+  const [loaded, fontError] = useFonts({
+    SpaceMono: { uri: require('../assets/fonts/SpaceMono-Regular.ttf'), display: FontDisplay.SWAP },
+    'Pretendard-SemiBold': { uri: require('../assets/fonts/Pretendard-SemiBold.otf'), display: FontDisplay.SWAP },
+    'NotoSerifKR-Regular': { uri: require('../assets/fonts/NotoSerifKR-Regular.ttf'), display: FontDisplay.SWAP },
   });
 
   useEffect(() => {
-    if (loaded) {
+    if (Platform.OS === 'web' || loaded || fontError) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, fontError]);
 
-  if (!loaded) {
+  useEffect(() => {
+    if (fontError) console.warn('Custom fonts could not load; using system fonts.');
+  }, [fontError]);
+
+  // Web must remain usable while fonts download. Native keeps its splash
+  // until fonts finish, and can continue with system fonts if loading fails.
+  if (Platform.OS !== 'web' && !loaded && !fontError) {
     return null;
   }
 
@@ -57,17 +67,22 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <ThemedView style={{ flex: 1 }}>
+      <View style={{ flex: 1, backgroundColor: colors.surface2 }}>
+      <ThemedView style={[{ flex: 1 }, Platform.OS === 'web' && { width: '100%', maxWidth: SCREEN_LAYOUT.maxWidth, alignSelf: 'center' }]}>
         <SessionRestorer />
         <NotificationListener />
+        <WebAlertHost />
         <Stack
           screenOptions={{
             headerStyle: {
-              backgroundColor: colors.card,
+              backgroundColor: colors.background,
             },
             headerTintColor: colors.text,
+            headerShadowVisible: false,
+            headerBackButtonDisplayMode: 'minimal',
             headerTitleStyle: {
-              fontFamily: 'Pretendard-SemiBold',
+              fontFamily: Typography.section.fontFamily,
+              fontSize: Typography.section.fontSize,
             },
           }}
         >
@@ -93,6 +108,7 @@ export default function RootLayout() {
         </Stack>
         <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
       </ThemedView>
+      </View>
     </Provider>
   );
 }

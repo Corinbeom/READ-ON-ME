@@ -1,5 +1,5 @@
 // BookAppFront/src/services/api.ts
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, isCancel } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
@@ -27,28 +27,31 @@ const resolveDevHost = (): string => {
   return 'localhost';
 };
 
-// 📍 환경별 Base URL 설정
+// Expo inlines EXPO_PUBLIC variables at build time; only public URLs belong here.
 export const API_BASE_URL = (() => {
-  const host = resolveDevHost();
-  return `http://${host}:8080`;
-})();
-
-// 📍 FastAPI 서버를 위한 Base URL 설정
-const RECOMMENDATION_API_BASE_URL = (() => {
-  const host = resolveDevHost();
-  return `http://${host}:8000`;
+  const configured = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (configured) {
+    let url: URL;
+    try {
+      url = new URL(configured);
+    } catch {
+      throw new Error('EXPO_PUBLIC_API_URL must be an absolute API URL.');
+    }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
+      throw new Error('EXPO_PUBLIC_API_URL must be an HTTP(S) URL without credentials, query, or fragment.');
+    }
+    if (!__DEV__ && (url.protocol !== 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))) {
+      throw new Error('Release builds require an external HTTPS EXPO_PUBLIC_API_URL.');
+    }
+    return configured.replace(/\/+$/, '');
+  }
+  if (!__DEV__) throw new Error('Set EXPO_PUBLIC_API_URL before building for release.');
+  return `http://${resolveDevHost()}:8080`;
 })();
 
 // 📍 공통 Axios 인스턴스
 export const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
-});
-
-// 📍 추천 API를 위한 별도 Axios 인스턴스
-export const recommendationApiInstance = axios.create({
-  baseURL: RECOMMENDATION_API_BASE_URL,
   timeout: 10000,
   headers: { 'Content-Type': 'application/json' },
 });
@@ -119,8 +122,10 @@ export const aiJobApi = {
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    if (isCancel(error)) return Promise.reject(error);
     const url = error.config?.url ?? '';
-    const isSilent = silentPaths.some((path) => url.includes(path));
+    const handledLocally = error.config && 'handleErrorLocally' in error.config && error.config.handleErrorLocally === true;
+    const isSilent = handledLocally || silentPaths.some((path) => url.includes(path));
     if (!isSilent) {
       const message = handleApiError(error);
       customAlert('오류', message);
@@ -150,6 +155,8 @@ export const authApi = {
 };
 
 // 🔹 책 관련 API
+type LocalRequestOptions = { signal?: AbortSignal; handleErrorLocally?: boolean };
+
 export const bookApi = {
   searchBooks: (params: {
     query: string;
@@ -157,7 +164,7 @@ export const bookApi = {
     size?: number;
     sort?: 'accuracy' | 'latest';
     target?: 'title' | 'isbn' | 'publisher' | 'person';
-  }) => api.get('/api/books/search', { params }),
+  }, options?: LocalRequestOptions) => api.get('/api/books/search', { params, ...options }),
 
   getBookDetail: (isbn: string) => api.get(`/api/books/detail/${isbn}`),
   getPopularBooks: () => api.get('/api/books/popular'),
@@ -165,10 +172,10 @@ export const bookApi = {
 
   getBookEditions: (isbn: string) => api.get(`/api/books/${isbn}/editions`),
 
-  updateBookStatus: (bookId: number, status: ReadingStatus) =>
-    api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() } }),
+  updateBookStatus: (bookId: number, status: ReadingStatus, options?: LocalRequestOptions) =>
+    api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() }, ...options }),
 
-  getUserLibrary: () => api.get('/api/library'),
+  getUserLibrary: (options?: LocalRequestOptions) => api.get('/api/library', options),
 
   getBooksByIds: (ids: number[]) => api.post('/api/books/details', ids),
 
@@ -191,7 +198,7 @@ export const reviewApi = {
 
   toggleReviewLike: (reviewId: number) => api.post(`/api/books/review/${reviewId}/like`),
 
-  getMyReviews: () => api.get('/api/reviews/my'), // New method to fetch user's reviews
+  getMyReviews: (options?: LocalRequestOptions) => api.get('/api/reviews/my', options),
 }; 
 
 // 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
@@ -202,7 +209,7 @@ export const recommendationApi = {
 
 // 👤 유저 관련 API
 export const userApi = {
-  getReadingKeywords: () => api.get('/api/users/reading-keywords'),
+  getReadingKeywords: (options?: LocalRequestOptions) => api.get('/api/users/reading-keywords', options),
 };
 
 // 🔔 알림 관련 API

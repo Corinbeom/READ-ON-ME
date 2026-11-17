@@ -10,7 +10,7 @@ export const Colors = {
     background: '#fafaf7',
     tint: '#0e0e0c',
     icon: '#5a5a55',
-    tabIconDefault: '#a0a09a',
+    tabIconDefault: '#5a5a55',
     tabIconSelected: '#0e0e0c',
 
     // Semantic aliases
@@ -33,7 +33,7 @@ export const Colors = {
     background: '#1c1a16',
     tint: '#efe9d8',
     icon: '#a39a85',
-    tabIconDefault: '#6b6453',
+    tabIconDefault: '#a39a85',
     tabIconSelected: '#efe9d8',
 
     // Semantic aliases

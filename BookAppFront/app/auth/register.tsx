@@ -1,71 +1,26 @@
-import React, { useState, useCallback } from 'react';
-import {
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Image,
-  View,
-  Dimensions,
-  Text,
-} from 'react-native';
-import { router } from 'expo-router';
+import customAlert from '@/src/utils/alert';
+import { useState, useCallback } from 'react';
+import { View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch, RootState } from '@/src/store';
 import { signUp } from '@/src/store/authSlice';
-import { ThemedView } from '@/components/ThemedView';
+import AuthScreen from '@/components/AuthScreen';
+import AppButton from '@/components/ui/AppButton';
+import { FormField } from '@/components/ui/AppTextInput';
 import { ThemedText } from '@/components/ThemedText';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { Spacing, Typography } from '@/src/styles/designTokens';
+import { authReturnParams } from '@/src/utils/aiSearchEntry';
 
-const screenWidth = Dimensions.get('window').width;
-
-// Validation rules
 const validationRules = {
   nickname: { minLength: 2, maxLength: 10, message: '닉네임은 2-10자 사이여야 합니다' },
   email: { pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: '올바른 이메일 형식이 아닙니다' },
   password: { pattern: /^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,20}$/, message: '비밀번호는 8~20자, 영문/숫자/특수문자를 포함해야 합니다' },
 };
 
-// Dynamic stylesheet function
-const getStyles = (colorScheme: 'light' | 'dark') => {
-  const colors = Colors[colorScheme];
-  return StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.background },
-    scrollContainer: { flexGrow: 1 },
-    content: { flex: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40 },
-    logo: { width: screenWidth * 0.55,   // 전체 화면 폭의 55%
-      height: (screenWidth * 0.55) / 4.7, // 원본 비율 유지 (470:100)
-      resizeMode: 'contain',
-      alignSelf: 'center',
-      marginBottom: 48, },
-    title: { textAlign: 'center', marginBottom: 8, color: colors.primary },
-    subtitle: { textAlign: 'center', marginBottom: 40, color: colors.darkGray },
-    form: { gap: 12 },
-    inputContainer: { marginBottom: 4 }, // Add a container for input and error
-    input: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.lightGray, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: colors.text },
-    inputError: { borderColor: '#dc3545' },
-    errorText: { color: '#dc3545', fontSize: 12, marginTop: 4, marginLeft: 8 },
-    hintText: { color: colors.darkGray, fontSize: 12, marginTop: 4, marginLeft: 8 },
-    ageGroupLabel: { color: colors.darkGray, fontSize: 13, marginBottom: 8 },
-    ageGroupRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-    ageGroupButton: { borderWidth: 1, borderColor: colors.lightGray, borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: colors.card },
-    ageGroupButtonSelected: { borderColor: colors.primary, backgroundColor: colors.primary },
-    ageGroupButtonText: { fontSize: 13, color: colors.text, fontWeight: '500' },
-    ageGroupButtonTextSelected: { color: '#fff', fontWeight: '600' },
-    button: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 16, alignItems: 'center', marginTop: 8 },
-    buttonDisabled: { backgroundColor: colors.darkGray },
-    buttonText: { color: colors.background, fontSize: 16, fontWeight: '600' },
-    linkContainer: { alignItems: 'center', paddingVertical: 12 },
-    link: { color: colors.primary },
-    backButtonText: { color: colors.darkGray, fontSize: 14 },
-  });
-};
-
 export default function RegisterScreen() {
+  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[] }>();
+  const returnParams = authReturnParams(params.returnTo, params.prompt);
   const [nickname, setNickName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,9 +31,6 @@ export default function RegisterScreen() {
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading } = useSelector((state: RootState) => state.auth);
 
-  const colorScheme = useColorScheme() ?? 'light';
-  const styles = getStyles(colorScheme);
-  const colors = Colors[colorScheme];
 
   const validateField = useCallback((field: string, value: string) => {
     let error = '';
@@ -96,7 +48,7 @@ export default function RegisterScreen() {
     setErrors({});
     const values = { nickname, email, password, confirmPassword };
     const fields = ['nickname', 'email', 'password', 'confirmPassword'] as const;
-    const isValid = fields.every(field => validateField(field, values[field]));
+    const isValid = fields.map(field => validateField(field, values[field])).every(Boolean);
     if (!isValid) return;
 
     // 선택한 나이대 → 대표 출생연도 (나이대 중간값 사용)
@@ -107,7 +59,7 @@ export default function RegisterScreen() {
     try {
       const result = await dispatch(signUp({ nickname, email, password, birth_year: birthYear }));
       if (signUp.fulfilled.match(result)) {
-        Alert.alert('성공', '회원가입이 완료되었습니다!', [{ text: '로그인하기', onPress: () => router.replace('/auth/login') }]);
+        customAlert('성공', '회원가입이 완료되었습니다!', [{ text: '로그인하기', onPress: () => router.replace({ pathname: '/auth/login', params: returnParams }) }]);
       } else {
         const payload = result.payload as any;
         if (payload?.errors) {
@@ -116,14 +68,14 @@ export default function RegisterScreen() {
         } else if (payload?.code) {
           const field = payload.code === 'EMAIL_DUPLICATE' ? 'email' : payload.code === 'NICKNAME_DUPLICATE' ? 'nickname' : '';
           if (field) setErrors(prev => ({ ...prev, [field]: payload.message }));
-          else Alert.alert('회원가입 실패', payload.message || '알 수 없는 오류가 발생했습니다.');
+          else customAlert('회원가입 실패', payload.message || '알 수 없는 오류가 발생했습니다.');
         } else {
-          Alert.alert('회원가입 실패', payload?.message || '회원가입에 실패했습니다');
+          customAlert('회원가입 실패', payload?.message || '회원가입에 실패했습니다');
         }
       }
     } catch (error) {
       console.error('Register error:', error);
-      Alert.alert('오류', '회원가입 중 오류가 발생했습니다');
+      customAlert('오류', '회원가입 중 오류가 발생했습니다');
     }
   };
 
@@ -133,73 +85,31 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <ThemedView style={styles.content}>
-                    <Image 
-            source={colorScheme === 'dark' 
-              ? require('@/assets/images/login_register_logo_dark.png') 
-              : require('@/assets/images/login_register_logo.png')} 
-            style={styles.logo} 
-          />
-          <ThemedText type="title" style={styles.title}>회원가입</ThemedText>
-          <ThemedText style={styles.subtitle}>새 계정을 만들어보세요</ThemedText>
-
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <TextInput style={[styles.input, errors.nickname && styles.inputError]} placeholder="닉네임 (2-10자)" value={nickname} onChangeText={(text) => onInputChange('nickname', text, setNickName)} onBlur={() => validateField('nickname', nickname)} autoCapitalize="words" autoCorrect={false} placeholderTextColor={colors.darkGray} />
-              {errors.nickname && <ThemedText style={styles.errorText}>{errors.nickname}</ThemedText>}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput style={[styles.input, errors.email && styles.inputError]} placeholder="이메일" value={email} onChangeText={(text) => onInputChange('email', text, setEmail)} onBlur={() => validateField('email', email)} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} placeholderTextColor={colors.darkGray} />
-              {errors.email && <ThemedText style={styles.errorText}>{errors.email}</ThemedText>}
-            </View>
-            
-            <View style={styles.inputContainer}>
-              <TextInput style={[styles.input, errors.password && styles.inputError]} placeholder="비밀번호 (8-20자, 영문/숫자/특수문자)" value={password} onChangeText={(text) => onInputChange('password', text, setPassword)} onBlur={() => validateField('password', password)} secureTextEntry autoCapitalize="none" placeholderTextColor={colors.darkGray} />
-              {errors.password && <ThemedText style={styles.errorText}>{errors.password}</ThemedText>}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <TextInput style={[styles.input, errors.confirmPassword && styles.inputError]} placeholder="비밀번호 확인" value={confirmPassword} onChangeText={(text) => onInputChange('confirmPassword', text, setConfirmPassword)} onBlur={() => validateField('confirmPassword', confirmPassword)} secureTextEntry autoCapitalize="none" placeholderTextColor={colors.darkGray} />
-              {errors.confirmPassword && <ThemedText style={styles.errorText}>{errors.confirmPassword}</ThemedText>}
-            </View>
-
-            <View style={styles.inputContainer}>
-              <ThemedText style={styles.ageGroupLabel}>나이대 (선택) — 나이대별 맞춤 추천을 받을 수 있어요</ThemedText>
-              <View style={styles.ageGroupRow}>
-                {([10, 20, 30, 40, 50, 60] as const).map((age) => {
-                  const isSelected = selectedAgeGroup === age;
-                  return (
-                    <TouchableOpacity
-                      key={age}
-                      style={[styles.ageGroupButton, isSelected && styles.ageGroupButtonSelected]}
-                      onPress={() => setSelectedAgeGroup(isSelected ? null : age)}
-                    >
-                      <ThemedText style={[styles.ageGroupButtonText, isSelected && styles.ageGroupButtonTextSelected]}>
-                        {age === 60 ? '60대 이상' : `${age}대`}
-                      </ThemedText>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-
-            <TouchableOpacity style={[styles.button, (isLoading || Object.values(errors).some(e => e)) && styles.buttonDisabled]} onPress={handleRegister} disabled={isLoading || Object.values(errors).some(e => e)}>
-              <Text style={styles.buttonText}>{isLoading ? '회원가입 중...' : '회원가입'}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.linkContainer} onPress={() => router.replace('/auth/login')}>
-              <ThemedText type="link" style={styles.link}>이미 계정이 있으신가요? 로그인</ThemedText>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.linkContainer} onPress={() => router.back()}>
-              <ThemedText style={styles.backButtonText}>뒤로 가기</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </ThemedView>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    <AuthScreen title="회원가입" description="나에게 맞는 책을 찾아볼까요?">
+      <FormField label="닉네임" placeholder="어떻게 불러드릴까요?" hint="2~10자로 입력해주세요."
+        value={nickname} onChangeText={(text) => onInputChange('nickname', text, setNickName)}
+        onBlur={() => validateField('nickname', nickname)} autoCorrect={false} error={errors.nickname} />
+      <FormField label="이메일" placeholder="이메일 주소" keyboardType="email-address" autoCapitalize="none" autoComplete="email"
+        value={email} onChangeText={(text) => onInputChange('email', text, setEmail)} onBlur={() => validateField('email', email)} error={errors.email} />
+      <FormField label="비밀번호" placeholder="비밀번호" hint="8~20자, 영문·숫자·특수문자를 포함해주세요."
+        secureTextEntry autoCapitalize="none" autoComplete="new-password" value={password}
+        onChangeText={(text) => onInputChange('password', text, setPassword)} onBlur={() => validateField('password', password)} error={errors.password} />
+      <FormField label="비밀번호 확인" placeholder="비밀번호를 한 번 더 입력해주세요" secureTextEntry autoCapitalize="none" autoComplete="new-password"
+        value={confirmPassword} onChangeText={(text) => onInputChange('confirmPassword', text, setConfirmPassword)}
+        onBlur={() => validateField('confirmPassword', confirmPassword)} error={errors.confirmPassword} />
+      <View style={{ gap: Spacing.xs }}>
+        <ThemedText style={Typography.label}>연령대 (선택)</ThemedText>
+        <ThemedText style={Typography.caption}>선택하면 나이대에 맞는 인기 책을 볼 수 있어요.</ThemedText>
+        <View role="radiogroup" accessibilityLabel="연령대" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
+          {[10, 20, 30, 40, 50, 60].map((age) => <AppButton key={age} compact
+            title={age === 60 ? '60대 이상' : `${age}대`} variant={selectedAgeGroup === age ? 'primary' : 'secondary'}
+            accessibilityRole="radio" accessibilityState={{ checked: selectedAgeGroup === age }}
+            onPress={() => setSelectedAgeGroup(selectedAgeGroup === age ? null : age)} />)}
+        </View>
+      </View>
+      <AppButton title="회원가입" loading={isLoading} onPress={handleRegister} />
+      <AppButton title="이미 계정이 있으신가요? 로그인" variant="ghost" onPress={() => router.replace({ pathname: '/auth/login', params: returnParams })} />
+      <AppButton title="홈으로 돌아가기" variant="ghost" onPress={() => router.replace('/')} />
+    </AuthScreen>
   );
 }
