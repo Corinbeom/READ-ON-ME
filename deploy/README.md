@@ -26,15 +26,42 @@ sudo docker compose -f compose.beta.yml up -d
 
 `API_HOST`에는 공인 IP를 넣는다. Caddy는 Let's Encrypt의 shortlived 프로필로 IP 인증서를 발급하고 갱신한다. 80·443 접근과 Caddy 데이터 볼륨을 유지한다. `default_sni`는 NAT 뒤에서 IP로 접속하는 클라이언트의 인증서 선택을 위해 설정했다. 외부의 일반 `curl https://<IP>/api/books/test`와 브라우저에서 인증서 검증을 확인한다. 검증 우회 옵션으로 성공 처리하지 않는다.
 
-## 웹 빌드와 배포
+## 웹 자동 배포
+
+운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. Oracle 서버 이미지·DB의 배포 절차는 기존과 같으며 이 자동화에 포함하지 않는다.
+
+프론트 검사에서 한 번 생성한 `dist`를 커밋 SHA별 Actions artifact로 보관하고 배포 작업에서 그대로 내려받는다. 배포 단계는 API 주소·폰트와 커밋 정보를 다시 검증한다. 배포 작업은 동시에 한 건만 실행하며, 대기 중인 작업이 최신 main보다 오래된 커밋이면 건너뛴다. Wrangler는 4.162.0으로 고정한다.
+
+배포 후 `https://read-on-me-beta.pages.dev/release.json`의 `commit`이 해당 main SHA와 같은지 확인한다. 이 파일은 공개 커밋 SHA와 Actions 실행 ID만 담는다. 검사나 빌드가 실패하면 배포 단계는 실행하지 않는다. 업로드 이후 확인 단계가 실패한 경우 이미 배포가 이루어졌을 수 있으므로 실제 release.json과 Pages 배포 기록을 먼저 확인한다.
+
+### 최초 인증 설정
+
+GitHub 저장소 Settings → Secrets and variables → Actions에 다음 repository secrets를 등록한다.
+
+| 이름 | 값 |
+| --- | --- |
+| `CLOUDFLARE_ACCOUNT_ID` | 기존 `read-on-me-beta` 프로젝트의 계정 ID |
+| `CLOUDFLARE_API_TOKEN` | 해당 계정만 허용한 Account → Cloudflare Pages → Edit API 토큰 |
+
+개인 Mac의 Wrangler OAuth 토큰을 Actions에 복사하지 않는다. API 토큰은 Git·로그·채팅에 남기지 않는다. 토큰 교체 시 같은 이름의 secret만 갱신한다. 선택 변수 `WEB_API_URL`은 빌드에 공개되는 API 주소이며, 미설정 시 현재 주소 `https://152.67.222.15`를 사용한다. API 키나 JWT 비밀값을 이 변수에 넣지 않는다.
+
+설정과 GitHub Actions 검사는 PR에서 먼저 확인한 뒤 main에 통합한다. 첫 자동 배포의 성공 실행과 공개 revision 일치를 확인해야 연결 완료로 판단한다. 실제 검증 기록은 [main 자동 배포 점검](../BookAppFront/qa/main-pages-deployment-2026-11-17.md)에 남긴다.
+
+### 일반 릴리스와 복구
+
+1. 기능 브랜치에서 변경·테스트 후 PR을 생성한다.
+2. `backend`, `ai`, `frontend` 검사를 확인하고 main으로 병합한다.
+3. main의 Validation 실행에서 `Deploy production web` 완료와 공개 `release.json`을 확인한다.
+4. 배포 실패 시 원인을 수정한 PR을 병합하거나, 같은 최신 main의 실패 작업을 재실행한다. 과거 릴리스로 되돌리려면 main에 revert를 반영해 다시 배포한다. 오래된 실행 재실행은 최신 main 검사에 의해 배포를 건너뛴다.
+
+운영 주소를 지정한 로컬 빌드 검증은 아래처럼 수행할 수 있다. 운영 업로드는 main의 Actions에서 진행한다.
 
 ```sh
 cd BookAppFront
-EXPO_PUBLIC_API_URL=https://<API_IP> npm run build:web
-npx wrangler@4 pages deploy dist --project-name read-on-me-beta --branch main
+EXPO_PUBLIC_API_URL=https://152.67.222.15 npm run build:web
 ```
 
-`build:web`는 Metro 캐시를 비우고 Expo 의존성의 폰트·이미지를 Pages가 제외하지 않는 `assets/vendor` 경로로 복사하고, 실제 브라우저 번들에 API 주소가 포함됐는지 검사한다. `public/_redirects`가 원래 `assets/node_modules` URL을 새 경로로 전달한다. SSR 빌드 통과만으로는 브라우저의 환경변수 치환을 보장하지 않는다. 최초 Pages 프로젝트 생성은 `wrangler pages project create read-on-me-beta --production-branch main --force`로 진행했다(Wrangler 4.162.0). 프로젝트 생성 후에는 `--force`를 사용하지 않는다. 웹 주소가 바뀌면 서버 `.env`의 `WEB_ORIGIN`도 변경하고 backend를 재생성한다.
+`build:web`는 Metro 캐시를 비우고 Expo 의존성의 폰트·이미지를 Pages가 제외하지 않는 `assets/vendor` 경로로 복사하고, 실제 브라우저 번들에 API 주소가 포함됐는지 검사한다. `public/_redirects`가 원래 `assets/node_modules` URL을 새 경로로 전달한다. SSR 빌드 통과만으로는 브라우저의 환경변수 치환을 보장하지 않는다. 기존 프로젝트의 production branch는 main이다. 최초 프로젝트 생성 후에는 `--force`를 사용하지 않는다. 웹 주소가 바뀌면 서버 `.env`의 `WEB_ORIGIN`도 변경하고 backend를 재생성한다.
 
 ## 점검과 보존
 

@@ -98,3 +98,10 @@ Lookup failures are distinct from an unsaved book. A failed write preserves the 
 Status state is keyed by account and book, cleared on logout/new login, and protected by request IDs. Writes continue across screen changes; refocusing book detail does not start a conflicting read while a write is pending. A successful write also refreshes the library when it is visible, covering navigation back before a slow save finishes. No API, database, dependency or environment changes are required.
 
 See [save feedback validation](qa/library-save-feedback-2026-11-17.md).
+
+
+## Production web deployment
+
+Production deployment is driven by main in `.github/workflows/validation.yml`. PRs run validation only. A main push deploys the exact frontend build artifact after backend, AI and frontend checks pass. A stale main run skips deployment, and the live `/release.json` records the published commit. Cloudflare credentials are injected into deployment steps only.
+
+See [deployment setup and recovery](../deploy/README.md#웹-자동-배포) and [CI deployment verification](qa/main-pages-deployment-2026-11-17.md). Local feature builds are for validation; production releases follow the main workflow.

@@ -174,7 +174,7 @@ docker compose up --build
 
 - Spring의 직접 AI 검색과 검색 작업 접수는 로그인이 필요하며 두 경로가 사용자별 분당 20회 제한을 공유합니다. 작업 상태 조회는 이 제한에 포함하지 않습니다. 익명 도서 검색은 연결 IP별 분당 60회로 제한하며 임의 `X-Forwarded-For`를 신뢰하지 않습니다. 공용 프록시 뒤의 익명 사용자는 프록시 연결 IP의 한도를 공유할 수 있습니다. Redis 장애 시 제한 대상 요청은 `503`과 `Retry-After: 5`로 거절합니다.
 - Compose의 DB·Redis·Spring·AI 호스트 포트는 모두 `127.0.0.1`에 바인딩됩니다. 외부 베타에는 HTTPS 역방향 프록시를 연결해야 하며 DB·Redis 포트를 인터넷에 공개하지 않습니다.
-- 웹 베타: https://read-on-me-beta.pages.dev, API: https://152.67.222.15. Cloudflare Pages는 `BookAppFront/wrangler.toml`을 사용합니다. `EXPO_PUBLIC_API_URL=https://152.67.222.15 npm run build:web`로 캐시를 비우고 브라우저 번들 주소까지 확인한 뒤 `npx wrangler@4 pages deploy dist --project-name read-on-me-beta --branch main`으로 배포합니다. `public/_redirects`는 임의 ISBN 상세 주소를 웹 라우트로 전달합니다. 서버 기동·마이그레이션·백업 절차는 [배포 안내](deploy/README.md), 실제 검증 결과는 [배포 기록](BookAppFront/qa/beta-deployment-2026-11-15.md)을 참고합니다.
+- 웹 베타: https://read-on-me-beta.pages.dev, API: https://152.67.222.15. 기능 PR 검증 후 main으로 병합하면 GitHub Actions의 전체 검사와 웹 빌드를 통과한 동일 artifact를 Cloudflare Pages에 자동 배포합니다. 공개 `/release.json`으로 배포된 main 커밋을 확인할 수 있습니다. `public/_redirects`는 임의 ISBN 상세 주소를 웹 라우트로 전달합니다. 최초 Actions 인증 설정과 서버 기동·마이그레이션·백업 절차는 [배포 안내](deploy/README.md), 첫 자동 배포 확인은 [검증 기록](BookAppFront/qa/main-pages-deployment-2026-11-17.md)을 참고합니다.
 
 - 임베딩 제공자는 `EMBEDDING_PROVIDER=local`(기본값) 또는 `gemini`로 선택합니다. Gemini 모드는 로컬 SentenceTransformer를 메모리에 올리지 않으며, 서버 재시작 후 적용됩니다. 기존 코퍼스가 있는 DB에서는 [임베딩 전환 절차](docs/environment-variables.md#gemini-임베딩-전환)를 먼저 완료해야 합니다.
 - AI 검색은 한 Spring 인스턴스에서 실행 2건과 대기 10건으로 제한합니다. 대기열이 가득 차면 `503`과 `Retry-After: 5`를 반환합니다. 재시작 시 대기 작업은 재개하고 실행 중이던 작업은 실패로 표시합니다.
