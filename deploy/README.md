@@ -30,7 +30,7 @@ sudo docker compose -f compose.beta.yml up -d
 
 운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. Oracle 서버 이미지·DB의 배포 절차는 기존과 같으며 이 자동화에 포함하지 않는다.
 
-프론트 검사에서 한 번 생성한 `dist`를 커밋 SHA별 Actions artifact로 보관하고 배포 작업에서 그대로 내려받는다. 배포 단계는 API 주소·폰트와 커밋 정보를 다시 검증한다. 배포 작업은 동시에 한 건만 실행하며, 대기 중인 작업이 최신 main보다 오래된 커밋이면 건너뛴다. Wrangler는 4.162.0으로 고정한다.
+프론트 검사에서 한 번 생성한 `dist`를 커밋 SHA별 Actions artifact로 보관하고 배포 작업에서 그대로 내려받는다. 배포 단계는 API 주소·폰트와 커밋 정보를 다시 검증한다. 배포 작업은 동시에 한 건만 실행하며, 대기 중인 작업이 최신 main보다 오래된 커밋이면 건너뛴다. 배포 런타임은 Node 22(22.12 이상)이며 Wrangler는 4.162.0으로 고정한다.
 
 배포 후 `https://read-on-me-beta.pages.dev/release.json`의 `commit`이 해당 main SHA와 같은지 확인한다. 이 파일은 공개 커밋 SHA와 Actions 실행 ID만 담는다. 검사나 빌드가 실패하면 배포 단계는 실행하지 않는다. 업로드 이후 확인 단계가 실패한 경우 이미 배포가 이루어졌을 수 있으므로 실제 release.json과 Pages 배포 기록을 먼저 확인한다.
 
