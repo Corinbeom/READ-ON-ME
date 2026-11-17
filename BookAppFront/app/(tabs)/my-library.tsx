@@ -7,6 +7,7 @@ import TabScreen, { TabHeader } from '@/components/TabScreen';
 import LibraryShelf, { LibraryBookCard, LibraryDiscovery } from '@/components/LibraryShelf';
 import AppButton from '@/components/ui/AppButton';
 import ScreenState from '@/components/ui/ScreenState';
+import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import { useLibraryOverview } from '@/hooks/useLibraryOverview';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -119,7 +120,7 @@ export default function MyLibraryScreen() {
         {isAuthenticated && !overview.library ? overview.libraryError
           ? <ScreenState title="서재를 불러오지 못했어요" description="연결 상태를 확인하고 다시 시도해주세요."
             action="다시 시도" onAction={overview.reload} />
-          : <ScreenState loading title="서재의 책을 불러오고 있어요" /> : null}
+          : <BookListSkeleton layout="library" label="서재의 책을 불러오고 있어요" /> : null}
 
         {isAuthenticated && overview.library ? (
           <>

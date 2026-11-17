@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   TouchableOpacity,
   ScrollView,
@@ -10,8 +10,7 @@ import { Bell } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
-import { bookApi, recommendationApi } from '@/src/services/api';
-import { Book } from '@/src/types/book';
+import { useHomeBooks, calcAgeGroup } from '@/hooks/useHomeBooks';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
 import AppButton from '@/components/ui/AppButton';
@@ -20,95 +19,18 @@ import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 
-interface LibraryBook {
-  ranking: string;
-  bookname: string;
-  authors: string;
-  publisher: string;
-  isbn13: string;
-  bookImageURL: string;
-}
-
-const calcAgeGroup = (birthYear: number): number => {
-  const actualAge = new Date().getFullYear() - birthYear;
-  return Math.max(10, Math.min(60, Math.floor(actualAge / 10) * 10));
-};
-
-const mapLibraryBookToBook = (item: LibraryBook, index: number): Book => ({
-  id: parseInt(item.ranking, 10) || index + 1,
-  title: item.bookname || '',
-  thumbnail: item.bookImageURL || '',
-  authors: item.authors || '',
-  publisher: item.publisher || '',
-  isbn13: item.isbn13 || '',
-  contents: '', url: '', isbn10: '', datetime: '', price: 0, sale_price: 0, status: '',
-});
-
 export default function HomeScreen() {
-  const [naruBooks, setNaruBooks] = useState<Book[]>([]);
-  const [naruLoading, setNaruLoading] = useState(false);
-  const [recommendedBooks, setRecommendedBooks] = useState<Book[]>([]);
-  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
-  const [recommendationType, setRecommendationType] = useState<string>('personalized');
   const [modalVisible, setModalVisible] = useState(false);
 
   const { user, isAuthenticated } = useSelector((state: RootState) => state.auth);
   const { unreadCount } = useSelector((state: RootState) => state.notifications);
   const birthYear = user?.birth_year;
-  const userId = user?.id;
+  const { popular, recommendations } = useHomeBooks(isAuthenticated ? user?.id : undefined, isAuthenticated ? birthYear : undefined);
 
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getHomeScreenStyles(colorScheme);
   const c = Colors[colorScheme];
   const hasUnreadNotifications = unreadCount > 0;
-
-  useEffect(() => {
-    let active = true;
-    const fetchNaruBooks = async () => {
-      setNaruLoading(true);
-      try {
-        const ageGroup = birthYear ? calcAgeGroup(birthYear) : undefined;
-        const response = await bookApi.getPopularBooksFromLibrary(ageGroup);
-        if (active) setNaruBooks((response.data as LibraryBook[]).map(mapLibraryBookToBook));
-      } catch (error) {
-        console.error('인기 책 조회 실패:', error);
-      } finally {
-        if (active) setNaruLoading(false);
-      }
-    };
-    void fetchNaruBooks();
-    return () => { active = false; };
-  }, [birthYear]);
-
-  useEffect(() => {
-    if (!isAuthenticated || !userId) {
-      setRecommendedBooks([]);
-      setRecommendationsLoading(false);
-      return;
-    }
-
-    let active = true;
-    const fetchRecommendations = async () => {
-      setRecommendationsLoading(true);
-      try {
-        const response = await recommendationApi.getRecommendations();
-        const { type, bookIds } = response.data;
-        if (active) setRecommendationType(type);
-        if (bookIds && bookIds.length > 0) {
-          const booksResponse = await bookApi.getBooksByIds(bookIds);
-          if (active) setRecommendedBooks(booksResponse.data);
-        } else if (active) {
-          setRecommendedBooks([]);
-        }
-      } catch (error) {
-        console.error('[추천 로직] 추천 책 조회 실패:', error);
-      } finally {
-        if (active) setRecommendationsLoading(false);
-      }
-    };
-    void fetchRecommendations();
-    return () => { active = false; };
-  }, [isAuthenticated, userId]);
 
   const now = new Date();
   const issueLabel = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -154,8 +76,8 @@ export default function HomeScreen() {
               ? `${calcAgeGroup(user.birth_year)}대에게 인기인 책`
               : '이달의 인기 책'}
           </Text>
-          {naruBooks.length > 0 && (
-            <Text style={styles.sectionCount}>{naruBooks.length}권</Text>
+          {popular.books.length > 0 && (
+            <Text style={styles.sectionCount}>{popular.books.length}권</Text>
           )}
         </View>
         {isAuthenticated && !user?.birth_year && (
@@ -166,8 +88,9 @@ export default function HomeScreen() {
         <View style={styles.sectionDivider} />
         <BookCarousel
           title=""
-          books={naruBooks}
-          loading={naruLoading}
+          books={popular.books}
+          loading={popular.loading}
+          error={popular.error} onRetry={popular.retry} loadingLabel="인기 책 목록을 불러오고 있어요"
         />
       </View>
 
@@ -176,7 +99,7 @@ export default function HomeScreen() {
         <View>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {recommendationType === 'personalized'
+              {recommendations.type === 'personalized'
                 ? '나와 같은 취향의 사람들이 읽은 책'
                 : `${user?.nickname}님을 위한 인기 도서`}
             </Text>
@@ -185,8 +108,9 @@ export default function HomeScreen() {
           <View style={styles.sectionDivider} />
           <BookCarousel
             title=""
-            books={recommendedBooks}
-            loading={recommendationsLoading}
+            books={recommendations.books}
+            loading={recommendations.loading}
+            error={recommendations.error} onRetry={recommendations.retry} loadingLabel="추천 책 목록을 불러오고 있어요"
             emptyMessage="독서 활동을 시작하면 추천이 생성돼요."
           />
         </View>

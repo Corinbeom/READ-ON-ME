@@ -7,6 +7,7 @@ import TabScreen, { TabHeader } from '@/components/TabScreen';
 import AppButton from '@/components/ui/AppButton';
 import AppTextInput from '@/components/ui/AppTextInput';
 import ScreenState from '@/components/ui/ScreenState';
+import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import { Colors } from '@/constants/Colors';
 import { useBookSearch } from '@/hooks/useBookSearch';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -98,9 +99,10 @@ export default function SearchScreen() {
   );
 
   const header = search.status === 'loading'
-    ? <ScreenState loading title="책을 찾고 있어요" description="잠시만 기다려주세요." />
+    ? search.retaining ? <View style={styles.refreshRow} role="status"><ActivityIndicator size={14} color={c.inkSoft} /><Text style={styles.refreshText}>기존 검색 결과를 새로 확인하고 있어요.</Text></View>
+      : <BookListSkeleton layout="rows" label="검색한 책 목록을 불러오고 있어요" />
     : search.status === 'error'
-      ? <ScreenState title="책을 불러오지 못했어요" description="연결 상태를 확인하고 다시 시도해주세요."
+      ? <ScreenState title={search.retaining ? '기존 결과를 갱신하지 못했어요' : '책을 불러오지 못했어요'} description="연결 상태를 확인하고 다시 시도해주세요."
         action="다시 시도" onAction={() => { void search.search(search.submittedQuery); }} />
       : search.status === 'success'
         ? search.books.length ? <Text style={styles.resultLabel}>{search.books.length}권의 검색 결과</Text> : null
@@ -127,7 +129,7 @@ export default function SearchScreen() {
         </View>
       </View>
       <FlatList
-        data={search.status === 'success' ? search.books : search.status === 'idle' ? search.suggestions : []}
+        data={search.status === 'success' || search.retaining ? search.books : search.status === 'idle' ? search.suggestions : []}
         renderItem={previewing ? renderSuggestion : renderBookItem}
         keyExtractor={(item, index) => `${item.isbn || item.title}:${index}`}
         style={styles.list} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"

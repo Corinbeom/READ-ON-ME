@@ -77,3 +77,17 @@ test('library status writes can recover inline without duplicate global alerts',
   await assert.rejects(bookApi.updateBookStatus(12, 'READING'));
   assert.equal(alerts.length, 1);
 });
+
+test('home list requests handle errors inline without changing their default consumers', async () => {
+  const { api, bookApi, recommendationApi, alerts } = loadApi();
+  failRequests(api);
+  const options = { signal: new AbortController().signal, handleErrorLocally: true };
+  await assert.rejects(bookApi.getPopularBooksFromLibrary(30, options));
+  await assert.rejects(recommendationApi.getRecommendations(options));
+  await assert.rejects(bookApi.getBooksByIds([1], options));
+  assert.equal(alerts.length, 0);
+  await assert.rejects(bookApi.getPopularBooksFromLibrary());
+  await assert.rejects(recommendationApi.getRecommendations());
+  await assert.rejects(bookApi.getBooksByIds([1]));
+  assert.equal(alerts.length, 3);
+});

@@ -35,6 +35,8 @@ export function getSearchScreenStyles(theme: 'light' | 'dark') {
     authors: { ...Typography.caption, color: c.inkSoft },
     chevron: { ...Typography.label, color: c.inkSoft, marginLeft: Spacing.xs },
     divider: { height: 1, backgroundColor: c.line, marginHorizontal: SCREEN_LAYOUT.gutter },
+    refreshRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
+    refreshText: { ...Typography.caption, color: c.inkSoft, flex: 1 },
     resultLabel: { ...Typography.caption, color: c.inkSoft, paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
     previewHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: Spacing.lg, paddingBottom: Spacing.sm },
     previewHint: { ...Typography.caption, color: c.inkSoft, flex: 1 },
