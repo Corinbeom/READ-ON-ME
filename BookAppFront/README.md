@@ -105,3 +105,12 @@ See [save feedback validation](qa/library-save-feedback-2026-11-17.md).
 Production deployment is driven by main in `.github/workflows/validation.yml`. PRs run validation only. A main push deploys the exact frontend build artifact after backend, AI and frontend checks pass. A stale main run skips deployment, and the live `/release.json` records the published commit. Cloudflare credentials are injected into deployment steps only.
 
 See [deployment setup and recovery](../deploy/README.md#웹-자동-배포) and [CI deployment verification](qa/main-pages-deployment-2026-11-17.md). Local feature builds are for validation; production releases follow the main workflow.
+
+
+## Book list skeletons
+
+`components/ui/BookListSkeleton.tsx` reserves the real card/row sizes for home carousels, search results and the first library load. Shapes fade in after 150ms; results are shown as soon as they arrive. Each list uses one opacity animation, stops it off screen and cleans up its timer/subscription on removal. Reduced motion uses static shapes. Placeholders have no links and expose one labelled busy state rather than fake book contents.
+
+`hooks/useHomeBooks.ts` keeps popular lists keyed by age group and recommendations by user, aborts obsolete requests and offers inline retry. A first failure is distinct from an empty response. `useBookSearch` retains the last completed result for a same-query refresh (including refresh failure); a different query or editing the input never displays those books as new results. The library continues preserving same-user data during focus refresh.
+
+See [skeleton verification](qa/book-list-skeletons-2026-11-17.md). No new dependencies, environment variables or backend changes are required.

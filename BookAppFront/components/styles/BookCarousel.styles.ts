@@ -15,7 +15,8 @@ export const getBookCarouselStyles = (colorScheme: 'light' | 'dark') => {
     bookThumbnail: { width: 110, height: 158, borderRadius: 0, backgroundColor: c.surface2, marginBottom: 8 },
     bookTitle: { ...Typography.label, color: c.text, width: 110, fontFamily: 'NotoSerifKR-Regular', minHeight: 40 },
     bookAuthor: { ...Typography.caption, color: c.inkSoft, width: 110, marginTop: 4, letterSpacing: 0.1, textTransform: 'uppercase' },
-    loadingIndicator: { height: 158 },
+    refreshText: { ...Typography.caption, color: c.inkSoft, paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: 8, flexShrink: 1 },
+    retryRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: SCREEN_LAYOUT.gutter },
     emptyText: { ...Typography.body, color: c.inkSoft, fontStyle: 'italic', paddingVertical: 16, paddingHorizontal: SCREEN_LAYOUT.gutter },
   });
 };

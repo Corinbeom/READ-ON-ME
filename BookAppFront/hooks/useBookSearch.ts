@@ -4,8 +4,7 @@ import { bookApi } from '@/src/services/api';
 import type { KakaoBook } from '@/src/types/kakaoBook';
 import { createLatestBookRequest } from '@/src/utils/latestBookRequest';
 import { normalizeSearchQuery } from '@/src/utils/recentSearches';
-
-type SearchStatus = 'idle' | 'loading' | 'success' | 'error';
+import { searchResultView, type SearchResult, type SearchStatus } from '@/src/utils/searchResults';
 
 function documents(data: { documents?: KakaoBook[] }): KakaoBook[] {
   if (!Array.isArray(data?.documents)) throw new Error('Invalid book search response');
@@ -16,7 +15,7 @@ export function useBookSearch(onSuccess: (query: string) => Promise<void>) {
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [status, setStatus] = useState<SearchStatus>('idle');
-  const [books, setBooks] = useState<KakaoBook[]>([]);
+  const [result, setResult] = useState<SearchResult<KakaoBook> | null>(null);
   const [suggestions, setSuggestions] = useState<KakaoBook[]>([]);
   const [suggesting, setSuggesting] = useState(false);
   const [suggestionError, setSuggestionError] = useState(false);
@@ -35,7 +34,6 @@ export function useBookSearch(onSuccess: (query: string) => Promise<void>) {
     cancel();
     setQuery(text);
     setStatus('idle');
-    setBooks([]);
     setSuggestions([]);
     setSuggestionError(false);
     const trimmed = normalizeSearchQuery(text);
@@ -64,14 +62,13 @@ export function useBookSearch(onSuccess: (query: string) => Promise<void>) {
     setQuery(trimmed);
     setSubmittedQuery(trimmed);
     setStatus('loading');
-    setBooks([]);
     setSuggestions([]);
     setSuggesting(false);
     setSuggestionError(false);
     try {
       const response = await bookApi.searchBooks({ query: trimmed, size: 20 }, { signal: request.signal, handleErrorLocally: true });
       if (!request.isCurrent()) return;
-      setBooks(documents(response.data));
+      setResult({ query: trimmed, books: documents(response.data) });
       setStatus('success');
       void onSuccess(trimmed);
     } catch {
@@ -81,5 +78,6 @@ export function useBookSearch(onSuccess: (query: string) => Promise<void>) {
     }
   }, [cancel, onSuccess, query]);
 
-  return { query, submittedQuery, status, books, suggestions, suggesting, suggestionError, changeQuery, search };
+  const { books, retaining } = searchResultView(status, submittedQuery, result);
+  return { query, submittedQuery, status, books, retaining, suggestions, suggesting, suggestionError, changeQuery, search };
 }

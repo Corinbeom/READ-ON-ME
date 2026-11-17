@@ -177,11 +177,11 @@ export const bookApi = {
 
   getUserLibrary: (options?: LocalRequestOptions) => api.get('/api/library', options),
 
-  getBooksByIds: (ids: number[]) => api.post('/api/books/details', ids),
+  getBooksByIds: (ids: number[], options?: LocalRequestOptions) => api.post('/api/books/details', ids, options),
 
   // 도서관 정보나루 인기 대출 도서 (로그인 시 나이대별, 비로그인 시 전체)
-  getPopularBooksFromLibrary: (ageGroup?: number) =>
-    api.get('/api/books/popular/naru', ageGroup ? { params: { ageGroup } } : {}),
+  getPopularBooksFromLibrary: (ageGroup?: number, options?: LocalRequestOptions) =>
+    api.get('/api/books/popular/naru', { params: ageGroup ? { ageGroup } : undefined, ...options }),
 };
 
 // 🔹 리뷰 관련 API
@@ -203,8 +203,8 @@ export const reviewApi = {
 
 // 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
 export const recommendationApi = {
-  getRecommendations: () =>
-    api.get<{ type: string; bookIds: number[] }>('/api/recommendations'),
+  getRecommendations: (options?: LocalRequestOptions) =>
+    api.get<{ type: string; bookIds: number[] }>('/api/recommendations', options),
 };
 
 // 👤 유저 관련 API
