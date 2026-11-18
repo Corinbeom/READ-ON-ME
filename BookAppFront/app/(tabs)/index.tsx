@@ -15,6 +15,7 @@ import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
 import AppButton from '@/components/ui/AppButton';
 import HomeAiPrompt from '@/components/HomeAiPrompt';
+import HomeBookCollection from '@/components/HomeBookCollection';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -63,10 +64,11 @@ export default function HomeScreen() {
       {/* ── Issue Bar ── */}
       <View style={styles.issueBar}>
         <Text style={styles.issueBarText}>{issueLabel} · Read On Me</Text>
-        <Text style={styles.issueBarText}>이번 주 화제</Text>
+        <Text style={styles.issueBarText}>다음에 읽을 한 권</Text>
       </View>
 
       <HomeAiPrompt />
+      <HomeBookCollection />
 
       {/* ── 인기 책 (도서관 정보나루) ── */}
       <View>

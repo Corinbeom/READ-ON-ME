@@ -56,7 +56,7 @@ export function LibraryDiscovery({ guest = false, compact = false }: { guest?: b
       <Text style={styles.compactTitle}>다음에 읽을 책도 골라볼까요?</Text>
       <View style={styles.compactActions}>
         <AppButton title="책 찾아보기" variant="secondary" style={styles.compactAction} onPress={() => router.push('/search')} />
-        <AppButton title="AI 사서" variant="secondary" style={styles.compactAction} onPress={() => router.push(aiSearchHref())} />
+        <AppButton title="AI 사서 갈피" variant="secondary" style={styles.compactAction} onPress={() => router.push(aiSearchHref())} />
       </View>
     </View>
   );
@@ -67,7 +67,7 @@ export function LibraryDiscovery({ guest = false, compact = false }: { guest?: b
       <Text style={styles.description}>{guest ? '로그인하면 읽고 싶은 책과 독서 기록을\n한곳에 모을 수 있어요.' : '마음에 드는 책의 상세 화면에서\n‘읽고 싶어요’를 눌러 서재에 담아보세요.'}</Text>
       <View style={styles.actions}>
         <AppButton title={guest ? '로그인하고 서재 만들기' : '책 찾아보기'} onPress={() => router.push(guest ? { pathname: '/auth/login', params: { returnTo: 'my-library' } } : '/search')} />
-        <AppButton title={guest ? '책 먼저 둘러보기' : 'AI 사서와 고르기'} variant="secondary"
+        <AppButton title={guest ? '책 먼저 둘러보기' : '갈피와 고르기'} variant="secondary"
           onPress={() => router.push(guest ? '/search' : aiSearchHref())} />
       </View>
     </View>

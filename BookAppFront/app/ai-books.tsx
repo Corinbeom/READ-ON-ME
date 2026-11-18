@@ -241,7 +241,7 @@ export default function AiBookSelectionScreen() {
           <ArrowLeft size={22} color={c.text} aria-hidden />
         </TouchableOpacity>
         <View style={styles.headerTitleBlock}>
-          <Text style={styles.headerTitle}>AI 사서</Text>
+          <Text style={styles.headerTitle}>AI 사서 갈피</Text>
           <Text style={styles.headerSubtitle}>함께 한 권을 골라요</Text>
         </View>
         <BookmarkMascot state="idle" size={36} compact />
@@ -261,7 +261,7 @@ export default function AiBookSelectionScreen() {
           <View style={styles.centerStage}>
             <BookmarkMascot state="idle" size={150} />
             <Text style={styles.title}>로그인 후 함께 골라요</Text>
-            <Text style={styles.description}>취향에 맞는 책을 함께 찾아드릴게요.</Text>
+            <Text style={styles.description}>갈피와 취향에 맞는 책을 함께 찾아봐요.</Text>
             {entryPrompt ? <View style={[styles.queryBox, { alignSelf: 'stretch' }]}>
               <Text style={styles.queryLabel}>선택한 조건</Text>
               <Text style={styles.queryText}>{entryPrompt}</Text>
@@ -286,7 +286,7 @@ export default function AiBookSelectionScreen() {
           <View style={styles.startStage}>
             <View style={styles.startMascot}><BookmarkMascot state="idle" size={150} /></View>
             <Text style={styles.eyebrow}>FIND YOUR NEXT BOOK</Text>
-            <Text style={styles.title}>오늘 읽을 한 권을{`\n`}함께 골라볼까요?</Text>
+            <Text style={styles.title}>갈피와 오늘 읽을{`\n`}한 권을 골라볼까요?</Text>
             <Text style={styles.description}>찾고 싶은 분위기나 주제를 적어주세요. 책을 찾은 뒤 마음에 드는 후보를 비교할 수 있어요.</Text>
             <AppTextInput
               style={styles.input}
@@ -313,7 +313,7 @@ export default function AiBookSelectionScreen() {
             <BookmarkMascot state="searching" size={230} active={isFocused} />
             <Text style={styles.eyebrow}>BOOK SEARCH</Text>
             <Text style={styles.title}>{job.status === 'QUEUED' ? '차례를 기다리고 있어요' : '책을 찾고 있어요'}</Text>
-            <Text style={styles.description}>{job.status === 'QUEUED' ? '요청을 받았어요. 잠시만 기다려주세요.' : 'AI 사서가 어울리는 책을 살펴보고 있어요.'}</Text>
+            <Text style={styles.description}>{job.status === 'QUEUED' ? '요청을 받았어요. 잠시만 기다려주세요.' : '갈피가 어울리는 책을 살펴보고 있어요.'}</Text>
             <View style={styles.queryBox}><Text style={styles.queryLabel}>찾고 있는 책</Text><Text style={styles.queryText}>{job.query}</Text></View>
             {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
             <Text style={styles.helperText}>화면을 닫아도 검색은 계속돼요. 다시 열면 결과를 확인할 수 있어요.</Text>
@@ -357,7 +357,7 @@ export default function AiBookSelectionScreen() {
             <Text style={styles.title}>두 권을 살펴볼까요?</Text>
             <Text style={styles.description}>{hasFallback
               ? '두 권의 제목과 저자를 살펴보고, 책 상세에서 소개를 확인해 보세요. 마음이 가는 한 권을 고를 수 있어요.'
-              : '추천 이유와 책 소개의 근거를 차례로 확인해 보세요. 마음이 가는 한 권을 직접 고를 수 있어요.'}</Text>
+              : '갈피와 함께 추천 이유와 책 소개의 근거를 살펴봐요. 마음이 가는 한 권을 직접 고를 수 있어요.'}</Text>
             {compareBooks.map((book, index) => (
               <AiBookChoiceCard key={`${book.isbn}-${index}`} book={book} position={index + 1} showEvidence onDetails={() => openDetail(book.isbn)} onChoose={() => chooseBook(book.isbn)} />
             ))}
