@@ -62,9 +62,13 @@ See [UI consistency validation](qa/ui-consistency-2026-11-16.md) for the respons
 
 ## Home AI discovery
 
-Home examples prefill `/ai-books` through the `prompt` route parameter. Selecting an example does not submit a search. Authentication preserves that condition using the fixed `returnTo=ai-books` flow. `src/utils/aiSearchEntry.ts` keeps explicit new drafts separate from completed results and protects queued/running searches. After a job is saved locally, the entry prompt is removed so a refresh resumes the submitted job.
+The mascot is introduced as **AI 사서 갈피**. `HomeAiPrompt` keeps its isolated typing animation in a compact introduction; search examples remain available in the search tab and AI entry screen.
 
-See [home discovery validation](qa/home-ai-discovery-2026-11-16.md) for the tested flows and remaining device coverage.
+`HomeBookCollection` provides one fixed editorial collection with three selectable books. Each selection updates the introduction and ISBN detail link. “이런 분위기의 책 더 찾기” prefills `/ai-books` through the `prompt` route parameter without submitting a search. Authentication preserves that condition using the fixed `returnTo=ai-books` flow. `src/utils/aiSearchEntry.ts` keeps explicit new drafts separate from completed results and protects queued/running searches. After a job is saved locally, the entry prompt is removed so a refresh resumes the submitted job.
+
+Collection metadata lives in `src/constants/homeCollection.ts`. Match the ISBN, exact edition title, author, cover and recorded provider source when updating it. Introductions must be supported by that edition's description; do not infer reading time, difficulty or personal suitability. This fixed selection is distinct from AI ranking and popular loans, and adds no homepage API or model calls. Provider covers have a fallback; book selection and navigation remain available if an image fails. The collection is not automatically rotated daily.
+
+See [initial discovery validation](qa/home-ai-discovery-2026-11-16.md) and [Galpi home validation](qa/home-galpi-discovery-2026-11-18.md) for the tested flows and remaining device coverage.
 
 UI progress and follow-up tasks are tracked in [UI improvements](UI_IMPROVEMENTS.md). See [floating navigation validation](qa/floating-tabs-2026-11-17.md) for layout, hit targets and keyboard checks.
 

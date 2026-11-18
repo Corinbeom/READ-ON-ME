@@ -7,7 +7,6 @@ import BookmarkMascot from '@/components/BookmarkMascot';
 import AppButton from '@/components/ui/AppButton';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
-import { AI_SEARCH_EXAMPLES } from '@/src/constants/aiSearchExamples';
 import { aiSearchHref } from '@/src/utils/aiSearchEntry';
 
 const PROMPTS = [
@@ -57,23 +56,15 @@ export default function HomeAiPrompt() {
     <View style={styles.aiSection} testID="home-ai-discovery">
       <View style={styles.aiContent}>
         <View style={styles.aiCopy}>
-          <Text style={styles.aiLabel}>AI 사서와 책 고르기</Text>
-          <Text accessibilityRole="header" style={styles.aiTitle}>오늘은 어떤 책을{`\n`}읽고 싶으세요?</Text>
+          <Text style={styles.aiLabel}>AI 사서 갈피</Text>
+          <Text accessibilityRole="header" style={styles.aiTitle}>다음에 읽을 한 권,{`\n`}함께 골라볼까요?</Text>
         </View>
-        <BookmarkMascot state="idle" size={80} compact />
+        <BookmarkMascot state="idle" size={60} compact />
       </View>
-      <Text style={styles.aiDescription}>기분이나 취향을 알려주세요.{`\n`}어울리는 책을 함께 골라드릴게요.</Text>
       <Text testID="home-typing-prompt" aria-hidden style={styles.aiPromptText} numberOfLines={1}>
         예: {typedText}<Text style={{ opacity: cursorOn ? 1 : 0 }}>|</Text>
       </Text>
-      <AppButton title="나에게 맞는 책 찾기" onPress={() => router.push(aiSearchHref())} />
-      <View style={styles.aiExamples}>
-        {AI_SEARCH_EXAMPLES.map((example) => (
-          <AppButton key={example.label} compact variant="secondary" title={example.label}
-            style={styles.aiExample} accessibilityHint="선택한 조건을 추천 화면에 미리 입력합니다."
-            onPress={() => router.push(aiSearchHref(example.query))} />
-        ))}
-      </View>
+      <AppButton title="갈피와 내 취향으로 책 찾기" onPress={() => router.push(aiSearchHref())} />
     </View>
   );
 }

@@ -86,8 +86,8 @@ export default function SearchScreen() {
           <Text accessibilityRole="header" style={[styles.sectionTitle, styles.aiCopy]}>취향으로 찾아볼까요?</Text>
           <BookmarkMascot state="idle" size={56} compact />
         </View>
-        <Text style={styles.aiDescription}>분위기나 관심사에 맞는 책을{`\n`}AI 사서와 함께 찾아보세요.</Text>
-        <AppButton title="AI 사서와 책 고르기" onPress={() => router.push(aiSearchHref())} />
+        <Text style={styles.aiDescription}>분위기나 관심사에 맞는 책을{`\n`}AI 사서 갈피와 함께 찾아보세요.</Text>
+        <AppButton title="갈피와 책 고르기" onPress={() => router.push(aiSearchHref())} />
         <View style={styles.aiExamples}>
           {AI_SEARCH_EXAMPLES.map((example) => (
             <AppButton key={example.label} title={example.label} compact variant="secondary" style={styles.aiExample}
@@ -137,7 +137,7 @@ export default function SearchScreen() {
         ListHeaderComponent={header}
         ListEmptyComponent={search.status === 'success' && !search.books.length
           ? <ScreenState title="검색 결과가 없어요" description="다른 제목이나 작가 이름으로 다시 찾아보세요."
-            action="AI 사서와 찾아보기" onAction={() => router.push(aiSearchHref())} /> : null}
+            action="갈피와 찾아보기" onAction={() => router.push(aiSearchHref())} /> : null}
       />
     </TabScreen>
   );
