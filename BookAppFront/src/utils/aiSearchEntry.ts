@@ -1,3 +1,5 @@
+import { getIsbn13 } from './bookUtils';
+
 export function normalizeAiPrompt(value: unknown): string {
   const first = Array.isArray(value) ? value[0] : value;
   return typeof first === 'string' ? first.trim().slice(0, 500) : '';
@@ -10,8 +12,11 @@ export function aiSearchHref(prompt?: unknown) {
     : { pathname: '/ai-books' as const };
 }
 
-export function authReturnParams(returnTo: unknown, prompt: unknown) {
+export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unknown) {
   if (returnTo === 'my-library') return { returnTo: 'my-library' as const };
+  if (returnTo === 'book-detail' && typeof isbn === 'string' && isbn && getIsbn13({ isbn13: isbn }) === isbn) {
+    return { returnTo: 'book-detail' as const, isbn };
+  }
   return returnTo === 'ai-books'
     ? { returnTo: 'ai-books' as const, prompt: normalizeAiPrompt(prompt) }
     : {};

@@ -70,6 +70,8 @@ Collection metadata lives in `src/constants/homeCollection.ts`. Match the ISBN, 
 
 See [initial discovery validation](qa/home-ai-discovery-2026-11-16.md) and [Galpi home validation](qa/home-galpi-discovery-2026-11-18.md) for the tested flows and remaining device coverage.
 
+Home displays up to six recently viewed editions after the themed collection. A successfully displayed detail screen moves the book to the front. History is stored on the device/browser and can be cleared from Home. Opening Home does not fetch book records for this section.
+
 UI progress and follow-up tasks are tracked in [UI improvements](UI_IMPROVEMENTS.md). See [floating navigation validation](qa/floating-tabs-2026-11-17.md) for layout, hit targets and keyboard checks.
 
 
@@ -94,6 +96,8 @@ See [library validation](qa/library-shelves-2026-11-17.md).
 
 
 ## Library save feedback
+
+Guests can start from “읽고 싶어요” on a book detail page. Login and signup keep that edition's ISBN-13 in the `returnTo=book-detail` flow and reopen the detail page. The user then confirms the reading status to save it.
 
 Book detail uses `components/BookLibraryStatus.tsx` and `src/store/libraryStatusSlice.ts` to show the confirmed reading status, inline loading/success feedback and a shortcut to the library. Selection changes only after a successful write. Status lookup and writes block duplicate requests, and selecting the current status does not write again.
 

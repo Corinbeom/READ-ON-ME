@@ -5,11 +5,17 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-const source = readFileSync(path.join(__dirname, '../src/utils/aiSearchEntry.ts'), 'utf8');
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
-const context = { exports: {} };
-vm.runInNewContext(outputText, context);
-const { normalizeAiPrompt, aiSearchHref, authReturnParams, resolveAiSearchEntry } = context.exports;
+function loadUtility(name, require) {
+  const source = readFileSync(path.join(__dirname, `../src/utils/${name}.ts`), 'utf8');
+  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } });
+  const context = { exports: {}, require };
+  vm.runInNewContext(outputText, context);
+  return context.exports;
+}
+const { normalizeAiPrompt, aiSearchHref, authReturnParams, resolveAiSearchEntry } = loadUtility('aiSearchEntry', (name) => {
+  assert.equal(name, './bookUtils');
+  return loadUtility('bookUtils');
+});
 
 test('route prompts accept Korean text and repeated params but obey the input length limit', () => {
   assert.equal(normalizeAiPrompt(['  위로가 되는 책  ', '다른 조건']), '위로가 되는 책');
@@ -67,4 +73,20 @@ test('library authentication returns to the shelf without carrying an unrelated 
   const flow = authReturnParams('my-library', 'AI 조건');
   assert.equal(flow.returnTo, 'my-library');
   assert.equal(flow.prompt, undefined);
+});
+
+test('the exact book edition survives both steps of the signup and login roundtrip', () => {
+  const isbn = '9791198363503';
+  const signup = authReturnParams('book-detail', 'unrelated AI prompt', isbn);
+  const login = authReturnParams(signup.returnTo, signup.prompt, signup.isbn);
+  assert.equal(login.returnTo, 'book-detail');
+  assert.equal(login.isbn, isbn);
+  assert.equal(login.prompt, undefined);
+});
+
+test('book detail returns require a single canonical ISBN-13 with a valid checksum', () => {
+  for (const isbn of [undefined, '', '9791198363504', '1198363509', ['9791198363503'], '/book/9791198363503', '9791198363503?next=/search']) {
+    assert.equal(authReturnParams('book-detail', '', isbn).returnTo, undefined);
+  }
+  assert.equal(authReturnParams('https://example.com/', '', '9791198363503').returnTo, undefined);
 });

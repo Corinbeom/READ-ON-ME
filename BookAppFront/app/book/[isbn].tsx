@@ -1,15 +1,16 @@
 import AppButton from '@/components/ui/AppButton';
-import BookLibraryStatus from '@/components/BookLibraryStatus';
+import BookLibraryStatus, { GuestBookLibraryStatus } from '@/components/BookLibraryStatus';
 import AppTextInput from '@/components/ui/AppTextInput';
 import ScreenState from '@/components/ui/ScreenState';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Spacing } from '@/src/styles/designTokens';
 import { secureImageUri } from '@/src/utils/imageUri';
+import { getIsbn13 } from '@/src/utils/bookUtils';
 
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   Image,
   View,
@@ -32,6 +33,7 @@ import { Review } from '@/src/types/review';
 import { getBookDetailScreenStyles } from '../../src/styles/BookDetailScreen.styles';
 import { BookDto } from '../../src/types/BookDto';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { rememberBookView } from '@/hooks/useRecentBooks';
 
 const REVIEW_MAX_LENGTH = 500;
 
@@ -61,6 +63,13 @@ export default function BookDetailScreen() {
     const raw = String(isbn ?? '');
     return raw.replace(/[^0-9]/g, '').slice(-13);
   }, [isbn]);
+  const bookIsbn = book ? getIsbn13(book) : '';
+
+  useFocusEffect(useCallback(() => {
+    if (book && bookIsbn && bookIsbn === normalizedIsbn && !loading && !error) {
+      void rememberBookView({ ...book, isbn13: bookIsbn });
+    }
+  }, [book, bookIsbn, normalizedIsbn, loading, error]));
 
   useEffect(() => {
     if (!normalizedIsbn) {
@@ -247,6 +256,9 @@ export default function BookDetailScreen() {
               <Text style={styles.meta}>{book?.authors}</Text>
             </View>
 
+            {isAuthenticated && user && book ? <BookLibraryStatus bookId={book.id} userId={user.id} />
+              : !isAuthenticated && bookIsbn ? <GuestBookLibraryStatus isbn={bookIsbn} /> : null}
+
             {/* ── Description ── */}
             <View style={styles.descriptionSection}>
               <Text style={styles.sectionLabel}>소개</Text>
@@ -263,8 +275,6 @@ export default function BookDetailScreen() {
                   style={{ alignSelf: 'flex-start' }} onPress={() => setIsDescriptionExpanded((prev) => !prev)} />
               )}
             </View>
-
-            {isAuthenticated && user && book ? <BookLibraryStatus bookId={book.id} userId={user.id} /> : null}
 
             {/* ── Reviews Header ── */}
             <View style={styles.reviewHeaderRow}>

@@ -19,8 +19,8 @@ const validationRules = {
 };
 
 export default function RegisterScreen() {
-  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[] }>();
-  const returnParams = authReturnParams(params.returnTo, params.prompt);
+  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[]; isbn?: string }>();
+  const returnParams = authReturnParams(params.returnTo, params.prompt, params.isbn);
   const [nickname, setNickName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
