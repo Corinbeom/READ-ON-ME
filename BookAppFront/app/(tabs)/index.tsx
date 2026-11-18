@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Platform,
   TouchableOpacity,
   ScrollView,
   Modal,
@@ -8,6 +9,7 @@ import {
 } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { router } from 'expo-router';
+import Head from 'expo-router/head';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
 import { useHomeBooks, calcAgeGroup } from '@/hooks/useHomeBooks';
@@ -20,6 +22,10 @@ import HomeRecentBooks from '@/components/HomeRecentBooks';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
+
+const homeUrl = 'https://read-on-me-beta.pages.dev/';
+const shareTitle = 'Read On Me · 갈피와 함께 읽을 책 고르기';
+const shareDescription = 'AI 사서 갈피에게 원하는 분위기를 말해보세요. 추천받은 책을 비교하고 마음에 드는 한 권을 서재에 담을 수 있어요.';
 
 export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -39,6 +45,24 @@ export default function HomeScreen() {
 
   return (
     <TabScreen testID="home-tab-screen">
+    {Platform.OS === 'web' ? (
+      <Head>
+        <title>{shareTitle}</title>
+        <meta name="description" content={shareDescription} />
+        <link rel="canonical" href={homeUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Read On Me" />
+        <meta property="og:locale" content="ko_KR" />
+        <meta property="og:title" content={shareTitle} />
+        <meta property="og:description" content={shareDescription} />
+        <meta property="og:url" content={homeUrl} />
+        <meta property="og:image" content={`${homeUrl}galpi-share-card.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="Read On Me. 다음에 읽을 한 권, 갈피와 함께." />
+        <meta name="twitter:card" content="summary_large_image" />
+      </Head>
+    ) : null}
     <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
       {/* ── Masthead ── */}

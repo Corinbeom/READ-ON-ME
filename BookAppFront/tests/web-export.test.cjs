@@ -36,6 +36,8 @@ test('release verification rejects font preloads and blocking font display, and 
   fs.copyFileSync(path.join(__dirname, '../scripts/verify-web-export.cjs'), script);
   fs.writeFileSync(path.join(dist, '_expo/static/js/entry.js'), 'const api="https://api.example.invalid";');
   const html = '<style>@font-face{font-display:swap;src:url(/font.ttf)}</style>' +
+    '<meta property="og:image" content="https://web.example.invalid/galpi-share-card.png"/>' +
+    '<link rel="icon" href="/favicon.ico"/>' +
     '<link as="font" rel="preload" href="/font.ttf"><script src="/_expo/static/js/entry.js"></script>';
   const verify = () => spawnSync(process.execPath, [script], {
     env: { ...process.env, EXPO_PUBLIC_API_URL: 'https://api.example.invalid' }, encoding: 'utf8',
@@ -43,7 +45,14 @@ test('release verification rejects font preloads and blocking font display, and 
   fs.writeFileSync(path.join(dist, 'index.html'), html);
   assert.match(verify().stderr, /Remove startup font preloads/);
   prepareWebExport(dist);
+  assert.match(verify().stderr, /exported share card/);
+  fs.copyFileSync(path.join(__dirname, '../public/galpi-share-card.png'), path.join(dist, 'galpi-share-card.png'));
+  assert.match(verify().stderr, /exported favicon/);
+  fs.writeFileSync(path.join(dist, 'favicon.ico'), Buffer.from([0, 0, 1, 0]));
   assert.equal(verify().status, 0);
+  const prepared = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
+  fs.writeFileSync(path.join(dist, 'index.html'), prepared.replace('https://web.example.invalid/galpi-share-card.png', '/galpi-share-card.png'));
+  assert.match(verify().stderr, /public HTTPS URL/);
   fs.writeFileSync(path.join(dist, 'index.html'), html.replace('font-display:swap', 'font-display:auto'));
   assert.match(verify().stderr, /Startup fonts must use font-display: swap/);
 });
