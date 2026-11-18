@@ -12,7 +12,7 @@ function loadUtility(name) {
   vm.runInNewContext(outputText, context);
   return context.exports;
 }
-const { loadLibraryOverview, libraryBookCount } = loadUtility('libraryOverview');
+const { loadLibraryOverview, libraryBookCount, parseReadingKeywords } = loadUtility('libraryOverview');
 const { getIsbn13 } = loadUtility('bookUtils');
 const emptyLibrary = { readingBooks: [], toReadBooks: [], completedBooks: [] };
 const keywords = { keywords: [], analyzed: 0 };
@@ -80,6 +80,16 @@ test('a cancelled screen or account cannot receive late responses even if the tr
 test('a library containing only completed books is not treated as empty', () => {
   assert.equal(libraryBookCount(emptyLibrary), 0);
   assert.equal(libraryBookCount({ ...emptyLibrary, completedBooks: [{ id: 1 }] }), 1);
+});
+
+test('the library removes internal labels from older API responses and keeps analyzed book counts', () => {
+  const valid = [{ tag: '성장', count: 2 }, { tag: 'SF', count: 1 }];
+  const input = { keywords: [{ tag: 'user_added', count: 8 }, ...valid, { tag: ' USER_ADDED ', count: 1 }], analyzed: 3 };
+  const reported = parseReadingKeywords(input);
+  assert.equal(reported.analyzed, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(reported.keywords)), valid);
+  assert.deepEqual(JSON.parse(JSON.stringify(parseReadingKeywords({ keywords: input.keywords.slice(0, 1), analyzed: 1 }))),
+    { keywords: [], analyzed: 1 });
 });
 
 test('shelf DTOs and existing search records resolve valid detail links with ISBN checksum validation', () => {

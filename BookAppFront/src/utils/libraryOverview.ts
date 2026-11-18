@@ -12,6 +12,20 @@ export interface ReadingKeywords {
   analyzed: number;
 }
 
+export function parseReadingKeywords(value: unknown): ReadingKeywords {
+  const data = value as Partial<ReadingKeywords> | null | undefined;
+  if (!Array.isArray(data?.keywords) || typeof data?.analyzed !== 'number') {
+    throw new Error('Invalid keyword response');
+  }
+  return {
+    analyzed: data.analyzed,
+    keywords: data.keywords.filter(item => {
+      const tag = typeof item?.tag === 'string' ? item.tag.trim().toLowerCase() : '';
+      return tag && tag !== 'user_added';
+    }),
+  };
+}
+
 type Result<T> = { data: T | null; error: string };
 type Sources = {
   library: () => Promise<UserLibrary>;

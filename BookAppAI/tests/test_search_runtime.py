@@ -128,6 +128,33 @@ async def test_data_build_returns_durable_run_id(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_reading_tags_exclude_internal_labels_before_applying_limit(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "prod")
+    monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
+
+    class BookTagsDb:
+        async def execute(self, _):
+            rows = [["user_added", " 성장 "], ["user_added", " 성장 "], [" USER_ADDED ", "SF", " "]]
+            return SimpleNamespace(scalars=lambda: SimpleNamespace(all=lambda: rows))
+
+    async def fake_db():
+        yield BookTagsDb()
+
+    app.dependency_overrides[get_db] = fake_db
+    try:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
+            response = await client.post(
+                "/api/user/reading-tags",
+                json={"isbns": ["1", "2", "3"], "limit": 2},
+                headers={"X-Internal-Token": "test-only-token"},
+            )
+        assert response.status_code == 200
+        assert response.json() == {"keywords": [{"tag": "성장", "count": 2}, {"tag": "SF", "count": 1}], "analyzed": 3}
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+
+@pytest.mark.asyncio
 async def test_embedding_runs_serially_off_event_loop(monkeypatch):
     active = 0
     maximum = 0

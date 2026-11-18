@@ -83,15 +83,15 @@ async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depen
     rows = result.scalars().all()
     analyzed = len(rows)
 
-    all_tags: list[str] = []
+    counter: Counter[str] = Counter()
     for tags in rows:
         if isinstance(tags, list):
-            all_tags.extend(t for t in tags if isinstance(t, str) and t)
-
-    if not all_tags:
-        return {"keywords": [], "analyzed": analyzed}
-
-    counter = Counter(all_tags)
+            for raw_tag in tags:
+                if not isinstance(raw_tag, str):
+                    continue
+                tag = raw_tag.strip()
+                if tag and tag.casefold() != "user_added":
+                    counter[tag] += 1
     top_tags = counter.most_common(request.limit)
     keywords = [{"tag": tag, "count": count} for tag, count in top_tags]
 

@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '@/src/store';
 import { bookApi, reviewApi, userApi } from '@/src/services/api';
 import type { Review } from '@/src/types/review';
-import { loadLibraryOverview, type ReadingKeywords, type UserLibrary } from '@/src/utils/libraryOverview';
+import { loadLibraryOverview, parseReadingKeywords, type ReadingKeywords, type UserLibrary } from '@/src/utils/libraryOverview';
 
 type Overview = {
   ownerId: number | null;
@@ -52,9 +52,7 @@ export function useLibraryOverview(isAuthenticated: boolean, userId?: number) {
       },
       keywords: async () => {
         const response = await userApi.getReadingKeywords(options);
-        const data = response.data?.data ?? response.data;
-        if (!Array.isArray(data?.keywords) || typeof data?.analyzed !== 'number') throw new Error('Invalid keyword response');
-        return data as ReadingKeywords;
+        return parseReadingKeywords(response.data?.data ?? response.data);
       },
     }, {
       library: ({ data, error }) => update(data ? { library: data, libraryError: '' } : { libraryError: error }),
