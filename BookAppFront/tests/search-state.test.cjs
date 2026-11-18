@@ -5,14 +5,23 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function loadUtility(name) {
+function loadUtility(name, require) {
   const source = readFileSync(path.join(__dirname, `../src/utils/${name}.ts`), 'utf8');
-  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS } });
-  const context = { exports: {}, AbortController };
+  const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } });
+  const context = { exports: {}, AbortController, require };
   vm.runInNewContext(outputText, context);
   return context.exports;
 }
-const recent = loadUtility('recentSearches');
+const deviceHistory = loadUtility('deviceHistory');
+const recent = loadUtility('recentSearches', (name) => {
+  assert.equal(name, './deviceHistory');
+  return deviceHistory;
+});
+const { createRecentBooks, MAX_RECENT_BOOKS, RECENT_BOOKS_KEY } = loadUtility('recentBooks', (name) => {
+  if (name === './deviceHistory') return deviceHistory;
+  assert.equal(name, './bookUtils');
+  return loadUtility('bookUtils');
+});
 const { createLatestBookRequest } = loadUtility('latestBookRequest');
 const plain = (value) => JSON.parse(JSON.stringify(value));
 function memoryStorage(initial = null) {
@@ -91,6 +100,45 @@ test('device storage failures do not block the current session or later writes',
   await history.add('Dune');
   assert.equal(history.getSnapshot().error, '');
   assert.deepEqual(JSON.parse(storage.read()), ['Dune', '1984']);
+});
+
+const sampleBooks = ['9791161571188', '9791198363503', '9791165341909', '9780306406157',
+  '9780451524935', '9788936434267', '9791161571379'].map((isbn13, index) => ({
+  isbn13, title: `책 ${index}`, authors: '저자', thumbnail: 'https://example.com/cover.png',
+}));
+
+test('recent books preserve edition identity, revisit order and the six-book limit across restart', async () => {
+  const storage = memoryStorage();
+  const history = createRecentBooks(storage);
+  for (const book of sampleBooks) await history.add(book);
+  await history.add(sampleBooks[2]);
+  const restored = createRecentBooks(storage);
+  await restored.load();
+  assert.equal(restored.getSnapshot().items.length, MAX_RECENT_BOOKS);
+  assert.deepEqual(plain(restored.getSnapshot().items).map(book => book.isbn13),
+    [2, 6, 5, 4, 3, 1].map(index => sampleBooks[index].isbn13));
+});
+
+test('loaded book history rejects invalid links and keeps only the fields needed for a card', async () => {
+  const valid = { ...sampleBooks[0], thumbnail: 'file:///tmp/cover.png', userId: 17, contents: 'private metadata' };
+  const storage = memoryStorage(JSON.stringify([null, { ...sampleBooks[1], isbn13: '9791198363504' }, valid, valid]));
+  const history = createRecentBooks(storage);
+  await history.load();
+  assert.deepEqual(plain(history.getSnapshot().items), [{ ...sampleBooks[0], thumbnail: '' }]);
+});
+
+test('deleting viewed books after a pending write also clears storage and keeps search terms', async () => {
+  const stored = new Map([[recent.RECENT_SEARCHES_KEY, '["1984"]']]);
+  const storage = {
+    getItem: async key => stored.get(key) ?? null,
+    setItem: async (key, value) => { stored.set(key, value); },
+    removeItem: async key => { stored.delete(key); },
+  };
+  const history = createRecentBooks(storage);
+  await Promise.all([history.add(sampleBooks[0]), history.clear()]);
+  assert.equal(history.getSnapshot().items.length, 0);
+  assert.equal(stored.has(RECENT_BOOKS_KEY), false);
+  assert.equal(stored.get(recent.RECENT_SEARCHES_KEY), '["1984"]');
 });
 
 test('a superseded autocomplete or search request is aborted and cannot publish late results', () => {

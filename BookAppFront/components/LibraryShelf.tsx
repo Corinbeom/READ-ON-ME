@@ -10,7 +10,7 @@ import { getIsbn13 } from '@/src/utils/bookUtils';
 import { secureImageUri } from '@/src/utils/imageUri';
 import { getLibraryShelfStyles } from './styles/LibraryShelf.styles';
 
-export function LibraryBookCard({ book, onPress }: { book: BookDto; onPress?: () => void }) {
+export function LibraryBookCard({ book, onPress }: { book: Pick<BookDto, 'title' | 'isbn13' | 'authors' | 'thumbnail'>; onPress?: () => void }) {
   const styles = getLibraryShelfStyles(useColorScheme() ?? 'light');
   const uri = secureImageUri(book.thumbnail);
   const isbn = getIsbn13(book);

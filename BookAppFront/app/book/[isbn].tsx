@@ -9,8 +9,8 @@ import { secureImageUri } from '@/src/utils/imageUri';
 import { getIsbn13 } from '@/src/utils/bookUtils';
 
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
   Image,
   View,
@@ -33,6 +33,7 @@ import { Review } from '@/src/types/review';
 import { getBookDetailScreenStyles } from '../../src/styles/BookDetailScreen.styles';
 import { BookDto } from '../../src/types/BookDto';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { rememberBookView } from '@/hooks/useRecentBooks';
 
 const REVIEW_MAX_LENGTH = 500;
 
@@ -62,6 +63,13 @@ export default function BookDetailScreen() {
     const raw = String(isbn ?? '');
     return raw.replace(/[^0-9]/g, '').slice(-13);
   }, [isbn]);
+  const bookIsbn = book ? getIsbn13(book) : '';
+
+  useFocusEffect(useCallback(() => {
+    if (book && bookIsbn && bookIsbn === normalizedIsbn && !loading && !error) {
+      void rememberBookView({ ...book, isbn13: bookIsbn });
+    }
+  }, [book, bookIsbn, normalizedIsbn, loading, error]));
 
   useEffect(() => {
     if (!normalizedIsbn) {
@@ -193,7 +201,6 @@ export default function BookDetailScreen() {
   const isEditingReview = editingReviewId !== null;
   const canWriteReview = isAuthenticated && (!userHasReviewed || isEditingReview);
   const submitButtonLabel = isEditingReview ? '수정 완료' : '등록';
-  const bookIsbn = book ? getIsbn13(book) : '';
 
   const renderStar = (onPress: (star: number) => void, currentRating: number) => (
     <View style={styles.ratingWrapper} role="radiogroup" accessibilityLabel="별점">

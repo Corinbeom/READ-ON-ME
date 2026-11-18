@@ -16,6 +16,7 @@ import BookCarousel from '@/components/BookCarousel';
 import AppButton from '@/components/ui/AppButton';
 import HomeAiPrompt from '@/components/HomeAiPrompt';
 import HomeBookCollection from '@/components/HomeBookCollection';
+import HomeRecentBooks from '@/components/HomeRecentBooks';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -69,6 +70,7 @@ export default function HomeScreen() {
 
       <HomeAiPrompt />
       <HomeBookCollection />
+      <HomeRecentBooks />
 
       {/* ── 인기 책 (도서관 정보나루) ── */}
       <View>
