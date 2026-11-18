@@ -10,6 +10,18 @@ import { emptyLibraryStatus, fetchLibraryStatus, libraryStatusKey, readingStatus
 import { ReadingStatus } from '@/src/types/readingStatus';
 import { getBookLibraryStatusStyles } from './styles/BookLibraryStatus.styles';
 
+export function GuestBookLibraryStatus({ isbn }: { isbn: string }) {
+  const styles = getBookLibraryStatusStyles(useColorScheme() ?? 'light');
+  return (
+    <View style={styles.section} testID="guest-book-library-status">
+      <AppButton title="읽고 싶어요" variant="secondary"
+        accessibilityHint="로그인한 뒤 이 책을 서재에 담을 수 있어요."
+        onPress={() => router.push({ pathname: '/auth/login', params: { returnTo: 'book-detail', isbn } })} />
+      <Text style={styles.guestHint}>로그인 후 이 책을 서재에 담을 수 있어요.</Text>
+    </View>
+  );
+}
+
 export default function BookLibraryStatus({ bookId, userId }: { bookId: number; userId: number }) {
   const dispatch = useDispatch<AppDispatch>();
   const scheme = useColorScheme() ?? 'light';

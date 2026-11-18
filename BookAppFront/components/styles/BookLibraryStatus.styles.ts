@@ -16,6 +16,7 @@ export const getBookLibraryStatusStyles = (scheme: 'light' | 'dark') => {
     feedback: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: Spacing.sm, minHeight: Typography.caption.lineHeight },
     message: { ...Typography.caption, color: c.inkSoft, flex: 1 },
     error: { color: c.danger },
+    guestHint: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xs },
     lastConfirmed: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xs },
     recovery: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginTop: Spacing.sm },
   });

@@ -95,6 +95,8 @@ See [library validation](qa/library-shelves-2026-11-17.md).
 
 ## Library save feedback
 
+Guests can start from “읽고 싶어요” on a book detail page. Login and signup keep that edition's ISBN-13 in the `returnTo=book-detail` flow and reopen the detail page. The user then confirms the reading status to save it.
+
 Book detail uses `components/BookLibraryStatus.tsx` and `src/store/libraryStatusSlice.ts` to show the confirmed reading status, inline loading/success feedback and a shortcut to the library. Selection changes only after a successful write. Status lookup and writes block duplicate requests, and selecting the current status does not write again.
 
 Lookup failures are distinct from an unsaved book. A failed write preserves the last confirmed selection and offers retry of the intended status or a fresh server lookup, since a timeout may occur after the server saved the change. Errors are handled inline without a second global alert. Other API consumers retain their existing default error handling.

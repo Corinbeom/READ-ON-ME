@@ -5,16 +5,20 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function load(relative) {
+function load(relative, require) {
   const source = readFileSync(path.join(__dirname, '..', relative), 'utf8');
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } });
-  const context = { exports: {} };
+  const context = { exports: {}, require };
   vm.runInNewContext(outputText, context);
   return context.exports;
 }
 const { HOME_COLLECTION } = load('src/constants/homeCollection.ts');
-const { getIsbn13 } = load('src/utils/bookUtils.ts');
-const { aiSearchHref, authReturnParams, resolveAiSearchEntry } = load('src/utils/aiSearchEntry.ts');
+const bookUtils = load('src/utils/bookUtils.ts');
+const { getIsbn13 } = bookUtils;
+const { aiSearchHref, authReturnParams, resolveAiSearchEntry } = load('src/utils/aiSearchEntry.ts', (name) => {
+  assert.equal(name, './bookUtils');
+  return bookUtils;
+});
 
 test('the editorial collection exposes three distinct, valid detail destinations', () => {
   assert.equal(HOME_COLLECTION.books.length, 3);

@@ -10,8 +10,8 @@ import { FormField } from '@/components/ui/AppTextInput';
 import { authReturnParams, aiSearchHref } from '@/src/utils/aiSearchEntry';
 
 export default function LoginScreen() {
-  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[] }>();
-  const returnParams = authReturnParams(params.returnTo, params.prompt);
+  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[]; isbn?: string }>();
+  const returnParams = authReturnParams(params.returnTo, params.prompt, params.isbn);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +33,7 @@ export default function LoginScreen() {
           { text: '확인', onPress: () => {
             if (returnParams.returnTo === 'my-library') router.dismissTo('/my-library');
             else if (returnParams.returnTo === 'ai-books') router.dismissTo(aiSearchHref(returnParams.prompt));
+            else if (returnParams.returnTo === 'book-detail') router.dismissTo({ pathname: '/book/[isbn]', params: { isbn: returnParams.isbn } });
             else router.replace('/');
           } }
         ]);
@@ -47,7 +48,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <AuthScreen title="로그인" description="다시 찾아주셔서 감사합니다">
+    <AuthScreen title="로그인" description={returnParams.returnTo === 'book-detail' ? '로그인하면 보던 책으로 돌아가 서재에 담을 수 있어요.' : '다시 찾아주셔서 감사합니다'}>
       <FormField label="이메일" placeholder="이메일 주소" value={email} onChangeText={setEmail}
         keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" />
       <FormField label="비밀번호" placeholder="비밀번호" value={password} onChangeText={setPassword}

@@ -1,11 +1,12 @@
 import AppButton from '@/components/ui/AppButton';
-import BookLibraryStatus from '@/components/BookLibraryStatus';
+import BookLibraryStatus, { GuestBookLibraryStatus } from '@/components/BookLibraryStatus';
 import AppTextInput from '@/components/ui/AppTextInput';
 import ScreenState from '@/components/ui/ScreenState';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Spacing } from '@/src/styles/designTokens';
 import { secureImageUri } from '@/src/utils/imageUri';
+import { getIsbn13 } from '@/src/utils/bookUtils';
 
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -192,6 +193,7 @@ export default function BookDetailScreen() {
   const isEditingReview = editingReviewId !== null;
   const canWriteReview = isAuthenticated && (!userHasReviewed || isEditingReview);
   const submitButtonLabel = isEditingReview ? '수정 완료' : '등록';
+  const bookIsbn = book ? getIsbn13(book) : '';
 
   const renderStar = (onPress: (star: number) => void, currentRating: number) => (
     <View style={styles.ratingWrapper} role="radiogroup" accessibilityLabel="별점">
@@ -247,6 +249,9 @@ export default function BookDetailScreen() {
               <Text style={styles.meta}>{book?.authors}</Text>
             </View>
 
+            {isAuthenticated && user && book ? <BookLibraryStatus bookId={book.id} userId={user.id} />
+              : !isAuthenticated && bookIsbn ? <GuestBookLibraryStatus isbn={bookIsbn} /> : null}
+
             {/* ── Description ── */}
             <View style={styles.descriptionSection}>
               <Text style={styles.sectionLabel}>소개</Text>
@@ -263,8 +268,6 @@ export default function BookDetailScreen() {
                   style={{ alignSelf: 'flex-start' }} onPress={() => setIsDescriptionExpanded((prev) => !prev)} />
               )}
             </View>
-
-            {isAuthenticated && user && book ? <BookLibraryStatus bookId={book.id} userId={user.id} /> : null}
 
             {/* ── Reviews Header ── */}
             <View style={styles.reviewHeaderRow}>
