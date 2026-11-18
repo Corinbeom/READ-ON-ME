@@ -3,6 +3,7 @@ import { Image, Modal, Platform, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LibraryBookCard } from '@/components/LibraryShelf';
+import ReadingKeywordCloud from '@/components/ReadingKeywordCloud';
 import AppButton from '@/components/ui/AppButton';
 import { getLibraryReadingKeywordsStyles } from '@/components/styles/LibraryReadingKeywords.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -76,6 +77,7 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
   const sharing = panel?.type === 'share' && data.keywords.length > 0;
   const title = sharing ? '독서 키워드 공유' : keyword?.tag;
   const close = () => setPanel(null);
+  const words = data.keywords.slice(0, 12);
 
   if (!data.keywords.length && !data.analyzed) return null;
   return (
@@ -86,12 +88,9 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
           <AppButton title="키워드 공유" compact variant="ghost" onPress={() => setPanel({ type: 'share' })} />
         ) : null}
       </View>
-      <Text style={styles.caption}>{data.keywords.length ? '읽는 중이거나 완독한 책에서 발견했어요.' : '책에 독서 키워드가 쌓이면 여기에서 볼 수 있어요.'}</Text>
-      <View style={styles.chips}>
-        {data.keywords.map(item => <AppButton key={item.tag} title={`${item.tag} · ${item.count}권`} style={styles.chip}
-          accessibilityHint="이 키워드가 나온 책을 표시합니다." compact variant="secondary"
-          onPress={() => setPanel({ type: 'evidence', tag: item.tag })} />)}
-      </View>
+      <Text style={styles.caption}>{words.length ? '키워드를 누르면 어떤 책에서 나왔는지 볼 수 있어요.' : '책에 독서 키워드가 쌓이면 여기에서 볼 수 있어요.'}</Text>
+      {words.length ? <ReadingKeywordCloud key={JSON.stringify(words.map(item => [item.tag, item.count]))}
+        keywords={words} onSelect={tag => setPanel({ type: 'evidence', tag })} /> : null}
       <Modal transparent animationType="slide" visible={!!title} onRequestClose={close}>
         <View style={layout.modalOverlay}>
           <View style={[layout.modalContent, { paddingBottom: insets.bottom }]} role="dialog" aria-modal accessibilityViewIsModal accessibilityLabel={title}>
