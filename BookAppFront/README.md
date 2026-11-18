@@ -88,6 +88,8 @@ See [search discovery validation](qa/search-discovery-2026-11-16.md).
 
 The library tab shows reading, to-read and completed books before reading keywords and reviews. Each shelf previews up to six books, with the full category available in a modal. Cards link to book detail only when their ISBN is valid. Missing covers have a placeholder.
 
+Reading keywords count distinct reading or completed books. Selecting a keyword shows the matching books from the active user's library and can prefill AI discovery. On web, select up to three keywords and preview or save a PNG created in the browser. It contains only the selected labels and Read On Me branding. Older keyword responses can still show counts and be used to create cards.
+
 An empty library offers search and AI discovery. Guest login and the signup/login roundtrip retain the fixed `returnTo=my-library` destination; AI entry still supports `returnTo=ai-books` with its prompt. Arbitrary return destinations are rejected.
 
 `hooks/useLibraryOverview.ts` loads books, reviews and keywords independently with local error handling and retry. It preserves same-user data while refreshing on focus, aborts obsolete requests and gates cached data by user ID. Loading or a failed library request is never presented as a successful empty library. This change adds no dependencies or environment variables.

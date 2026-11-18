@@ -12,7 +12,7 @@ function loadUtility(name) {
   vm.runInNewContext(outputText, context);
   return context.exports;
 }
-const { loadLibraryOverview, libraryBookCount, parseReadingKeywords } = loadUtility('libraryOverview');
+const { loadLibraryOverview, libraryBookCount, parseReadingKeywords, readingKeywordBooks } = loadUtility('libraryOverview');
 const { getIsbn13 } = loadUtility('bookUtils');
 const emptyLibrary = { readingBooks: [], toReadBooks: [], completedBooks: [] };
 const keywords = { keywords: [], analyzed: 0 };
@@ -90,6 +90,21 @@ test('the library removes internal labels from older API responses and keeps ana
   assert.deepEqual(JSON.parse(JSON.stringify(reported.keywords)), valid);
   assert.deepEqual(JSON.parse(JSON.stringify(parseReadingKeywords({ keywords: input.keywords.slice(0, 1), analyzed: 1 }))),
     { keywords: [], analyzed: 1 });
+});
+
+test('keyword evidence resolves only books in the current reading and completed shelves', () => {
+  const reading = { isbn13: '9791165341909' };
+  const completed = { isbn13: '9791198363503' };
+  const wishlist = { isbn13: '9791161571188' };
+  const library = { readingBooks: [reading], completedBooks: [completed], toReadBooks: [wishlist] };
+  const { keywords: [growth] } = parseReadingKeywords({
+    analyzed: 4,
+    keywords: [{ tag: ' 성장 ', count: 4, book_isbns: [reading.isbn13, completed.isbn13, wishlist.isbn13, '9780451524935', reading.isbn13, null] }],
+  });
+  assert.equal(growth.tag, '성장');
+  assert.equal(growth.book_isbns.length, 4);
+  assert.deepEqual(JSON.parse(JSON.stringify(readingKeywordBooks(growth, library))), [reading, completed]);
+  assert.equal(readingKeywordBooks({ tag: '이전 응답', count: 2 }, library).length, 0);
 });
 
 test('shelf DTOs and existing search records resolve valid detail links with ISBN checksum validation', () => {

@@ -137,7 +137,7 @@ export default function SearchScreen() {
         ListHeaderComponent={header}
         ListEmptyComponent={search.status === 'success' && !search.books.length
           ? <ScreenState title="검색 결과가 없어요" description="다른 제목이나 작가 이름으로 다시 찾아보세요."
-            action="갈피와 찾아보기" onAction={() => router.push(aiSearchHref())} /> : null}
+            action="이 검색어로 갈피에게 물어보기" onAction={() => router.push(aiSearchHref(search.submittedQuery))} /> : null}
       />
     </TabScreen>
   );

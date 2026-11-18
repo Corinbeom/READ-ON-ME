@@ -1,4 +1,3 @@
-from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -72,27 +71,29 @@ async def ai_search(
 @router.post("/api/user/reading-tags", dependencies=[Depends(require_internal_token)])
 async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depends(get_db)):
     """
-    Aggregates tags from user's book corpus entries and returns top N keywords.
+    Returns top keywords with the ISBNs of the requested books that support them.
     """
     if not request.isbns:
         return {"keywords": [], "analyzed": 0}
 
     result = await db.execute(
-        select(BookCorpus.tags).where(BookCorpus.isbn.in_(request.isbns))
+        select(BookCorpus.isbn, BookCorpus.tags).where(BookCorpus.isbn.in_(request.isbns))
     )
-    rows = result.scalars().all()
-    analyzed = len(rows)
+    rows = result.all()
 
-    counter: Counter[str] = Counter()
-    for tags in rows:
+    books_by_tag: dict[str, set[str]] = {}
+    for isbn, tags in rows:
         if isinstance(tags, list):
             for raw_tag in tags:
                 if not isinstance(raw_tag, str):
                     continue
                 tag = raw_tag.strip()
                 if tag and tag.casefold() != "user_added":
-                    counter[tag] += 1
-    top_tags = counter.most_common(request.limit)
-    keywords = [{"tag": tag, "count": count} for tag, count in top_tags]
+                    books_by_tag.setdefault(tag, set()).add(isbn)
+    ranked = sorted(books_by_tag.items(), key=lambda item: (-len(item[1]), item[0]))
+    keywords = [
+        {"tag": tag, "count": len(isbns), "book_isbns": sorted(isbns)}
+        for tag, isbns in ranked[:max(0, request.limit)]
+    ]
 
-    return {"keywords": keywords, "analyzed": analyzed}
+    return {"keywords": keywords, "analyzed": len(rows)}

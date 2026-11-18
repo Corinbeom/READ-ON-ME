@@ -49,7 +49,7 @@ public class ReadingKeywordService {
      * 유저의 READING + COMPLETED 도서 isbn을 기반으로 독서 키워드를 집계한다.
      *
      * @param userId 유저 ID
-     * @return { "keywords": [{"tag": "심리", "count": 5}, ...], "analyzed": N }
+     * @return 키워드별 책 수와 근거 ISBN 목록, 분석한 책 수
      */
     public Map<String, Object> getReadingKeywords(Long userId) {
         List<UserBookIsbnDto> userBooks = userBookStatusService.getUserBooksWithIsbn(userId);

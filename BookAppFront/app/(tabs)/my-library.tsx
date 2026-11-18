@@ -1,18 +1,16 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, ScrollView, Modal, Animated, Easing } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, FlatList, Image, ScrollView, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { router } from 'expo-router';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import LibraryShelf, { LibraryBookCard, LibraryDiscovery } from '@/components/LibraryShelf';
 import AppButton from '@/components/ui/AppButton';
+import LibraryReadingKeywords from '@/components/LibraryReadingKeywords';
 import ScreenState from '@/components/ui/ScreenState';
 import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import { useLibraryOverview } from '@/hooks/useLibraryOverview';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Colors } from '@/constants/Colors';
-import { Typography } from '@/src/styles/designTokens';
-import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { getMyLibraryScreenStyles } from '@/src/styles/MyLibraryScreen.styles';
 import { secureImageUri } from '@/src/utils/imageUri';
 import { libraryBookCount, type UserLibrary } from '@/src/utils/libraryOverview';
@@ -35,10 +33,6 @@ export default function MyLibraryScreen() {
   const myReviews = overview.reviews ?? [];
   const readingKeywords = overview.keywords;
   const hasBooks = libraryBookCount(userLibrary) > 0;
-  const keywordAnimValues = useMemo(
-    () => Array.from({ length: readingKeywords?.keywords.length ?? 0 }, () => new Animated.Value(0)),
-    [readingKeywords]
-  );
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalBooks, setModalBooks] = useState<BookDto[]>([]);
@@ -46,7 +40,6 @@ export default function MyLibraryScreen() {
   const [isReviewModal, setIsReviewModal] = useState(false);
   const colorScheme = useColorScheme() ?? 'light';
   const styles = getMyLibraryScreenStyles(colorScheme);
-  const c = Colors[colorScheme];
   const limitedNotifications = notifications.slice(0, 3);
   const hasUnreadNotifications = unreadCount > 0;
 
@@ -55,16 +48,6 @@ export default function MyLibraryScreen() {
     setModalBooks([]);
     setModalReviews([]);
   }, [isAuthenticated, user?.id]);
-
-  useEffect(() => {
-    if (!readingKeywords || !readingKeywords.keywords.length) return;
-    keywordAnimValues.forEach((value) => value.setValue(0));
-    const animation = Animated.stagger(90, keywordAnimValues.map((value) => Animated.timing(value, {
-      toValue: 1, duration: 480, useNativeDriver: true, easing: Easing.out(Easing.cubic),
-    })));
-    animation.start();
-    return () => animation.stop();
-  }, [readingKeywords, keywordAnimValues]);
 
   const handleLogout = () => customAlert('로그아웃', '정말로 로그아웃 하시겠습니까?', [
     { text: '취소', style: 'cancel' },
@@ -145,81 +128,7 @@ export default function MyLibraryScreen() {
                 <LibraryDiscovery compact />
               </>
             ) : <LibraryDiscovery />}
-          {/* ── Reading Keywords ── */}
-          {readingKeywords && (readingKeywords.keywords.length > 0 || readingKeywords.analyzed > 0) && (
-            <View style={{ paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: 28, paddingBottom: 24, borderBottomWidth: 1, borderBottomColor: c.line }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
-                <Text style={{ ...Typography.section, color: c.text, flexShrink: 1, letterSpacing: -0.3 }}>
-                  나의 독서 키워드
-                </Text>
-                {readingKeywords.analyzed > 0 && (
-                  <Text style={{ ...Typography.caption, color: c.inkSoft, letterSpacing: 0.15, textTransform: 'uppercase' }}>
-                    {readingKeywords.analyzed}권 분석
-                  </Text>
-                )}
-              </View>
-              <View style={{ height: 2, backgroundColor: c.text, marginBottom: 20 }} />
-              {readingKeywords.keywords.length === 0 ? (
-                <Text style={{ ...Typography.body, color: c.inkSoft, fontStyle: 'italic' }}>
-                  독서 활동이 쌓이면 키워드가 생성돼요
-                </Text>
-              ) : (() => {
-                  // 각 단어의 절대 위치·회전·크기 — 12개 이하에서 겹치지 않도록 설계
-                  const POSITIONS = [
-                    { left: '30%', top: 78,  rotate: '0deg'   , size: 28, color: c.text     }, // rank 1
-                    { left: '55%', top: 10,  rotate: '13deg'  , size: 19, color: c.inkSoft  }, // rank 2
-                    { left: '3%',  top: 22,  rotate: '-14deg' , size: 18, color: c.inkSoft  }, // rank 3
-                    { left: '5%',  top: 118, rotate: '-9deg'  , size: 16, color: c.inkFaint }, // rank 4
-                    { left: '60%', top: 115, rotate: '11deg'  , size: 15, color: c.inkFaint }, // rank 5
-                    { left: '75%', top: 58,  rotate: '-13deg' , size: 13, color: c.inkFaint }, // rank 6
-                    { left: '35%', top: 172, rotate: '6deg'   , size: 13, color: c.inkFaint }, // rank 7
-                    { left: '2%',  top: 168, rotate: '-5deg'  , size: 12, color: c.inkFaint }, // rank 8
-                    { left: '65%', top: 170, rotate: '9deg'   , size: 12, color: c.inkFaint }, // rank 9
-                    { left: '73%', top: 8,   rotate: '-10deg' , size: 12, color: c.inkFaint }, // rank 10
-                    { left: '22%', top: 4,   rotate: '4deg'   , size: 12, color: c.inkFaint }, // rank 11
-                    { left: '42%', top: 198, rotate: '-4deg'  , size: 12, color: c.inkFaint }, // rank 12
-                  ] as const;
-
-                  return (
-                    <View style={{ height: 220, marginTop: 4 }}>
-                      {readingKeywords.keywords.map((item, index) => {
-                        const pos  = POSITIONS[index];
-                        const anim = keywordAnimValues[index];
-                        if (!pos) return null;
-
-                        const opacity = anim
-                          ? anim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] })
-                          : 1;
-                        const scale = anim
-                          ? anim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] })
-                          : 1;
-
-                        return (
-                          <Animated.Text
-                            key={item.tag}
-                            style={{
-                              position: 'absolute',
-                              left: pos.left,
-                              top: pos.top,
-                              opacity,
-                              transform: [{ scale }, { rotate: pos.rotate }],
-                              fontSize: pos.size,
-                              fontFamily: 'NotoSerifKR-Regular',
-                              color: pos.color,
-                              letterSpacing: index === 0 ? -0.5 : -0.2,
-                            }}
-                          >
-                            {item.tag}
-                          </Animated.Text>
-                        );
-                      })}
-                    </View>
-                  );
-                })()
-              }
-            </View>
-          )}
-
+            {readingKeywords ? <LibraryReadingKeywords key={user?.id} data={readingKeywords} library={userLibrary} /> : null}
 
             {overview.keywordsError ? retryNotice(overview.keywordsError) : null}
             {myReviews.length > 0 ? (

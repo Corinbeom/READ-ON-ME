@@ -7,8 +7,14 @@ export interface UserLibrary {
   completedBooks: BookDto[];
 }
 
+export interface ReadingKeyword {
+  tag: string;
+  count: number;
+  book_isbns?: string[];
+}
+
 export interface ReadingKeywords {
-  keywords: { tag: string; count: number }[];
+  keywords: ReadingKeyword[];
   analyzed: number;
 }
 
@@ -17,13 +23,24 @@ export function parseReadingKeywords(value: unknown): ReadingKeywords {
   if (!Array.isArray(data?.keywords) || typeof data?.analyzed !== 'number') {
     throw new Error('Invalid keyword response');
   }
+  const seen = new Set<string>();
   return {
     analyzed: data.analyzed,
-    keywords: data.keywords.filter(item => {
-      const tag = typeof item?.tag === 'string' ? item.tag.trim().toLowerCase() : '';
-      return tag && tag !== 'user_added';
+    keywords: data.keywords.flatMap((item): ReadingKeyword[] => {
+      const tag = typeof item?.tag === 'string' ? item.tag.trim() : '';
+      if (!tag || tag.toLowerCase() === 'user_added' || seen.has(tag) || !Number.isInteger(item.count) || item.count < 1) return [];
+      seen.add(tag);
+      const book_isbns = Array.isArray(item.book_isbns)
+        ? [...new Set(item.book_isbns.filter(isbn => typeof isbn === 'string' && /^\d{13}$/.test(isbn)))]
+        : undefined;
+      return [{ tag, count: item.count, ...(book_isbns ? { book_isbns } : {}) }];
     }),
   };
+}
+
+export function readingKeywordBooks(keyword: ReadingKeyword, library: UserLibrary): BookDto[] {
+  const sources = new Set(keyword.book_isbns);
+  return [...library.readingBooks, ...library.completedBooks].filter(book => sources.has(book.isbn13));
 }
 
 type Result<T> = { data: T | null; error: string };
