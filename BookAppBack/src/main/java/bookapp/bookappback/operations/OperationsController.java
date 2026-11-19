@@ -2,6 +2,8 @@ package bookapp.bookappback.operations;
 
 import bookapp.bookappback.common.exception.AppException;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -88,13 +90,17 @@ public class OperationsController {
     public record StatusChange(@NotBlank @Pattern(regexp = FEEDBACK_STATUSES) String status,
                                @NotNull @PositiveOrZero Integer version) {}
 
+    @JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public record FeedbackItem(long id, @JsonFormat(shape = JsonFormat.Shape.STRING) OffsetDateTime createdAt, String category,
                                String message, String status, int statusVersion) {}
 
+    @JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public record FeedbackPage(List<FeedbackItem> items, Long nextBeforeId) {}
 
+    @JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public record RecommendationSummary(long completedJobs, long withResults, long fallbackResults,
                                         long noMatch, long errors, Long p50TotalMs, Long p95TotalMs) {}
 
+    @JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public record Summary(Map<String, Long> feedbackCounts, RecommendationSummary recommendation) {}
 }
