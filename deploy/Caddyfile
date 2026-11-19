@@ -14,7 +14,14 @@
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
     }
-    reverse_proxy backend:8080 {
-        flush_interval -1
+    handle /server-release.json {
+        root * /srv/deploy-status
+        header Cache-Control "no-store"
+        file_server
+    }
+    handle {
+        reverse_proxy backend:8080 {
+            flush_interval -1
+        }
     }
 }

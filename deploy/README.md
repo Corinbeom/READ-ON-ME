@@ -28,6 +28,8 @@ sudo docker compose -f compose.beta.yml up -d
 
 ## 웹 자동 배포
 
+Spring과 AI의 GHCR 게시, OCI 설치 및 활성화 절차는 [OCI 자동 배포](OCI_PULL_DEPLOY.md)를 참고합니다.
+
 운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. Oracle 서버 이미지·DB의 배포 절차는 기존과 같으며 이 자동화에 포함하지 않는다.
 
 프론트 검사에서 한 번 생성한 `dist`를 커밋 SHA별 Actions artifact로 보관하고 배포 작업에서 그대로 내려받는다. 배포 단계는 API 주소·폰트와 커밋 정보를 다시 검증한다. 배포 작업은 동시에 한 건만 실행하며, 대기 중인 작업이 최신 main보다 오래된 커밋이면 건너뛴다. 배포 런타임은 Node 22(22.12 이상)이며 Wrangler는 4.162.0으로 고정한다.
