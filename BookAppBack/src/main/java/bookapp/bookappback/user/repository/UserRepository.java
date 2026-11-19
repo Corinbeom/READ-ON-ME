@@ -13,6 +13,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // UserService에서 사용할 Optional<User> 반환 타입
     Optional<User> findByEmail(String email);
 
+    Optional<User> findByKakaoId(Long kakaoId);
+
     // 기존에 있던 다른 메소드들
     boolean existsByEmail(String email);
 

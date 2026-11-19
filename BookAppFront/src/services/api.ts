@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
 import type { BookDto } from '../types/BookDto';
+import type { KakaoExchange, KakaoStart } from '../utils/kakaoLogin';
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
@@ -58,6 +59,7 @@ export const api = axios.create({
 });
 
 const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
+const kakaoAuthPath = '/api/users/kakao/';
 
 api.interceptors.request.use(async (config) => {
   const noAuthPaths = [
@@ -66,6 +68,7 @@ api.interceptors.request.use(async (config) => {
     readingKeywordPicksPath,
     '/api/users/signin',
     '/api/users/signup',
+    kakaoAuthPath,
   ];
   
   const shouldSkipAuth = noAuthPaths.some((path) =>
@@ -87,6 +90,7 @@ const silentPaths = [
   '/api/users/profile',
   '/api/users/signin',
   '/api/users/signup',
+  kakaoAuthPath,
 ];
 
 export interface AiSearchBook {
@@ -150,6 +154,12 @@ export const authApi = {
 
   signUp: (data: { email: string; password: string; nickname: string; birth_year?: number }) =>
     api.post('/api/users/signup', data),
+
+  startKakao: (challenge: string, signal: AbortSignal) =>
+    api.post<KakaoStart>(kakaoAuthPath + 'start', { challenge }, { signal }),
+
+  exchangeKakao: (data: KakaoExchange) =>
+    api.post(kakaoAuthPath + 'exchange', data, { timeout: 15000 }),
 
   getProfile: (token: string) =>
     api.get('/api/users/profile', {

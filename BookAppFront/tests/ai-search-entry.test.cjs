@@ -8,13 +8,18 @@ const ts = require('typescript');
 function loadUtility(name, require) {
   const source = readFileSync(path.join(__dirname, `../src/utils/${name}.ts`), 'utf8');
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } });
-  const context = { exports: {}, require };
+  const context = { exports: {}, require, URLSearchParams };
   vm.runInNewContext(outputText, context);
   return context.exports;
 }
-const { normalizeAiPrompt, aiSearchHref, authReturnParams, resolveAiSearchEntry } = loadUtility('aiSearchEntry', (name) => {
+const entry = loadUtility('aiSearchEntry', (name) => {
   assert.equal(name, './bookUtils');
   return loadUtility('bookUtils');
+});
+const { normalizeAiPrompt, aiSearchHref, authReturnParams, authReturnHref, resolveAiSearchEntry } = entry;
+const { isKakaoStartForOrigin, saveKakaoFlow, consumeKakaoCallback } = loadUtility('kakaoLogin', (name) => {
+  assert.equal(name, './aiSearchEntry');
+  return entry;
 });
 
 test('route prompts accept Korean text and repeated params but obey the input length limit', () => {
@@ -89,4 +94,52 @@ test('book detail returns require a single canonical ISBN-13 with a valid checks
     assert.equal(authReturnParams('book-detail', '', isbn).returnTo, undefined);
   }
   assert.equal(authReturnParams('https://example.com/', '', '9791198363503').returnTo, undefined);
+});
+
+const state = 'a'.repeat(64);
+const verifier = 'b'.repeat(64);
+const isbn = '9791198363503';
+
+function callbackStorage(returnParams, expiresAt = 2000) {
+  const items = new Map();
+  const storage = {
+    getItem: key => items.get(key) ?? null,
+    setItem: (key, value) => items.set(key, value),
+    removeItem: key => items.delete(key),
+  };
+  saveKakaoFlow(storage, { state, verifier, expiresAt, returnParams });
+  return storage;
+}
+
+test('Kakao callback preserves the exact book on a matching, one-time login', () => {
+  const storage = callbackStorage({ returnTo: 'book-detail', isbn });
+  assert.equal(consumeKakaoCallback(storage, '?state=' + 'c'.repeat(64) + '&code=bad', 1000), null);
+  const query = '?state=' + state + '&code=example';
+  const result = consumeKakaoCallback(storage, query, 1000);
+  assert.equal(result.exchange.verifier, verifier);
+  const destination = authReturnHref(result.returnParams);
+  assert.equal(destination.pathname, '/book/[isbn]');
+  assert.equal(destination.params.isbn, isbn);
+  assert.equal(consumeKakaoCallback(storage, query, 1000), null);
+});
+
+test('Kakao cancellation keeps the return destination while expired or untrusted input cannot sign in', () => {
+  const cancel = consumeKakaoCallback(callbackStorage({ returnTo: 'my-library' }),
+    '?state=' + state + '&error=access_denied', 1000);
+  assert.equal(cancel.cancelled, true);
+  assert.equal(authReturnHref(cancel.returnParams), '/my-library');
+  assert.equal(cancel.exchange, null);
+  assert.equal(consumeKakaoCallback(callbackStorage({}, 500), '?state=' + state + '&code=example', 1000), null);
+  const duplicate = consumeKakaoCallback(callbackStorage({ returnTo: 'https://example.test' }),
+    '?state=' + state + '&code=first&code=second', 1000);
+  assert.equal(duplicate.exchange, null);
+  assert.equal(authReturnHref(duplicate.returnParams), '/');
+});
+
+test('Kakao authorization only starts with the configured callback on the current web origin', () => {
+  const origin = 'https://web.example.test';
+  const start = { state, javascript_key: 'public', redirect_uri: origin + '/auth/kakao/callback', expires_in_seconds: 600 };
+  assert.equal(isKakaoStartForOrigin(start, origin), true);
+  assert.equal(isKakaoStartForOrigin({ ...start, redirect_uri: 'https://other.example.test/auth/kakao/callback' }, origin), false);
+  assert.equal(isKakaoStartForOrigin({ ...start, redirect_uri: start.redirect_uri + '?redirect=x' }, origin), false);
 });

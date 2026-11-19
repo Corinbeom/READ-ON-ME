@@ -22,6 +22,15 @@ export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unkn
     : {};
 }
 
+export function authReturnHref(params: ReturnType<typeof authReturnParams>) {
+  if (params.returnTo === 'my-library') return '/my-library' as const;
+  if (params.returnTo === 'ai-books') return aiSearchHref(params.prompt);
+  if (params.returnTo === 'book-detail') {
+    return { pathname: '/book/[isbn]' as const, params: { isbn: params.isbn } };
+  }
+  return '/' as const;
+}
+
 export function resolveAiSearchEntry<T extends { status: string; query: string }>(prompt: string, previous: T | null) {
   const pending = previous?.status === 'QUEUED' || previous?.status === 'RUNNING';
   // A new condition must never hide an existing search that is still running.

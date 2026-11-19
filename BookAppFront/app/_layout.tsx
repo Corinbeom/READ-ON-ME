@@ -23,10 +23,10 @@ function SessionRestorer() {
   useEffect(() => {
     const restoreSession = async () => {
       const token = await AsyncStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token || store.getState().auth.token) return;
       dispatch(setToken(token));
       const result = await dispatch(getProfile(token));
-      if (getProfile.rejected.match(result)) {
+      if (getProfile.rejected.match(result) && store.getState().auth.token === token) {
         // Token is invalid/expired — clear everything silently
         dispatch(logout());
       }
@@ -95,6 +95,7 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen name="auth/login" options={{ title: '로그인' }} />
+          <Stack.Screen name="auth/kakao/callback" options={{ title: '카카오 로그인', headerBackVisible: false }} />
           <Stack.Screen name="auth/register" options={{ title: '회원가입' }} />
           <Stack.Screen name="ai-books" options={{ headerShown: false }} />
           <Stack.Screen name="reading-keywords" options={{ headerShown: false, title: '요즘 내가 읽는 세계' }} />

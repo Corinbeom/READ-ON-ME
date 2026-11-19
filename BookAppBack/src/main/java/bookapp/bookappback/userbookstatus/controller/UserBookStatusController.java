@@ -1,5 +1,6 @@
 package bookapp.bookappback.userbookstatus.controller;
 
+import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.userbookstatus.entity.ReadingStatus;
 import bookapp.bookappback.userbookstatus.entity.UserBookStatus;
 import bookapp.bookappback.userbookstatus.service.UserBookStatusService;
@@ -8,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,25 +27,23 @@ public class UserBookStatusController {
 
     @PostMapping("/{bookId}")
     public ResponseEntity<UserBookStatus> updateBookStatus(
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
             @PathVariable Long bookId,
             @RequestParam ReadingStatus status) {
-        String userEmail = userDetails.getUsername(); // Get email from UserDetails
-        UserBookStatus updatedStatus = userBookStatusService.updateStatus(userEmail, bookId, status);
+        UserBookStatus updatedStatus = userBookStatusService.updateStatus(userDetails.getUser().getId(), bookId, status);
         return ResponseEntity.ok(updatedStatus);
     }
 
     @DeleteMapping("/{bookId}")
-    public ResponseEntity<Void> removeBook(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long bookId) {
-        userBookStatusService.removeBook(userDetails.getUsername(), bookId);
+    public ResponseEntity<Void> removeBook(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable Long bookId) {
+        userBookStatusService.removeBook(userDetails.getUser().getId(), bookId);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping
     public ResponseEntity<UserLibraryResponse> getLibrary(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        String userEmail = userDetails.getUsername(); // Get email from UserDetails
-        UserLibraryResponse userLibrary = userBookStatusService.getUserLibrary(userEmail);
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        UserLibraryResponse userLibrary = userBookStatusService.getUserLibrary(userDetails.getUser().getId());
         return ResponseEntity.ok(userLibrary);
     }
 

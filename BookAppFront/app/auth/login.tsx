@@ -5,9 +5,10 @@ import { useDispatch } from 'react-redux';
 import { signIn } from '@/src/store/authSlice';
 import type { AppDispatch } from '@/src/store';
 import AuthScreen from '@/components/AuthScreen';
+import KakaoLoginButton from '@/components/KakaoLoginButton';
 import AppButton from '@/components/ui/AppButton';
 import { FormField } from '@/components/ui/AppTextInput';
-import { authReturnParams, aiSearchHref } from '@/src/utils/aiSearchEntry';
+import { authReturnHref, authReturnParams } from '@/src/utils/aiSearchEntry';
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[]; isbn?: string }>();
@@ -31,10 +32,9 @@ export default function LoginScreen() {
       if (signIn.fulfilled.match(result)) {
         customAlert('성공', '로그인되었습니다.', [
           { text: '확인', onPress: () => {
-            if (returnParams.returnTo === 'my-library') router.dismissTo('/my-library');
-            else if (returnParams.returnTo === 'ai-books') router.dismissTo(aiSearchHref(returnParams.prompt));
-            else if (returnParams.returnTo === 'book-detail') router.dismissTo({ pathname: '/book/[isbn]', params: { isbn: returnParams.isbn } });
-            else router.replace('/');
+            const destination = authReturnHref(returnParams);
+            if (destination === '/') router.replace(destination);
+            else router.dismissTo(destination);
           } }
         ]);
       } else {
@@ -49,6 +49,7 @@ export default function LoginScreen() {
 
   return (
     <AuthScreen title="로그인" description={returnParams.returnTo === 'book-detail' ? '로그인하면 보던 책으로 돌아가 서재에 담을 수 있어요.' : '다시 찾아주셔서 감사합니다'}>
+      <KakaoLoginButton returnParams={returnParams} disabled={loading} />
       <FormField label="이메일" placeholder="이메일 주소" value={email} onChangeText={setEmail}
         keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" />
       <FormField label="비밀번호" placeholder="비밀번호" value={password} onChangeText={setPassword}

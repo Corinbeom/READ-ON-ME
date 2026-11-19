@@ -19,6 +19,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -30,10 +32,20 @@ public class UserService implements UserDetailsService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다"));
-        return new UserDetailsImpl(user);
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        if (!username.startsWith(UserDetailsImpl.KAKAO_SUBJECT_PREFIX)) {
+            return userRepository.findByEmail(username).map(UserDetailsImpl::new)
+                    .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다"));
+        }
+        try {
+            long id = Long.parseLong(username.substring(UserDetailsImpl.KAKAO_SUBJECT_PREFIX.length()));
+            return userRepository.findById(id)
+                    .filter(user -> user.getKakaoId() != null && user.getEmail() == null)
+                    .map(UserDetailsImpl::new)
+                    .orElseThrow(() -> new UsernameNotFoundException("사용자를 찾을 수 없습니다"));
+        } catch (NumberFormatException e) {
+            throw new UsernameNotFoundException("사용자를 찾을 수 없습니다");
+        }
     }
 
     public UserResponse signUp(SignUpRequest request) {
@@ -72,27 +84,37 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(UserExceptions.InvalidLoginException::new);
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new UserExceptions.InvalidLoginException();
         }
 
-        String token = jwtUtil.generateToken(user.getId(), user.getEmail());
-        UserResponse userResponse = new UserResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getNickname(),
-                user.getProfileImage(),
-                user.getBirthYear(),
-                user.getCreatedAt().toString()
-        );
-
-        return new TokenResponse(token, jwtUtil.getExpirationTimeInSeconds(), userResponse);
+        return issueToken(user);
     }
 
-    public UserResponse getUserProfile(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
+    public TokenResponse signInWithKakao(long kakaoId, String nickname) {
+        User user = userRepository.findByKakaoId(kakaoId)
+                .orElseGet(() -> userRepository.saveAndFlush(User.forKakao(kakaoId, availableNickname(nickname))));
+        return issueToken(user);
+    }
 
+    private String availableNickname(String requested) {
+        String nickname = requested == null ? "" : requested.replaceAll("[\\p{Cc}\\p{Cf}]", "").strip();
+        nickname = limitNickname(nickname, 10);
+        if (nickname.codePointCount(0, nickname.length()) < 2) nickname = "갈피독자";
+        if (userRepository.findByNickname(nickname).isEmpty()) return nickname;
+        return limitNickname(nickname, 3) + "-" + UUID.randomUUID().toString().substring(0, 6);
+    }
+
+    private String limitNickname(String nickname, int limit) {
+        return nickname.substring(0, nickname.offsetByCodePoints(0, Math.min(limit, nickname.codePointCount(0, nickname.length()))));
+    }
+
+    private TokenResponse issueToken(User user) {
+        String token = jwtUtil.generateToken(user.getId(), new UserDetailsImpl(user).getUsername());
+        return new TokenResponse(token, jwtUtil.getExpirationTimeInSeconds(), toResponse(user));
+    }
+
+    private UserResponse toResponse(User user) {
         return new UserResponse(
                 user.getId(),
                 user.getEmail(),
@@ -101,6 +123,13 @@ public class UserService implements UserDetailsService {
                 user.getBirthYear(),
                 user.getCreatedAt().toString()
         );
+    }
+
+    public UserResponse getUserProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
+
+        return toResponse(user);
     }
 
     public void updateUserProfile(Long userId, UpdateProfileRequest request) {
@@ -127,7 +156,7 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+        if (user.getPassword() == null || !passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new UserExceptions.PasswordMismatchException();
         }
 

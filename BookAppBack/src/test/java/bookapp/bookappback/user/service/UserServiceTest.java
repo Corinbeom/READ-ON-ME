@@ -13,6 +13,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import java.util.Optional;
 
@@ -91,6 +92,7 @@ class UserServiceTest {
     void signIn_success() {
         SignInRequest request = new SignInRequest("test@example.com", "password");
         User user = new User("test@example.com", "encodedPassword", "nickname", null, null);
+        user.setId(10L);
 
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(request.getPassword(), user.getPassword())).thenReturn(true);
@@ -98,5 +100,35 @@ class UserServiceTest {
         when(jwtUtil.getExpirationTimeInSeconds()).thenReturn(3600L);
 
         assertDoesNotThrow(() -> userService.signIn(request));
+    }
+
+    @Test
+    void kakaoAccountIsCreatedWithoutEmailAndReusedByKakaoId() {
+        long kakaoId = 40001L;
+        User[] stored = new User[1];
+        when(userRepository.findByKakaoId(kakaoId)).thenAnswer(call -> Optional.ofNullable(stored[0]));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(call -> {
+            User user = call.getArgument(0);
+            user.setId(37L);
+            stored[0] = user;
+            return user;
+        });
+        when(userRepository.findByNickname("기존닉네임")).thenReturn(Optional.of(
+                new User("existing@example.test", "hash", "기존닉네임", null, null)));
+
+        userService.signInWithKakao(kakaoId, "기존닉네임");
+        userService.signInWithKakao(kakaoId, "바뀐 프로필");
+
+        assertNull(stored[0].getEmail());
+        assertNull(stored[0].getPassword());
+        assertEquals(Long.valueOf(kakaoId), stored[0].getKakaoId());
+        assertTrue(stored[0].getNickname().matches("기존닉-[a-f0-9]{6}"));
+        verify(userRepository).saveAndFlush(any(User.class));
+        verify(jwtUtil, times(2)).generateToken(37L, "kakao:37");
+        verifyNoInteractions(passwordEncoder);
+
+        when(userRepository.findById(37L)).thenReturn(Optional.of(stored[0]));
+        assertEquals("kakao:37", userService.loadUserByUsername("kakao:37").getUsername());
+        assertThrows(UsernameNotFoundException.class, () -> userService.loadUserByUsername("kakao:invalid"));
     }
 }
