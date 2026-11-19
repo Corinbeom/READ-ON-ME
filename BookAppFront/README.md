@@ -72,7 +72,7 @@ See [initial discovery validation](qa/home-ai-discovery-2026-11-16.md) and [Galp
 
 Home displays up to six recently viewed editions after the themed collection. A successfully displayed detail screen moves the book to the front. History is stored on the device/browser and can be cleared from Home. Opening Home does not fetch book records for this section.
 
-The home route exports link preview metadata with `public/galpi-share-card.png`. The web tab icon is configured in `app.json`. Update the home URL in the metadata if the public website domain changes. The web build checks that the HTML references both exported assets.
+The home route exports link preview metadata with `public/galpi-share-card.png`. The web tab icon is configured in `app.json`. All web routes link to `public/apple-touch-icon.png` for iOS home-screen shortcuts and to `public/manifest.webmanifest` for web app installation on Android. Update the home URL in the preview metadata if the public website domain changes. The web build verifies the image references and installation icon sizes.
 
 UI progress and follow-up tasks are tracked in [UI improvements](UI_IMPROVEMENTS.md). See [floating navigation validation](qa/floating-tabs-2026-11-17.md) for layout, hit targets and keyboard checks.
 
