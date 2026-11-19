@@ -1,0 +1,36 @@
+name: Public uptime
+run-name: ${{ inputs.test_notification && 'Public uptime (test notification)' || 'Public uptime' }}
+
+on:
+  schedule:
+    - cron: '4,19,34,49 * * * *'
+  workflow_dispatch:
+    inputs:
+      test_notification:
+        description: Send an intentional failure notification
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-uptime
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check the public home and book catalog
+        if: ${{ !inputs.test_notification }}
+        env:
+          WEB_API_URL: ${{ vars.WEB_API_URL || 'https://152.67.222.15' }}
+        run: python3 deploy/check-public-uptime.py
+      - name: Trigger the test notification
+        if: ${{ inputs.test_notification }}
+        run: |
+          echo '::error title=Test notification::Intentional failure. No outage is implied.'
+          exit 1

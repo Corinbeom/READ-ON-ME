@@ -144,6 +144,8 @@ export default function HomeScreen() {
         </View>
       )}
 
+      <AppButton title="의견 보내기" compact variant="ghost" onPress={() => router.push('/feedback')} />
+
       {/* ── Modal ── */}
       <Modal
         animationType="fade"

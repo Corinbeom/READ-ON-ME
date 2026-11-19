@@ -36,6 +36,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final long BOOK_SEARCH_LIMIT = 60;
     private static final long AI_SEARCH_LIMIT    = 20;
     private static final long KAKAO_LOGIN_LIMIT = 30;
+    private static final long FEEDBACK_LIMIT = 20;
 
     @Override
     protected void doFilterInternal(
@@ -56,6 +57,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
             if (!consumeOrRespond(request, response, path.endsWith("/start") ? "kakao-start" : "kakao-exchange", KAKAO_LOGIN_LIMIT)) {
                 return;
             }
+        } else if ("POST".equals(request.getMethod()) && path.equals("/api/feedback")) {
+            if (!consumeOrRespond(request, response, "feedback", FEEDBACK_LIMIT)) return;
         } else if ("POST".equals(request.getMethod()) &&
                 (path.equals("/api/ai/search") || path.equals("/api/ai/jobs"))) {
             // Authorization rejects anonymous AI requests; do not spend Redis/API quota on them.
