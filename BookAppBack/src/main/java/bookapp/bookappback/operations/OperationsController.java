@@ -1,6 +1,7 @@
 package bookapp.bookappback.operations;
 
 import bookapp.bookappback.common.exception.AppException;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -87,7 +88,7 @@ public class OperationsController {
     public record StatusChange(@NotBlank @Pattern(regexp = FEEDBACK_STATUSES) String status,
                                @NotNull @PositiveOrZero Integer version) {}
 
-    public record FeedbackItem(long id, OffsetDateTime createdAt, String category,
+    public record FeedbackItem(long id, @JsonFormat(shape = JsonFormat.Shape.STRING) OffsetDateTime createdAt, String category,
                                String message, String status, int statusVersion) {}
 
     public record FeedbackPage(List<FeedbackItem> items, Long nextBeforeId) {}

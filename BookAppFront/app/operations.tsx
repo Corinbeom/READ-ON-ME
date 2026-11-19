@@ -41,6 +41,7 @@ function OperationsDashboard() {
   const [summaryError, setSummaryError] = useState('');
   const [denied, setDenied] = useState(false);
   const [revision, setRevision] = useState(0);
+  const [section, setSection] = useState<'feedback' | 'health'>('feedback');
   const [uptime, setUptime] = useState<UptimeRun | null>();
   const [category, setCategory] = useState<FeedbackCategory | ''>('');
   const [status, setStatus] = useState<FeedbackStatus | ''>('');
@@ -162,98 +163,105 @@ function OperationsDashboard() {
     <ScrollView style={{ backgroundColor: colors.background }}
       contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, Spacing.xl) }]}>
       <View style={styles.row}>
-        <Text style={[Typography.title, text]}>피드백</Text>
+        <View style={styles.filters}>
+          <AppButton title="피드백" compact variant={section === 'feedback' ? 'primary' : 'ghost'}
+            accessibilityState={{ selected: section === 'feedback' }} disabled={!!saving} onPress={() => setSection('feedback')} />
+          <AppButton title="운영 현황" compact variant={section === 'health' ? 'primary' : 'ghost'}
+            accessibilityState={{ selected: section === 'health' }} disabled={!!saving} onPress={() => setSection('health')} />
+        </View>
         <AppButton title="새로고침" compact variant="ghost" disabled={!!saving} onPress={refresh} />
       </View>
       {summaryError ? <Text accessibilityRole="alert" style={[Typography.label, { color: colors.danger }]}>{summaryError}</Text> : null}
-      <View style={styles.row}>
-        {feedbackStatuses.map(item => (
-          <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.line }]} key={item.value}>
-            <Text style={[Typography.caption, muted]}>{item.label}</Text>
-            <Text style={[Typography.section, text]}>{summary.feedbackCounts[item.value] ?? 0}건</Text>
-          </View>
-        ))}
-      </View>
-      <View style={styles.filters}>
-        {[{ value: '' as const, label: '전체 유형' }, ...feedbackCategories].map(item => (
-          <AppButton key={item.value} title={item.label} compact variant={category === item.value ? 'primary' : 'ghost'}
-            accessibilityState={{ selected: category === item.value }} disabled={!!saving} onPress={() => {
-              if (category !== item.value) { resetList(); setCategory(item.value); }
-            }} />
-        ))}
-      </View>
-      <View style={styles.filters}>
-        {[{ value: '' as const, label: '전체 상태' }, ...feedbackStatuses].map(item => (
-          <AppButton key={item.value} title={item.label} compact variant={status === item.value ? 'primary' : 'ghost'}
-            accessibilityState={{ selected: status === item.value }} disabled={!!saving} onPress={() => {
-              if (status !== item.value) { resetList(); setStatus(item.value); }
-            }} />
-        ))}
-      </View>
-
-      {pageError ? <ScreenState title={pageError} action="다시 시도" onAction={refresh} />
-        : !page ? <ScreenState title="피드백을 불러오고 있어요" loading />
-        : !page.items.length ? <ScreenState title="이 조건의 피드백이 없어요" />
-        : page.items.map(item => {
-          const open = expanded === item.id;
-          const label = feedbackCategories.find(entry => entry.value === item.category)?.label;
-          const statusLabel = feedbackStatuses.find(entry => entry.value === item.status)?.label;
-          return (
-            <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]} key={item.id}>
-              <View style={styles.row}>
-                <Text style={[Typography.label, text]}>{label} · {statusLabel}</Text>
-                <Text style={[Typography.caption, muted]}>{dateLabel(item.createdAt)}</Text>
-              </View>
-              <Text style={[Typography.body, text]} numberOfLines={open ? undefined : 2}>{item.message}</Text>
-              <AppButton title={open ? '접기' : '자세히 보기'} compact variant="ghost"
-                accessibilityState={{ expanded: open }} disabled={!!saving} onPress={() => {
-                  setSavingError('');
-                  setExpanded(open ? undefined : item.id);
-                }} />
-              {open ? (
-                <>
-                  <View style={styles.filters}>
-                    {feedbackStatuses.map(option => (
-                      <AppButton key={option.value} title={option.label} compact variant={option.value === item.status ? 'primary' : 'secondary'}
-                        accessibilityState={{ selected: option.value === item.status }}
-                        disabled={!!saving || option.value === item.status} loading={saving === option.value}
-                        onPress={() => void saveStatus(item, option.value)} />
-                    ))}
-                  </View>
-                  {savingError ? <Text accessibilityRole="alert" style={[Typography.label, { color: colors.danger }]}>{savingError}</Text> : null}
-                </>
-              ) : null}
-            </View>
-          );
-        })}
-      {cursors.length || nextCursor ? (
+      {section === 'feedback' ? <>
         <View style={styles.row}>
-          <AppButton title="최근 페이지" compact variant="secondary" disabled={!cursors.length || !!saving} onPress={() => {
-            setPage(null); setExpanded(undefined); setCursors(current => current.slice(0, -1));
-          }} />
-          <AppButton title="오래된 의견 더 보기" compact variant="secondary" disabled={!nextCursor || !!saving} onPress={() => {
-            if (nextCursor) { setCursors(current => [...current, nextCursor]); setPage(null); setExpanded(undefined); }
-          }} />
-        </View>
-      ) : null}
-
-      <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]}>
-        <Text style={[Typography.section, text]}>갈피 추천 · 최근 24시간</Text>
-        <View style={styles.metrics}>
-          {metrics.map(([label, value]) => (
-            <View key={label} style={styles.metric}>
-              <Text style={[Typography.caption, muted]}>{label}</Text>
-              <Text style={[Typography.label, text]}>{value}</Text>
+          {feedbackStatuses.map(item => (
+            <View style={[styles.stat, { backgroundColor: colors.card, borderColor: colors.line }]} key={item.value}>
+              <Text style={[Typography.caption, muted]}>{item.label}</Text>
+              <Text style={[Typography.section, text]}>{summary.feedbackCounts[item.value] ?? 0}건</Text>
             </View>
           ))}
         </View>
-      </View>
-      <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]}>
-        <Text style={[Typography.section, text]}>외부 점검</Text>
-        <Text style={[Typography.label, text]}>{displayStatus}</Text>
-        {uptime ? <Text style={[Typography.caption, muted]}>{uptime.event === 'schedule' ? '예약 점검' : '수동 점검'} · {dateLabel(uptime.run_started_at)}</Text> : null}
-        <Link href={uptimeUrl} asChild><AppButton title="GitHub 점검 기록" compact variant="secondary" /></Link>
-      </View>
+        <View style={styles.filters}>
+          {[{ value: '' as const, label: '전체 유형' }, ...feedbackCategories].map(item => (
+            <AppButton key={item.value} title={item.label} compact variant={category === item.value ? 'primary' : 'ghost'}
+              accessibilityState={{ selected: category === item.value }} disabled={!!saving} onPress={() => {
+                if (category !== item.value) { resetList(); setCategory(item.value); }
+              }} />
+          ))}
+        </View>
+        <View style={styles.filters}>
+          {[{ value: '' as const, label: '전체 상태' }, ...feedbackStatuses].map(item => (
+            <AppButton key={item.value} title={item.label} compact variant={status === item.value ? 'primary' : 'ghost'}
+              accessibilityState={{ selected: status === item.value }} disabled={!!saving} onPress={() => {
+                if (status !== item.value) { resetList(); setStatus(item.value); }
+              }} />
+          ))}
+        </View>
+
+        {pageError ? <ScreenState title={pageError} action="다시 시도" onAction={refresh} />
+          : !page ? <ScreenState title="피드백을 불러오고 있어요" loading />
+          : !page.items.length ? <ScreenState title="이 조건의 피드백이 없어요" />
+          : page.items.map(item => {
+            const open = expanded === item.id;
+            const label = feedbackCategories.find(entry => entry.value === item.category)?.label;
+            const statusLabel = feedbackStatuses.find(entry => entry.value === item.status)?.label;
+            return (
+              <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]} key={item.id}>
+                <View style={styles.row}>
+                  <Text style={[Typography.label, text]}>{label} · {statusLabel}</Text>
+                  <Text style={[Typography.caption, muted]}>{dateLabel(item.createdAt)}</Text>
+                </View>
+                <Text style={[Typography.body, text]} numberOfLines={open ? undefined : 2}>{item.message}</Text>
+                <AppButton title={open ? '접기' : '자세히 보기'} compact variant="ghost"
+                  accessibilityState={{ expanded: open }} disabled={!!saving} onPress={() => {
+                    setSavingError('');
+                    setExpanded(open ? undefined : item.id);
+                  }} />
+                {open ? (
+                  <>
+                    <View style={styles.filters}>
+                      {feedbackStatuses.map(option => (
+                        <AppButton key={option.value} title={option.label} compact variant={option.value === item.status ? 'primary' : 'secondary'}
+                          accessibilityState={{ selected: option.value === item.status }}
+                          disabled={!!saving || option.value === item.status} loading={saving === option.value}
+                          onPress={() => void saveStatus(item, option.value)} />
+                      ))}
+                    </View>
+                    {savingError ? <Text accessibilityRole="alert" style={[Typography.label, { color: colors.danger }]}>{savingError}</Text> : null}
+                  </>
+                ) : null}
+              </View>
+            );
+          })}
+        {cursors.length || nextCursor ? (
+          <View style={styles.row}>
+            <AppButton title="최근 페이지" compact variant="secondary" disabled={!cursors.length || !!saving} onPress={() => {
+              setPage(null); setExpanded(undefined); setCursors(current => current.slice(0, -1));
+            }} />
+            <AppButton title="오래된 의견 더 보기" compact variant="secondary" disabled={!nextCursor || !!saving} onPress={() => {
+              if (nextCursor) { setCursors(current => [...current, nextCursor]); setPage(null); setExpanded(undefined); }
+            }} />
+          </View>
+        ) : null}
+      </> : <>
+        <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]}>
+          <Text style={[Typography.section, text]}>갈피 추천 · 최근 24시간</Text>
+          <View style={styles.metrics}>
+            {metrics.map(([label, value]) => (
+              <View key={label} style={styles.metric}>
+                <Text style={[Typography.caption, muted]}>{label}</Text>
+                <Text style={[Typography.label, text]}>{value}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+        <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]}>
+          <Text style={[Typography.section, text]}>외부 점검</Text>
+          <Text style={[Typography.label, text]}>{displayStatus}</Text>
+          {uptime ? <Text style={[Typography.caption, muted]}>{uptime.event === 'schedule' ? '예약 점검' : '수동 점검'} · {dateLabel(uptime.run_started_at)}</Text> : null}
+          <Link href={uptimeUrl} asChild><AppButton title="GitHub 점검 기록" compact variant="secondary" /></Link>
+        </View>
+      </>}
     </ScrollView>
   );
 }

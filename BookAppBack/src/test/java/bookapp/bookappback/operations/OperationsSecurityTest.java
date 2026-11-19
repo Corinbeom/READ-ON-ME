@@ -2,6 +2,7 @@ package bookapp.bookappback.operations;
 
 import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -10,6 +11,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.OffsetDateTime;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -20,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 class OperationsSecurityTest {
     @Autowired MockMvc mvc;
+    @Autowired ObjectMapper mapper;
 
     @Test
     void anonymousAndRegularUsersCannotReadOrUpdateFeedback() throws Exception {
@@ -38,6 +44,16 @@ class OperationsSecurityTest {
         mvc.perform(put("/api/operations/feedback/1/status").with(user(principal(12L)))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWING\",\"version\":-1}"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void feedbackReceiptTimeIsAnIsoTimestampRatherThanNumericSeconds() {
+        var created = OffsetDateTime.parse("2026-11-19T12:28:34Z");
+        var feedback = new OperationsController.FeedbackItem(1, created, "ERROR", "feedback", "NEW", 0);
+        var time = mapper.valueToTree(feedback).path("createdAt");
+
+        assertTrue(time.isTextual());
+        assertEquals(created, OffsetDateTime.parse(time.asText()));
     }
 
     private static UserDetailsImpl principal(long id) {
