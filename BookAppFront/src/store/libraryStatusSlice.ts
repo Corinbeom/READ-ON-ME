@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { bookApi } from '../services/api';
 import { ReadingStatus } from '../types/readingStatus';
 import type { UserLibrary } from '../utils/libraryOverview';
@@ -16,7 +16,7 @@ export type LibraryStatusEntry = {
   saving: boolean;
   saved: boolean;
   requestedStatus: ReadingStatus | null;
-  error: 'load' | 'save' | null;
+  error: 'load' | 'save' | 'remove' | null;
   requestId?: string;
 };
 export const emptyLibraryStatus: LibraryStatusEntry = {
@@ -59,13 +59,33 @@ export const saveLibraryStatus = createAsyncThunk<ReadingStatus, LibraryStatusTa
   { condition: (target, { getState }) => {
     const state = getState();
     const entry = state.libraryStatus.entries[libraryStatusKey(target)];
-    return isCurrentUser(state, target) && !!entry?.loaded && !entry.loading && !entry.saving && entry.error !== 'load'
+    return isCurrentUser(state, target) && !!entry?.loaded && !entry.loading && !entry.saving && entry.error !== 'load' && entry.error !== 'remove'
       && (entry.error === 'save' ? target.status === entry.requestedStatus : target.status !== entry.status);
   } }
 );
 
+export const removeLibraryBook = createAsyncThunk<void, LibraryStatusTarget, { state: StateView }>(
+  'libraryStatus/remove',
+  async ({ bookId }) => { await bookApi.removeLibraryBook(bookId, { handleErrorLocally: true }); },
+  { condition: (target, { getState }) => {
+    const state = getState();
+    const entry = state.libraryStatus.entries[libraryStatusKey(target)];
+    return isCurrentUser(state, target) && !!entry?.loaded && !!entry.status && !entry.loading && !entry.saving
+      && (!entry.error || entry.error === 'remove');
+  } }
+);
+
 const libraryStatusSlice = createSlice({
-  name: 'libraryStatus', initialState, reducers: {},
+  name: 'libraryStatus', initialState,
+  reducers: {
+    rememberShelfStatus: (state, action: PayloadAction<LibraryStatusTarget & { status: ReadingStatus }>) => {
+      const key = libraryStatusKey(action.payload);
+      const entry = state.entries[key];
+      if (!entry?.loading && !entry?.saving && !entry?.loaded) {
+        state.entries[key] = { ...emptyLibraryStatus, loaded: true, status: action.payload.status };
+      }
+    },
+  },
   extraReducers: (builder) => builder
     .addCase(fetchLibraryStatus.pending, (state, action) => {
       const key = libraryStatusKey(action.meta.arg);
@@ -96,8 +116,24 @@ const libraryStatusSlice = createSlice({
       if (entry?.requestId !== action.meta.requestId) return;
       Object.assign(entry, { saving: false, error: 'save', requestId: undefined });
     })
+    .addCase(removeLibraryBook.pending, (state, action) => {
+      const entry = state.entries[libraryStatusKey(action.meta.arg)];
+      Object.assign(entry, { saving: true, saved: false, error: null, requestId: action.meta.requestId });
+    })
+    .addCase(removeLibraryBook.fulfilled, (state, action) => {
+      const entry = state.entries[libraryStatusKey(action.meta.arg)];
+      if (entry?.requestId !== action.meta.requestId) return;
+      Object.assign(entry, { status: null, saving: false, requestId: undefined });
+      state.revision++;
+    })
+    .addCase(removeLibraryBook.rejected, (state, action) => {
+      const entry = state.entries[libraryStatusKey(action.meta.arg)];
+      if (entry?.requestId !== action.meta.requestId) return;
+      Object.assign(entry, { saving: false, error: 'remove', requestId: undefined });
+    })
     // Clearing request IDs also rejects late responses from the previous login session.
     .addMatcher((action) => action.type === 'auth/logout' || action.type === 'auth/signIn/pending', () => initialState),
 });
 
+export const { rememberShelfStatus } = libraryStatusSlice.actions;
 export default libraryStatusSlice.reducer;

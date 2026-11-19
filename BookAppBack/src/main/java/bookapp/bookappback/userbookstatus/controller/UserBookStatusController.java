@@ -35,6 +35,12 @@ public class UserBookStatusController {
         return ResponseEntity.ok(updatedStatus);
     }
 
+    @DeleteMapping("/{bookId}")
+    public ResponseEntity<Void> removeBook(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long bookId) {
+        userBookStatusService.removeBook(userDetails.getUsername(), bookId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping
     public ResponseEntity<UserLibraryResponse> getLibrary(
             @AuthenticationPrincipal UserDetails userDetails) {

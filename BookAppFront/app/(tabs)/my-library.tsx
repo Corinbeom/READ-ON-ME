@@ -5,6 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { router } from 'expo-router';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
 import LibraryShelf, { LibraryBookCard, LibraryDiscovery } from '@/components/LibraryShelf';
+import LibraryBookActions from '@/components/LibraryBookActions';
 import AppButton from '@/components/ui/AppButton';
 import LibraryReadingKeywords from '@/components/LibraryReadingKeywords';
 import ScreenState from '@/components/ui/ScreenState';
@@ -20,8 +21,12 @@ import { logout } from '@/src/store/authSlice';
 import { markAllNotificationsAsRead, markNotificationAsRead } from '@/src/store/notificationSlice';
 import type { BookDto } from '@/src/types/BookDto';
 import type { Review } from '@/src/types/review';
+import { ReadingStatus } from '@/src/types/readingStatus';
+import { rememberShelfStatus } from '@/src/store/libraryStatusSlice';
 
 const emptyLibrary: UserLibrary = { toReadBooks: [], readingBooks: [], completedBooks: [] };
+type LibraryList = { title: string; status?: ReadingStatus };
+type ManagedBook = { book: BookDto; userId: number };
 
 export default function MyLibraryScreen() {
   const dispatch = useDispatch<AppDispatch>();
@@ -33,40 +38,42 @@ export default function MyLibraryScreen() {
   const myReviews = overview.reviews ?? [];
   const readingKeywords = overview.keywords;
   const hasBooks = libraryBookCount(userLibrary) > 0;
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalTitle, setModalTitle] = useState('');
-  const [modalBooks, setModalBooks] = useState<BookDto[]>([]);
-  const [modalReviews, setModalReviews] = useState<Review[]>([]);
-  const [isReviewModal, setIsReviewModal] = useState(false);
+  const [list, setList] = useState<LibraryList | null>(null);
+  const [managedBook, setManagedBook] = useState<ManagedBook | null>(null);
+  const editing = managedBook && isAuthenticated && managedBook.userId === user?.id ? managedBook : null;
   const colorScheme = useColorScheme() ?? 'light';
   const styles = getMyLibraryScreenStyles(colorScheme);
   const limitedNotifications = notifications.slice(0, 3);
   const hasUnreadNotifications = unreadCount > 0;
 
   useEffect(() => {
-    setModalVisible(false);
-    setModalBooks([]);
-    setModalReviews([]);
+    setList(null);
+    setManagedBook(null);
   }, [isAuthenticated, user?.id]);
 
   const handleLogout = () => customAlert('로그아웃', '정말로 로그아웃 하시겠습니까?', [
     { text: '취소', style: 'cancel' },
     { text: '로그아웃', style: 'destructive', onPress: () => { dispatch(logout()); router.replace('/(tabs)'); } },
   ]);
-  const openBookListModal = (title: string, books: BookDto[]) => {
-    setModalTitle(title); setModalBooks(books); setModalReviews([]); setIsReviewModal(false); setModalVisible(true);
-  };
-  const openReviewListModal = () => {
-    setModalTitle('내가 쓴 리뷰'); setModalReviews(myReviews); setModalBooks([]); setIsReviewModal(true); setModalVisible(true);
+  const openBookListModal = (title: string, status: ReadingStatus) => setList({ title, status });
+  const openReviewListModal = () => setList({ title: '내가 쓴 리뷰' });
+  const closeModal = () => { if (editing) setManagedBook(null); else setList(null); };
+  const manage = (book: BookDto, status: ReadingStatus) => {
+    if (!isAuthenticated || !user) return;
+    dispatch(rememberShelfStatus({ bookId: book.id, userId: user.id, status }));
+    setManagedBook({ book, userId: user.id });
   };
   const handleNotificationPress = (id: number) => { dispatch(markNotificationAsRead(id)); };
   const handleMarkAllNotifications = () => { if (hasUnreadNotifications) dispatch(markAllNotificationsAsRead()); };
   const renderBookItem = ({ item }: { item: BookDto }) => (
-    <View style={styles.bookItemContainer}><LibraryBookCard book={item} onPress={() => setModalVisible(false)} /></View>
+    <View style={styles.bookItemContainer}>
+      <LibraryBookCard book={item} onPress={() => setList(null)}
+        onManage={list?.status ? () => manage(item, list.status!) : undefined} />
+    </View>
   );
   const renderReviewItem = ({ item }: { item: Review }) => (
     <TouchableOpacity style={styles.reviewItemContainer} accessibilityRole="button"
-      onPress={() => { setModalVisible(false); router.push(`/book/${item.book.isbn13}`); }}>
+      onPress={() => { setList(null); router.push(`/book/${item.book.isbn13}`); }}>
       <Image source={{ uri: secureImageUri(item.book.thumbnail) }} style={styles.reviewBookThumbnail} resizeMode="cover" />
       <View style={styles.reviewInfoContainer}>
         <Text style={styles.reviewItemTitle}>{item.book.title}</Text>
@@ -76,10 +83,12 @@ export default function MyLibraryScreen() {
     </TouchableOpacity>
   );
   const statItems = [
-    { label: '읽는 중', count: userLibrary.readingBooks.length, books: userLibrary.readingBooks },
-    { label: '읽고 싶어요', count: userLibrary.toReadBooks.length, books: userLibrary.toReadBooks },
-    { label: '완독', count: userLibrary.completedBooks.length, books: userLibrary.completedBooks },
+    { label: '읽는 중', title: '읽는 중', status: ReadingStatus.READING, books: userLibrary.readingBooks },
+    { label: '읽고 싶어요', title: '읽고 싶은 책', status: ReadingStatus.TO_READ, books: userLibrary.toReadBooks },
+    { label: '완독', title: '완독한 책', status: ReadingStatus.COMPLETED, books: userLibrary.completedBooks },
   ];
+  const modalBooks = statItems.find(item => item.status === list?.status)?.books ?? [];
+  const modalTitle = editing ? '책 관리' : list?.title;
   const retryNotice = (message: string) => (
     <View style={styles.retryNotice}>
       <Text accessibilityRole="alert" style={styles.retryText}>{message}</Text>
@@ -115,16 +124,17 @@ export default function MyLibraryScreen() {
                     <React.Fragment key={item.label}>
                       {index ? <View style={styles.statDivider} /> : null}
                       <TouchableOpacity style={styles.statItem} accessibilityRole="button"
-                        accessibilityLabel={`${item.label} ${item.count}권`} onPress={() => openBookListModal(item.label, item.books)}>
-                        <Text style={styles.statCount}>{item.count}</Text>
+                        accessibilityLabel={`${item.label} ${item.books.length}권`} onPress={() => openBookListModal(item.label, item.status)}>
+                        <Text style={styles.statCount}>{item.books.length}</Text>
                         <Text style={styles.statLabel}>{item.label}</Text>
                       </TouchableOpacity>
                     </React.Fragment>
                   ))}
                 </View>
-                <LibraryShelf title="읽는 중" books={userLibrary.readingBooks} onShowAll={() => openBookListModal('읽는 중', userLibrary.readingBooks)} />
-                <LibraryShelf title="읽고 싶은 책" books={userLibrary.toReadBooks} onShowAll={() => openBookListModal('읽고 싶은 책', userLibrary.toReadBooks)} />
-                <LibraryShelf title="완독한 책" books={userLibrary.completedBooks} onShowAll={() => openBookListModal('완독한 책', userLibrary.completedBooks)} />
+                {statItems.map(item => (
+                  <LibraryShelf key={item.status} title={item.title} books={item.books}
+                    onShowAll={() => openBookListModal(item.title, item.status)} onManage={book => manage(book, item.status)} />
+                ))}
                 <LibraryDiscovery compact />
               </>
             ) : <LibraryDiscovery />}
@@ -194,15 +204,20 @@ export default function MyLibraryScreen() {
 
           </>
         ) : null}
-        <Modal animationType="slide" transparent visible={modalVisible} onRequestClose={() => setModalVisible(false)}>
+        <Modal animationType="slide" transparent visible={!!modalTitle} onRequestClose={closeModal}>
           <View style={styles.modalOverlay}>
             <View style={[styles.modalContent, { paddingBottom: insets.bottom }]} role="dialog" aria-modal accessibilityViewIsModal accessibilityLabel={modalTitle}>
               <View style={styles.modalTitleRow}>
                 <Text accessibilityRole="header" style={styles.modalTitle}>{modalTitle}</Text>
-                <AppButton title="닫기" variant="ghost" compact onPress={() => setModalVisible(false)} />
+                <AppButton title="닫기" variant="ghost" compact onPress={closeModal} />
               </View>
-              {isReviewModal ? modalReviews.length ? (
-                <FlatList data={modalReviews} renderItem={renderReviewItem} keyExtractor={(item) => String(item.id)}
+              {editing ? (
+                <ScrollView>
+                  <LibraryBookActions key={`${editing.userId}:${editing.book.id}`} book={editing.book} userId={editing.userId}
+                    onSaved={() => setManagedBook(current => current === editing ? null : current)} />
+                </ScrollView>
+              ) : !list?.status ? myReviews.length ? (
+                <FlatList data={myReviews} renderItem={renderReviewItem} keyExtractor={(item) => String(item.id)}
                   ItemSeparatorComponent={() => <View style={styles.sectionDivider} />} contentContainerStyle={styles.modalReviewListContent} />
               ) : <Text style={styles.emptySectionText}>작성한 리뷰가 없습니다.</Text>
                 : modalBooks.length ? (

@@ -36,9 +36,10 @@ export default function BookLibraryStatus({ bookId, userId }: { bookId: number; 
   const busy = loading || entry.saving;
   const label = entry.status ? readingStatusLabels[entry.status] : '';
   const message = loading ? '서재 상태를 확인하고 있어요.'
-    : entry.saving ? `‘${readingStatusLabels[entry.requestedStatus!]}’ 상태로 저장하고 있어요.`
+    : entry.saving ? entry.requestedStatus ? `‘${readingStatusLabels[entry.requestedStatus]}’ 상태로 저장하고 있어요.` : '서재에서 책을 빼고 있어요.'
     : entry.error === 'load' ? '서재 상태를 불러오지 못했어요. 다시 확인해주세요.'
     : entry.error === 'save' ? '저장 결과를 확인하지 못했어요. 다시 저장하거나 상태를 확인해주세요.'
+    : entry.error === 'remove' ? '서재에서 책을 뺐는지 다시 확인해주세요.'
     : entry.saved ? `‘${label}’ 상태로 서재에 저장했어요.`
     : label ? `서재에 ‘${label}’ 상태로 담겨 있어요.` : '읽기 상태를 선택해 서재에 담아보세요.';
   return (
