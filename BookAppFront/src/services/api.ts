@@ -205,6 +205,19 @@ export type OperationsSummary = {
   };
 };
 
+export type OperationsUserOverview = {
+  totalUsers: number;
+  joinedToday: number;
+  joinedLastSevenDays: number;
+  emailAccounts: number;
+  kakaoAccounts: number;
+  shelfUsers: number;
+  toReadBooks: number;
+  readingBooks: number;
+  completedBooks: number;
+  galpiUsersLastDay: number;
+};
+
 export type OperationsFeedback = {
   id: number;
   createdAt: string;
@@ -233,6 +246,7 @@ export type OperationsRecommendationFeedbackPage = {
 
 export const operationsApi = {
   summary: (signal: AbortSignal) => api.get<OperationsSummary>(operationsPath + '/summary', { signal }),
+  users: (signal: AbortSignal) => api.get<AiJobResponse<OperationsUserOverview>>(operationsPath + '/users', { signal }),
   feedback: (params: { category: FeedbackCategory | ''; status: FeedbackStatus | ''; before_id?: number }, signal: AbortSignal) =>
     api.get<OperationsFeedbackPage>(operationsPath + '/feedback', { params, signal }),
   recommendationFeedback: (params: { rating?: RecommendationRating; before_id?: number }, signal: AbortSignal) =>
