@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import OperationsUserList from '@/components/OperationsUserList';
+import AppButton from '@/components/ui/AppButton';
 import ScreenState from '@/components/ui/ScreenState';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -17,6 +19,7 @@ export default function OperationsUserOverview({ revision, recommendation }: Pro
   const [overview, setOverview] = useState<UserOverview>();
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [showList, setShowList] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,10 +32,19 @@ export default function OperationsUserOverview({ revision, recommendation }: Pro
     return () => controller.abort();
   }, [attempt, revision]);
 
-  if (failed) return <ScreenState title="유저 현황을 불러오지 못했어요" action="다시 시도"
-    onAction={() => setAttempt(value => value + 1)} />;
-  if (!overview) return <ScreenState title="유저 현황을 불러오고 있어요" loading />;
+  return (
+    <>
+      <AppButton title={showList ? '유저 현황으로' : '유저 목록 보기'} variant="secondary" compact style={styles.listAction}
+        onPress={() => setShowList(value => !value)} />
+      {showList ? <OperationsUserList revision={revision} /> : failed
+        ? <ScreenState title="유저 현황을 불러오지 못했어요" action="다시 시도" onAction={() => setAttempt(value => value + 1)} />
+        : overview ? <OverviewMetrics overview={overview} recommendation={recommendation} />
+        : <ScreenState title="유저 현황을 불러오고 있어요" loading />}
+    </>
+  );
+}
 
+function OverviewMetrics({ overview, recommendation }: { overview: UserOverview; recommendation: Props['recommendation'] }) {
   return (
     <>
       <MetricGroup title="가입 현황" note="오늘과 최근 7일은 한국 날짜 기준" metrics={[
@@ -77,6 +89,7 @@ function MetricGroup({ title, note, metrics }: { title: string; note?: string; m
 }
 
 const styles = StyleSheet.create({
+  listAction: { alignSelf: 'flex-end' },
   card: { borderWidth: 1, borderRadius: UI.cardRadius, padding: Spacing.md, gap: Spacing.xs },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.md, rowGap: Spacing.sm, paddingTop: Spacing.xs },
   metric: { flexBasis: '44%', flexGrow: 1, minWidth: 106, gap: Spacing.xxs },

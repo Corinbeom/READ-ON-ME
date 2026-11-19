@@ -49,6 +49,54 @@ class OperationsSecurityTest {
     }
 
     @Test
+    void operationsShortcutChecksTheAuthenticatedAccount() throws Exception {
+        String path = "/api/operations/access";
+        mvc.perform(get(path)).andExpect(status().isForbidden());
+        mvc.perform(get(path).with(user(principal(7L)))).andExpect(status().isForbidden());
+        mvc.perform(get(path).with(user(principal(5L))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.user_id").value(5));
+    }
+
+    @Test
+    @Transactional
+    void userListIsRestrictedAndPaginatesOnlyTheAccountFieldsShownInOperations() throws Exception {
+        String path = "/api/operations/users/list";
+        mvc.perform(get(path)).andExpect(status().isForbidden());
+        mvc.perform(get(path).with(user(principal(7L)))).andExpect(status().isForbidden());
+        mvc.perform(get(path).with(user(principal(5L))).param("before_id", "0")).andExpect(status().isBadRequest());
+        mvc.perform(get(path).with(user(principal(5L))).param("before_id", "abc")).andExpect(status().isBadRequest());
+
+        LocalDateTime joinedAt = LocalDateTime.of(2026, 11, 19, 12, 30);
+        for (int id = 2000; id < 2030; id++) {
+            jdbc.sql("""
+                    INSERT INTO users (id, email, password, nickname, created_at)
+                    VALUES (:id, :email, 'fixture', :nickname, :joinedAt)
+                    """).param("id", id).param("email", "reader-" + id + "@example.test")
+                    .param("nickname", "reader-" + id).param("joinedAt", joinedAt).update();
+        }
+        jdbc.sql("""
+                INSERT INTO users (id, kakao_id, nickname, created_at)
+                VALUES (2030, 123987, 'KakaoUser', :joinedAt)
+                """).param("joinedAt", joinedAt).update();
+
+        mvc.perform(get(path).with(user(principal(5L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(30))
+                .andExpect(jsonPath("$.data.items[0].nickname").value("KakaoUser"))
+                .andExpect(jsonPath("$.data.items[0].provider").value("KAKAO"))
+                .andExpect(jsonPath("$.data.items[0].joinedAt").isString())
+                .andExpect(jsonPath("$.data.items[0].kakao_id").doesNotExist())
+                .andExpect(jsonPath("$.data.items[1].email").doesNotExist())
+                .andExpect(jsonPath("$.data.items[1].password").doesNotExist())
+                .andExpect(jsonPath("$.data.nextBeforeId").value(2001));
+        mvc.perform(get(path).with(user(principal(5L))).param("before_id", "2001"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].id").value(2000))
+                .andExpect(jsonPath("$.data.items[0].provider").value("EMAIL"));
+    }
+
+    @Test
     @Transactional
     void userOverviewIsRestrictedAndCountsMembersOncePerActivity() throws Exception {
         String path = "/api/operations/users";

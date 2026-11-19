@@ -10,6 +10,7 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
     content: { paddingBottom: SCREEN_LAYOUT.bottomPadding },
+    headerActions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: Spacing.xxs },
     statsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.line, backgroundColor: c.background },
     statItem: { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm, minHeight: 80 },
     statDivider: { width: 1, backgroundColor: c.line, marginVertical: 16 },
