@@ -2,6 +2,7 @@ name: Validation
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -69,12 +70,79 @@ jobs:
           include-hidden-files: true
           retention-days: 7
 
+  deployment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - run: |
+          for script in deploy/*-server-release.sh; do bash -n "$script"; done
+          python3 -m unittest discover -s deploy/tests -v
+
+  publish-server:
+    name: Publish production server images
+    if: >-
+      github.ref == 'refs/heads/main'
+      && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && vars.OCI_AUTO_DEPLOY_ENABLED == 'true'))
+    needs: [backend, ai, frontend, deployment]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: production-server
+      cancel-in-progress: false
+    env:
+      REGISTRY: ghcr.io/corinbeom/read-on-me
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        id: spring
+        with:
+          context: BookAppBack
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.REGISTRY }}/spring:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+      - uses: docker/build-push-action@v6
+        id: ai
+        with:
+          context: BookAppAI
+          platforms: linux/amd64
+          build-args: EMBEDDING_PROVIDER=gemini
+          push: true
+          tags: ${{ env.REGISTRY }}/ai:${{ github.sha }}
+          labels: org.opencontainers.image.revision=${{ github.sha }}
+      - name: Publish the matched image pair
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SPRING_DIGEST: ${{ steps.spring.outputs.digest }}
+          AI_DIGEST: ${{ steps.ai.outputs.digest }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$latest" != "$GITHUB_SHA" ]; then
+            echo 'A newer main revision exists; keeping the current server release.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          bash deploy/publish-server-release.sh
+
   deploy-web:
     name: Deploy production web
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [backend, ai, frontend]
+    if: >-
+      always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && needs.backend.result == 'success' && needs.ai.result == 'success'
+      && needs.frontend.result == 'success' && needs.deployment.result == 'success'
+      && (vars.OCI_AUTO_DEPLOY_ENABLED != 'true' || needs.publish-server.result == 'success')
+    needs: [backend, ai, frontend, deployment, publish-server]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     concurrency:
       group: production-web
       cancel-in-progress: false
@@ -106,6 +174,25 @@ jobs:
         run: |
           node scripts/verify-web-export.cjs
           node -e 'if (require("./dist/release.json").commit !== process.env.GITHUB_SHA) process.exit(1)'
+      - name: Wait for the matching OCI release
+        if: vars.OCI_AUTO_DEPLOY_ENABLED == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WEB_API_URL: ${{ vars.WEB_API_URL || 'https://152.67.222.15' }}
+        run: |
+          for attempt in $(seq 1 72); do
+            latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+            if [ "$latest" != "$GITHUB_SHA" ]; then
+              exit 0
+            fi
+            if curl --fail --silent --max-time 5 "${WEB_API_URL%/}/server-release.json?run=$GITHUB_RUN_ID" |
+              jq -e --arg sha "$GITHUB_SHA" '.commit == $sha' >/dev/null; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::OCI did not confirm this server revision'
+          exit 1
       - name: Check current main revision
         id: revision
         env:

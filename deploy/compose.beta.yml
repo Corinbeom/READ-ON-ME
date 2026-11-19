@@ -84,6 +84,7 @@ services:
     ports: [80:80, 443:443]
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy-status:/srv/deploy-status:ro
       - caddydata:/data
       - caddyconfig:/config
 volumes:

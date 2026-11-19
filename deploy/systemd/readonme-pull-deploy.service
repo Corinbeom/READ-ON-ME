@@ -1,0 +1,12 @@
+[Unit]
+Description=Apply the verified Read On Me server release
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+Environment=DOCKER_CONFIG=/etc/readonme-deploy/registry
+ExecStart=/bin/bash /opt/readonme/pull-server-release.sh
+TimeoutStartSec=18min
+UMask=0077
