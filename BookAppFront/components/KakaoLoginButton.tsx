@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Image, Platform, StyleSheet, TouchableOpacity } from 'react-native';
+import { Image, Platform, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { Colors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 import { authApi } from '@/src/services/api';
+import { Spacing, UI } from '@/src/styles/designTokens';
 import type { authReturnParams } from '@/src/utils/aiSearchEntry';
 import customAlert from '@/src/utils/alert';
 import { createKakaoVerifier, isKakaoStartForOrigin, loadKakaoSdk, saveKakaoFlow } from '@/src/utils/kakaoLogin';
@@ -19,6 +22,7 @@ async function prepareKakao(signal: AbortSignal) {
 }
 
 export default function KakaoLoginButton({ returnParams, disabled }: { returnParams: ReturnParams; disabled: boolean }) {
+  const colors = Colors[useColorScheme() ?? 'light'];
   const [ready, setReady] = useState<Awaited<ReturnType<typeof prepareKakao>>>(null);
   const [attempt, setAttempt] = useState(0);
 
@@ -53,16 +57,19 @@ export default function KakaoLoginButton({ returnParams, disabled }: { returnPar
   };
 
   return (
-    <TouchableOpacity accessibilityRole="button" accessibilityLabel="카카오 로그인"
-      disabled={disabled} accessibilityState={{ disabled }} onPress={start}
-      style={[styles.button, disabled && styles.disabled]}>
-      <Image accessible={false} source={require('@/assets/images/kakao-login.png')} style={styles.image} />
-    </TouchableOpacity>
+    <View style={[styles.section, { borderColor: colors.line }]}>
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel="카카오 로그인"
+        disabled={disabled} accessibilityState={{ disabled }} onPress={start}
+        style={[styles.button, disabled && styles.disabled]}>
+        <Image accessible={false} source={require('@/assets/images/kakao-login.png')} style={styles.image} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  button: { width: '100%', maxWidth: 320, alignSelf: 'center' },
-  image: { width: '100%', aspectRatio: 224 / 46, resizeMode: 'contain' },
+  section: { borderTopWidth: 1, paddingTop: Spacing.md },
+  button: { width: '100%', maxWidth: 224, minHeight: UI.compactControlHeight, alignSelf: 'center', justifyContent: 'center' },
+  image: { width: '100%', height: 46, resizeMode: 'contain' },
   disabled: { opacity: 0.45 },
 });

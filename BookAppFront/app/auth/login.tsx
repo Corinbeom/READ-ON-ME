@@ -48,14 +48,14 @@ export default function LoginScreen() {
   };
 
   return (
-    <AuthScreen title="로그인" description={returnParams.returnTo === 'book-detail' ? '로그인하면 보던 책으로 돌아가 서재에 담을 수 있어요.' : '다시 찾아주셔서 감사합니다'}>
-      <KakaoLoginButton returnParams={returnParams} disabled={loading} />
+    <AuthScreen compact title="로그인" description={returnParams.returnTo === 'book-detail' ? '로그인하면 보던 책으로 돌아가 서재에 담을 수 있어요.' : '다시 찾아주셔서 감사합니다'}>
       <FormField label="이메일" placeholder="이메일 주소" value={email} onChangeText={setEmail}
         keyboardType="email-address" autoCapitalize="none" autoCorrect={false} autoComplete="email" />
       <FormField label="비밀번호" placeholder="비밀번호" value={password} onChangeText={setPassword}
         secureTextEntry autoCapitalize="none" autoComplete="current-password" onSubmitEditing={() => { if (!loading) void handleLogin(); }} />
       <AppButton title="로그인" onPress={handleLogin} loading={loading} />
       <AppButton title="계정이 없으신가요? 회원가입" variant="ghost" onPress={() => router.push({ pathname: '/auth/register', params: returnParams })} />
+      <KakaoLoginButton returnParams={returnParams} disabled={loading} />
       <AppButton title="홈으로 돌아가기" variant="ghost" onPress={() => router.replace('/')} />
     </AuthScreen>
   );
