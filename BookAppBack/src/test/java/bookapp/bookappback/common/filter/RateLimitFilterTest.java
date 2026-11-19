@@ -82,4 +82,18 @@ class RateLimitFilterTest {
         assertEquals(503, response.getStatus());
         verifyNoInteractions(chain);
     }
+
+    @Test
+    void anonymousFeedbackUsesItsOwnBoundedBudget() throws Exception {
+        var chain = mock(FilterChain.class);
+        var request = new MockHttpServletRequest("POST", "/api/feedback");
+        request.setRemoteAddr("10.0.0.2");
+        when(values.increment("rate:feedback:ip:10.0.0.2")).thenReturn(21L);
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, chain);
+
+        assertEquals(429, response.getStatus());
+        verifyNoInteractions(chain);
+    }
 }

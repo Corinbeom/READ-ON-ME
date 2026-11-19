@@ -75,6 +75,8 @@ EXPO_PUBLIC_API_URL=https://152.67.222.15 npm run build:web
 
 ## 점검과 보존
 
+외부 장애 알림, 최근 24시간의 갈피 추천 집계, 익명 피드백 확인은 [베타 운영](BETA_OPERATIONS.md)을 참고합니다.
+
 ```sh
 cd /opt/readonme
 sudo docker compose -f compose.beta.yml ps

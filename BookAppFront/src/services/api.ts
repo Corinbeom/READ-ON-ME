@@ -60,6 +60,7 @@ export const api = axios.create({
 
 const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
 const kakaoAuthPath = '/api/users/kakao/';
+const feedbackPath = '/api/feedback';
 
 api.interceptors.request.use(async (config) => {
   const noAuthPaths = [
@@ -69,6 +70,7 @@ api.interceptors.request.use(async (config) => {
     '/api/users/signin',
     '/api/users/signup',
     kakaoAuthPath,
+    feedbackPath,
   ];
   
   const shouldSkipAuth = noAuthPaths.some((path) =>
@@ -91,6 +93,7 @@ const silentPaths = [
   '/api/users/signin',
   '/api/users/signup',
   kakaoAuthPath,
+  feedbackPath,
 ];
 
 export interface AiSearchBook {
@@ -173,6 +176,13 @@ export const authApi = {
     api.post<{ data: { nickname: string } }>('/api/users/profile/nickname-suggestion', { exclude }, { signal }),
 
   test: () => api.get('/api/users/test'),
+};
+
+export type FeedbackCategory = 'ERROR' | 'DISCOVERY' | 'USABILITY';
+
+export const feedbackApi = {
+  submit: (category: FeedbackCategory, message: string, signal: AbortSignal) =>
+    api.post(feedbackPath, { category, message }, { signal }),
 };
 
 // 🔹 책 관련 API

@@ -49,7 +49,7 @@ public class RequestTimingFilter extends OncePerRequestFilter {
             int status = response.getStatus();
             String method = request.getMethod();
             String path = request.getRequestURI();
-            String query = request.getQueryString();
+            String query = path.equals("/api/feedback") ? null : request.getQueryString();
 
             // JSON-ish 형태로 로그를 남기면 나중에 grep/집계하기 쉽습니다.
             log.info("request_completed method={} path={} query={} status={} latency_ms={} request_id={}",

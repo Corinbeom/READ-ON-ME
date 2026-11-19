@@ -19,6 +19,10 @@ import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { Typography } from '@/src/styles/designTokens';
 import { getProfile, setToken, logout } from '@/src/store/authSlice';
 
+function HomeHeaderButton() {
+  return <AppButton title="홈으로" variant="ghost" onPress={() => router.replace('/')} />;
+}
+
 function SessionRestorer() {
   const dispatch = useDispatch<AppDispatch>();
   useEffect(() => {
@@ -100,14 +104,16 @@ export default function RootLayout() {
           <Stack.Screen name="auth/register" options={{ title: '회원가입' }} />
           <Stack.Screen name="ai-books" options={{ headerShown: false }} />
           <Stack.Screen name="reading-keywords" options={{ headerShown: false, title: '요즘 내가 읽는 세계' }} />
+          <Stack.Screen name="feedback" options={({ navigation }) => ({
+            title: '의견 보내기',
+            headerLeft: navigation.canGoBack() ? undefined : () => <HomeHeaderButton />,
+          })} />
           <Stack.Screen
             name="book/[isbn]"
             options={({ navigation }) => ({
               title: '',
               headerBackTitle: ' ',
-              headerLeft: navigation.canGoBack() ? undefined : () => (
-                <AppButton title="홈으로" variant="ghost" onPress={() => router.replace('/')} />
-              ),
+              headerLeft: navigation.canGoBack() ? undefined : () => <HomeHeaderButton />,
             })}
           />
           <Stack.Screen name="+not-found" />
