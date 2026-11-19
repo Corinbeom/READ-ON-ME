@@ -3,9 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.book_corpus import BookCorpus
-from app.services import book_ai_service, corpus_ingestion
+from app.services import book_ai_service, corpus_ingestion, reading_keyword_picks
 from app.security import require_internal_token
-from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest
+from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
 
 router = APIRouter()
 # --- Endpoints ---
@@ -97,3 +97,8 @@ async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depen
     ]
 
     return {"keywords": keywords, "analyzed": len(rows)}
+
+
+@router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])
+async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest, db: AsyncSession = Depends(get_db)):
+    return await reading_keyword_picks.find_reading_keyword_isbns(db, request.keywords)

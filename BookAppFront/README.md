@@ -88,7 +88,7 @@ See [search discovery validation](qa/search-discovery-2026-11-16.md).
 
 The library tab shows reading, to-read and completed books before reading keywords and reviews. Each shelf previews up to six books, with the full category available in a modal. Cards link to book detail only when their ISBN is valid. Missing covers have a placeholder.
 
-Reading keywords count distinct reading or completed books. Selecting a keyword shows the matching books from the active user's library and can prefill AI discovery. On web, select up to three keywords and preview or save a PNG created in the browser. It contains only the selected labels and Read On Me branding. Older keyword responses can still show counts and be used to create cards.
+Reading keywords count distinct books marked as reading or completed. Selecting a keyword shows the books that informed it and can prefill AI discovery. On web, choose up to three labels for a 1080×1920 story card. The preview redraws in place, and tapping “이미지로 저장” encodes the PNG. “스토리 링크 복사” copies a public link containing the chosen labels. The linked page shows up to three matches from the catalog and opens their book details without signing in. Older keyword responses can still show counts and be used to create cards.
 
 An empty library offers search and AI discovery. Guest login and the signup/login roundtrip retain the fixed `returnTo=my-library` destination; AI entry still supports `returnTo=ai-books` with its prompt. Arbitrary return destinations are rejected.
 

@@ -21,7 +21,8 @@ export function getLibraryReadingKeywordsStyles(theme: 'light' | 'dark') {
     cloudMainLabel: { color: c.text, letterSpacing: -0.5 },
     body: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: Spacing.md, gap: Spacing.md },
     books: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
-    preview: { width: '100%', maxWidth: 340, alignSelf: 'center', aspectRatio: 1, backgroundColor: c.surface2 },
+    preview: { width: '100%', maxWidth: 245, alignSelf: 'center', aspectRatio: 9 / 16, backgroundColor: c.surface2 },
+    linkFallback: { gap: Spacing.xs },
     error: { ...Typography.caption, color: c.danger },
   });
 }

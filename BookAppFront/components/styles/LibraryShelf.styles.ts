@@ -5,6 +5,8 @@ import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 
 export function getLibraryShelfStyles(theme: 'light' | 'dark') {
   const c = Colors[theme];
+  const book = { width: 112, minHeight: UI.controlHeight };
+  const cover = { width: 104, height: 148, backgroundColor: c.surface2 };
   return StyleSheet.create({
     shelf: { paddingTop: Spacing.lg, paddingBottom: Spacing.xs },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.sm, paddingHorizontal: SCREEN_LAYOUT.gutter, marginBottom: Spacing.sm },
@@ -12,8 +14,10 @@ export function getLibraryShelfStyles(theme: 'light' | 'dark') {
     title: { ...Typography.section, color: c.text, flexShrink: 1 },
     count: { ...Typography.caption, color: c.inkSoft },
     books: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingBottom: Spacing.xs, gap: Spacing.md },
-    book: { width: 112, minHeight: UI.controlHeight },
-    cover: { width: 104, height: 148, backgroundColor: c.surface2 },
+    book,
+    cover,
+    compactBook: { ...book, width: 82 },
+    compactCover: { ...cover, width: 78, height: 111 },
     placeholder: { alignItems: 'center', justifyContent: 'center' },
     coverLabel: { ...Typography.caption, color: c.inkSoft },
     bookTitle: { ...Typography.label, fontFamily: 'NotoSerifKR-Regular', color: c.text, marginTop: Spacing.xs, minHeight: 40 },

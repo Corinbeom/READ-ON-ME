@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
+import type { BookDto } from '../types/BookDto';
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
@@ -56,10 +57,13 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
+
 api.interceptors.request.use(async (config) => {
   const noAuthPaths = [
     '/api/books/search',
     '/api/books/detail',
+    readingKeywordPicksPath,
     '/api/users/signin',
     '/api/users/signup',
   ];
@@ -79,6 +83,7 @@ api.interceptors.request.use(async (config) => {
 // 전역 알림을 띄우지 않을 경로 (화면/슬라이스에서 직접 처리하는 엔드포인트)
 const silentPaths = [
   '/api/ai/jobs',
+  readingKeywordPicksPath,
   '/api/users/profile',
   '/api/users/signin',
   '/api/users/signup',
@@ -156,8 +161,15 @@ export const authApi = {
 
 // 🔹 책 관련 API
 type LocalRequestOptions = { signal?: AbortSignal; handleErrorLocally?: boolean };
+export type ReadingKeywordPick = Pick<BookDto, 'isbn13' | 'title' | 'authors' | 'thumbnail'>;
 
 export const bookApi = {
+  getReadingKeywordPicks: (keywords: string[], signal: AbortSignal) => {
+    const params = new URLSearchParams();
+    keywords.forEach(keyword => params.append('tag', keyword));
+    return api.get<ReadingKeywordPick[]>(readingKeywordPicksPath, { params, signal });
+  },
+
   searchBooks: (params: {
     query: string;
     page?: number;

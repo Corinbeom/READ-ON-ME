@@ -10,18 +10,23 @@ import { getIsbn13 } from '@/src/utils/bookUtils';
 import { secureImageUri } from '@/src/utils/imageUri';
 import { getLibraryShelfStyles } from './styles/LibraryShelf.styles';
 
-export function LibraryBookCard({ book, onPress }: { book: Pick<BookDto, 'title' | 'isbn13' | 'authors' | 'thumbnail'>; onPress?: () => void }) {
+export function LibraryBookCard({ book, onPress, compact = false }: {
+  book: Pick<BookDto, 'title' | 'isbn13' | 'authors' | 'thumbnail'>;
+  onPress?: () => void;
+  compact?: boolean;
+}) {
   const styles = getLibraryShelfStyles(useColorScheme() ?? 'light');
   const uri = secureImageUri(book.thumbnail);
   const isbn = getIsbn13(book);
   const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => setImageFailed(false), [uri]);
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors;
+  const cover = compact ? styles.compactCover : styles.cover;
   const content = (
-    <TouchableOpacity style={styles.book} onPress={onPress} disabled={!isbn} activeOpacity={0.75}
+    <TouchableOpacity style={compact ? styles.compactBook : styles.book} onPress={onPress} disabled={!isbn} activeOpacity={0.75}
       accessibilityLabel={`${book.title}${authors ? ` · ${authors}` : ''} · ${isbn ? '책 상세 보기' : '상세 보기 불가'}`}>
-      {uri && !imageFailed ? <Image source={{ uri }} style={styles.cover} resizeMode="cover" onError={() => setImageFailed(true)} />
-        : <View style={[styles.cover, styles.placeholder]}><Text style={styles.coverLabel}>표지 없음</Text></View>}
+      {uri && !imageFailed ? <Image source={{ uri }} style={cover} resizeMode="cover" onError={() => setImageFailed(true)} />
+        : <View style={[cover, styles.placeholder]}><Text style={styles.coverLabel}>표지 없음</Text></View>}
       <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
       <Text style={styles.author} numberOfLines={1}>{isbn ? authors || '저자 정보 없음' : '상세 보기 불가'}</Text>
     </TouchableOpacity>

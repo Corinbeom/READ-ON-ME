@@ -158,6 +158,7 @@ docker compose up --build
 | --- | --- | --- |
 | Spring | `POST /api/users/signup`, `/signin`, `GET /profile` | 회원 관리 및 JWT 인증 |
 | Spring | `GET /api/books/search`, `/detail/{isbn}`, `/popular`, `/books/{isbn}/editions` | 카카오 기반 도서 조회 |
+| Spring | `GET /api/books/reading-keyword-picks?tag=가족` | 로그인 없이 공개 키워드 1~3개로 관련 도서를 최대 3권 조회 |
 | Spring | `POST /api/library/{bookId}?status=READING`, `GET /api/library`, `GET /api/library/all` | 개인/전체 서재 관리 및 추천용 데이터 |
 | Spring | `POST /api/books/{bookId}/review`, `POST /api/books/review/{id}/like`, `GET /api/books/{bookId}/reviews` | 리뷰/좋아요/조회 |
 | Spring | `GET /api/notifications/stream`, `GET /api/notifications` | SSE 알림 스트림 및 목록 |

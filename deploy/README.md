@@ -50,7 +50,7 @@ GitHub 저장소 Settings → Secrets and variables → Actions에 다음 reposi
 ### 일반 릴리스와 복구
 
 1. 기능 브랜치에서 변경·테스트 후 PR을 생성한다.
-2. `backend`, `ai`, `frontend` 검사를 확인하고 main으로 병합한다.
+2. `backend`, `ai`, `frontend` 검사를 확인한다. 웹이 새 API를 사용하는 릴리스는 OCI의 Spring·AI 이미지를 먼저 업데이트하고, 운영 API 응답을 확인한 뒤 main으로 병합한다.
 3. main의 Validation 실행에서 `Deploy production web` 완료와 공개 `release.json`을 확인한다.
 4. 배포 실패 시 원인을 수정한 PR을 병합하거나, 같은 최신 main의 실패 작업을 재실행한다. 과거 릴리스로 되돌리려면 main에 revert를 반영해 다시 배포한다. 오래된 실행 재실행은 최신 main 검사에 의해 배포를 건너뛴다.
 
