@@ -4,6 +4,7 @@ import bookapp.bookappback.common.dto.ApiResponse;
 import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.security.UserDetailsImpl;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import jakarta.validation.Valid;
@@ -98,7 +99,7 @@ public class OperationsController {
     public record StatusChange(@NotBlank @Pattern(regexp = FEEDBACK_STATUSES) String status,
                                @NotNull @PositiveOrZero Integer version) {}
 
-    public record Access(long userId) {}
+    public record Access(@JsonProperty("user_id") long userId) {}
 
     @JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public record FeedbackItem(long id, @JsonFormat(shape = JsonFormat.Shape.STRING) OffsetDateTime createdAt, String category,
