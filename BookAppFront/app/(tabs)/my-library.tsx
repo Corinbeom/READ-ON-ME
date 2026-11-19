@@ -105,7 +105,7 @@ export default function MyLibraryScreen() {
         {isAuthenticated && user ? (
           <View style={styles.profileBar}>
             <Text style={styles.profileBarText}>{user.nickname}</Text>
-            <Text style={[styles.profileBarText, styles.profileEmail]} numberOfLines={1}>{user.email}</Text>
+            {user.email ? <Text style={[styles.profileBarText, styles.profileEmail]} numberOfLines={1}>{user.email}</Text> : null}
           </View>
         ) : <LibraryDiscovery guest />}
 

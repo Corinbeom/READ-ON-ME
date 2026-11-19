@@ -41,25 +41,21 @@ class UserBookStatusServiceTest {
     @Test
     @DisplayName("서재에서 뺄 때 요청자의 서재 항목만 삭제")
     void removeBook_usesAuthenticatedOwner() {
-        User user = new User("reader@test.com", "encoded", "reader", null, null);
-        user.setId(1L);
-        when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
-
-        userBookStatusService.removeBook("reader@test.com", 100L);
+        userBookStatusService.removeBook(1L, 100L);
 
         verify(userBookStatusRepository).removeLibraryEntry(1L, 100L);
-        verifyNoInteractions(bookRepository);
+        verifyNoInteractions(userRepository, bookRepository);
     }
 
     @Test
     @DisplayName("사용자 서재 상태 업데이트 성공")
     void updateStatus_success() {
-        User user = new User("reader@test.com", "encoded", "reader", null, null);
+        User user = User.forKakao(1729L, "reader");
         user.setId(1L);
         Book book = new Book();
         book.setId(100L);
 
-        when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(bookRepository.findById(100L)).thenReturn(Optional.of(book));
         when(userBookStatusRepository.findByUserIdAndBookId(1L, 100L)).thenReturn(Optional.empty());
 
@@ -69,7 +65,7 @@ class UserBookStatusServiceTest {
         saved.setStatus(ReadingStatus.READING);
         when(userBookStatusRepository.save(any(UserBookStatus.class))).thenReturn(saved);
 
-        UserBookStatus result = userBookStatusService.updateStatus("reader@test.com", 100L, ReadingStatus.READING);
+        UserBookStatus result = userBookStatusService.updateStatus(1L, 100L, ReadingStatus.READING);
 
         assertEquals(ReadingStatus.READING, result.getStatus());
         verify(userBookStatusRepository, times(1)).save(any(UserBookStatus.class));
@@ -80,7 +76,6 @@ class UserBookStatusServiceTest {
     void getUserLibrary_success() {
         User user = new User("reader@test.com", "encoded", "reader", null, null);
         user.setId(1L);
-        when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
 
         Book toRead = buildBook(10L, "읽고 싶은 책");
         Book reading = buildBook(11L, "읽는 중 책");
@@ -92,7 +87,7 @@ class UserBookStatusServiceTest {
 
         when(userBookStatusRepository.findByUserId(1L)).thenReturn(List.of(u1, u2, u3));
 
-        UserLibraryResponse response = userBookStatusService.getUserLibrary("reader@test.com");
+        UserLibraryResponse response = userBookStatusService.getUserLibrary(1L);
 
         assertEquals(1, response.getToReadBooks().size());
         assertEquals(1, response.getReadingBooks().size());
@@ -125,10 +120,10 @@ class UserBookStatusServiceTest {
     @Test
     @DisplayName("사용자 미존재 시 예외 발생")
     void updateStatus_userNotFound() {
-        when(userRepository.findByEmail("missing@test.com")).thenReturn(Optional.empty());
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThrows(UserExceptions.EmailNotFoundException.class,
-                () -> userBookStatusService.updateStatus("missing@test.com", 1L, ReadingStatus.TO_READ));
+        assertThrows(UserExceptions.UserNotFoundException.class,
+                () -> userBookStatusService.updateStatus(1L, 1L, ReadingStatus.TO_READ));
     }
 
     @Test
@@ -136,11 +131,11 @@ class UserBookStatusServiceTest {
     void updateStatus_bookNotFound() {
         User user = new User("reader@test.com", "encoded", "reader", null, null);
         user.setId(1L);
-        when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(bookRepository.findById(100L)).thenReturn(Optional.empty());
 
         assertThrows(BookExceptions.InvalidBookIdException.class,
-                () -> userBookStatusService.updateStatus("reader@test.com", 100L, ReadingStatus.TO_READ));
+                () -> userBookStatusService.updateStatus(1L, 100L, ReadingStatus.TO_READ));
     }
 
     private Book buildBook(Long id, String title) {

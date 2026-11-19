@@ -1,6 +1,7 @@
 
 package bookapp.bookappback.user.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,11 +21,15 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column
     private String password;
+
+    @JsonIgnore
+    @Column(name = "kakao_id", unique = true)
+    private Long kakaoId;
 
     @Column(unique = true, nullable = false)
     private String nickname;
@@ -45,6 +50,12 @@ public class User {
         this.profileImage = profileImage;
         this.birthYear = birthYear;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public static User forKakao(long kakaoId, String nickname) {
+        User user = new User(null, null, nickname, null, null);
+        user.kakaoId = kakaoId;
+        return user;
     }
 
     @Override

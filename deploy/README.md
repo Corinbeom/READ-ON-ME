@@ -26,6 +26,14 @@ sudo docker compose -f compose.beta.yml up -d
 
 `API_HOST`에는 공인 IP를 넣는다. Caddy는 Let's Encrypt의 shortlived 프로필로 IP 인증서를 발급하고 갱신한다. 80·443 접근과 Caddy 데이터 볼륨을 유지한다. `default_sni`는 NAT 뒤에서 IP로 접속하는 클라이언트의 인증서 선택을 위해 설정했다. 외부의 일반 `curl https://<IP>/api/books/test`와 브라우저에서 인증서 검증을 확인한다. 검증 우회 옵션으로 성공 처리하지 않는다.
 
+## 카카오 로그인
+
+카카오 로그인은 `KAKAO_LOGIN_JAVASCRIPT_KEY`, `KAKAO_LOGIN_REST_API_KEY`, `KAKAO_LOGIN_CLIENT_SECRET`, `KAKAO_LOGIN_REDIRECT_URI`를 모두 설정했을 때 켜진다. 운영의 리다이렉트 URI는 `https://read-on-me-beta.pages.dev/auth/kakao/callback`이다. 카카오 콘솔의 JavaScript 키와 REST API 키 양쪽에 같은 URI를 등록한다. JavaScript 키의 SDK 도메인에는 운영 웹 주소를 등록한다.
+
+기존 OCI 설치에서는 현재 이미지·볼륨 설정을 유지한 채 `deploy/compose.beta.yml`의 새 `KAKAO_LOGIN_*` 환경 변수 항목을 운영 Compose의 backend에 추가한다. 값은 OCI의 `/opt/readonme/.env`에 보관한다. 자동 배포는 이미지 태그만 갱신하므로 이 설정은 첫 활성화 전에 적용한다. 도서 검색에는 기존 `KAKAO_API_KEY`를 사용한다.
+
+Spring 배포 시 Flyway V5가 카카오 계정용 컬럼을 추가한다. 이메일 로그인은 기존 자격증명을 계속 사용한다. 카카오 로그인을 검증할 때는 책 상세의 서재 저장 버튼에서 로그인 화면을 연 뒤, 모바일 브라우저에서 카카오 인증을 마치고 같은 책으로 돌아오는지 확인한다.
+
 ## 웹 자동 배포
 
 Spring과 AI의 GHCR 게시, OCI 설치 및 활성화 절차는 [OCI 자동 배포](OCI_PULL_DEPLOY.md)를 참고합니다.

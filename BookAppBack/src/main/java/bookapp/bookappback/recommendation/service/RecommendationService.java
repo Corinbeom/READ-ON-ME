@@ -39,10 +39,9 @@ public class RecommendationService {
     private static final double AGE_BONUS = 1.3;
     private static final int RRF_K = 60;
 
-    public RecommendationResponse getRecommendations(String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserExceptions.EmailNotFoundException(userEmail));
-        Long targetUserId = user.getId();
+    public RecommendationResponse getRecommendations(Long targetUserId) {
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new UserExceptions.UserNotFoundException(targetUserId));
 
         Map<Long, Map<Long, Double>> allLibraries = userBookStatusService.getAllUserLibrariesWeighted();
 

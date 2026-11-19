@@ -2,7 +2,6 @@
 package bookapp.bookappback.security;
 
 import bookapp.bookappback.user.entity.User;
-import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -11,6 +10,7 @@ import java.util.Collections;
 
 public class UserDetailsImpl implements UserDetails {
 
+    public static final String KAKAO_SUBJECT_PREFIX = "kakao:";
     private final User user;
 
     public UserDetailsImpl(User user) {
@@ -34,7 +34,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public String getUsername() {
-        return user.getEmail(); // 로그인 시 username으로 email을 사용
+        return user.getEmail() != null ? user.getEmail() : KAKAO_SUBJECT_PREFIX + user.getId();
     }
 
     @Override

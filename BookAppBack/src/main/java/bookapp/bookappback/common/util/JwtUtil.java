@@ -22,12 +22,12 @@ public class JwtUtil {
         this.secretKey = Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes());
     }
 
-    public String generateToken(Long userId, String email) {
+    public String generateToken(Long userId, String subject) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtConfig.getExpiration());
 
         return Jwts.builder()
-                .setSubject(email)
+                .setSubject(subject)
                 .claim("userId", userId)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
@@ -41,20 +41,13 @@ public class JwtUtil {
         return userId != null ? userId.longValue() : null;
     }
 
-    public String getEmailFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        return claims.getSubject();
-    }
-
-
-    // extractUsername 메서드 추가
     public String extractUsername(String token) {
-        return getEmailFromToken(token);
+        return getClaimsFromToken(token).getSubject();
     }
 
     public boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return username != null && username.equals(userDetails.getUsername()) && !isTokenExpired(token);
     }
 
     private boolean isTokenExpired(String token) {

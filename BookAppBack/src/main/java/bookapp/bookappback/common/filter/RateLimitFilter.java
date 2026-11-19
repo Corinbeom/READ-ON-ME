@@ -35,6 +35,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final long BOOK_SEARCH_LIMIT = 60;
     private static final long AI_SEARCH_LIMIT    = 20;
+    private static final long KAKAO_LOGIN_LIMIT = 30;
 
     @Override
     protected void doFilterInternal(
@@ -48,6 +49,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (path.startsWith("/api/books/search") || keywordPicks) {
             String endpoint = keywordPicks ? "reading-keyword-picks" : "book-search";
             if (!consumeOrRespond(request, response, endpoint, BOOK_SEARCH_LIMIT)) {
+                return;
+            }
+        } else if ("POST".equals(request.getMethod()) &&
+                (path.equals("/api/users/kakao/start") || path.equals("/api/users/kakao/exchange"))) {
+            if (!consumeOrRespond(request, response, path.endsWith("/start") ? "kakao-start" : "kakao-exchange", KAKAO_LOGIN_LIMIT)) {
                 return;
             }
         } else if ("POST".equals(request.getMethod()) &&

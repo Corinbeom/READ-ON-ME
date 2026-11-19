@@ -1,10 +1,11 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../services/api';
+import type { KakaoExchange } from '../utils/kakaoLogin';
 
 export interface User {
   id: number;
-  email: string;
+  email: string | null;
   nickname: string;
   birth_year?: number;
   createdAt: string;
@@ -27,6 +28,14 @@ const initialState: AuthState = {
   error: null,
 };
 
+async function persistSignIn(result: { success?: boolean; data?: { access_token?: string; user?: User }; message?: string }) {
+  const token = result.data?.access_token;
+  const user = result.data?.user;
+  if (!result.success || !token || !user) throw new Error(result.message || '로그인에 실패했습니다.');
+  await AsyncStorage.setItem('accessToken', token);
+  return { token, user };
+}
+
 export const signIn = createAsyncThunk(
   'auth/signIn',
   async (
@@ -36,23 +45,7 @@ export const signIn = createAsyncThunk(
     try {
       const response = await authApi.signIn(credentials);
 
-      // ✅ READ-ON-ME 백엔드 구조 기준
-      const { success, data, message } = response.data;
-
-      if (!success || !data) {
-        return rejectWithValue(message || '로그인 실패');
-      }
-
-      const { access_token, user } = data;
-
-      if (!access_token) {
-        return rejectWithValue('JWT 토큰이 응답에 없습니다.');
-      }
-
-      // ✅ AsyncStorage에 토큰 저장
-      await AsyncStorage.setItem('accessToken', access_token);
-
-      return { token: access_token, user };
+      return await persistSignIn(response.data);
     } catch (error: any) {
       console.error('로그인 실패:', error.response?.data);
       return rejectWithValue(
@@ -61,6 +54,11 @@ export const signIn = createAsyncThunk(
     }
   }
 );
+
+export const signInWithKakao = createAsyncThunk('auth/signInWithKakao', async (exchange: KakaoExchange) => {
+  const response = await authApi.exchangeKakao(exchange);
+  return persistSignIn(response.data);
+});
 
 export const signUp = createAsyncThunk(
   'auth/signUp',
@@ -121,6 +119,13 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
+      .addCase(signInWithKakao.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.token = action.payload.token;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+        state.error = null;
+      })
       .addCase(signIn.fulfilled, (state, action) => {
         state.isLoading = false;
         state.token = action.payload.token;
@@ -153,12 +158,14 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(getProfile.fulfilled, (state, action) => {
+        if (state.token !== action.meta.arg) return;
         state.isLoading = false;
         state.user = action.payload;
         state.isAuthenticated = true;
         state.error = null;
       })
       .addCase(getProfile.rejected, (state, action) => {
+        if (state.token !== action.meta.arg) return;
         state.isLoading = false;
         state.error = action.payload as string;
       });

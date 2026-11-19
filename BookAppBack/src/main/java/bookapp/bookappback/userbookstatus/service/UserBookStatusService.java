@@ -29,9 +29,9 @@ public class UserBookStatusService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
 
-    public UserBookStatus updateStatus(String userEmail, Long bookId, ReadingStatus status) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserExceptions.EmailNotFoundException(userEmail));
+    public UserBookStatus updateStatus(Long userId, Long bookId, ReadingStatus status) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
 
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookExceptions.InvalidBookIdException(bookId));
@@ -47,17 +47,12 @@ public class UserBookStatusService {
     }
 
     @Transactional
-    public void removeBook(String userEmail, Long bookId) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserExceptions.EmailNotFoundException(userEmail));
-        userBookStatusRepository.removeLibraryEntry(user.getId(), bookId);
+    public void removeBook(Long userId, Long bookId) {
+        userBookStatusRepository.removeLibraryEntry(userId, bookId);
     }
 
-    public UserLibraryResponse getUserLibrary(String userEmail) {
-        User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() -> new UserExceptions.EmailNotFoundException(userEmail));
-
-        List<UserBookStatus> userBookStatuses = userBookStatusRepository.findByUserId(user.getId());
+    public UserLibraryResponse getUserLibrary(Long userId) {
+        List<UserBookStatus> userBookStatuses = userBookStatusRepository.findByUserId(userId);
 
         List<BookDto> toReadBooks = userBookStatuses.stream()
                 .filter(ubs -> ubs.getStatus() == ReadingStatus.TO_READ)
