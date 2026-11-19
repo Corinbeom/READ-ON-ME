@@ -24,5 +24,19 @@ const entries = [...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)]
 if (!entries.length || !entries.some((src) => fs.readFileSync(path.join(dist, src), 'utf8').includes(apiUrl))) {
   throw new Error('The browser bundle is missing EXPO_PUBLIC_API_URL. Rebuild with expo export --clear.');
 }
+const image = html.match(/<meta\b(?=[^>]*\bproperty=["']og:image["'])[^>]*\bcontent=["']([^"']+)["']/i)?.[1];
+let shareImage;
+if (image) {
+  try { shareImage = new URL(image); } catch { /* Report invalid URLs as missing share metadata. */ }
+}
+if (shareImage?.protocol !== 'https:' || shareImage.pathname !== '/galpi-share-card.png' ||
+    !fs.existsSync(path.join(dist, 'galpi-share-card.png'))) {
+  throw new Error('The home HTML must link to the exported share card at a public HTTPS URL.');
+}
+if (!/<link\b(?=[^>]*\brel=["']icon["'])(?=[^>]*\bhref=["']\/favicon\.ico["'])/i.test(html) ||
+    !fs.existsSync(path.join(dist, 'favicon.ico'))) {
+  throw new Error('The home HTML must link to the exported favicon.');
+}
 console.log(`Verified browser bundle API URL: ${apiUrl}`);
 console.log('Verified non-blocking startup fonts.');
+console.log('Verified the home share card and favicon.');
