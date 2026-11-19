@@ -108,6 +108,10 @@ export default function RootLayout() {
             title: '의견 보내기',
             headerLeft: navigation.canGoBack() ? undefined : () => <HomeHeaderButton />,
           })} />
+          <Stack.Screen name="operations" options={({ navigation }) => ({
+            title: '서비스 운영',
+            headerLeft: navigation.canGoBack() ? undefined : () => <HomeHeaderButton />,
+          })} />
           <Stack.Screen
             name="book/[isbn]"
             options={({ navigation }) => ({

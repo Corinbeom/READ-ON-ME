@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
 import type { BookDto } from '../types/BookDto';
 import type { KakaoExchange, KakaoStart } from '../utils/kakaoLogin';
+import type { FeedbackCategory, FeedbackStatus } from '../utils/feedback';
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
@@ -61,6 +62,7 @@ export const api = axios.create({
 const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
 const kakaoAuthPath = '/api/users/kakao/';
 const feedbackPath = '/api/feedback';
+const operationsPath = '/api/operations';
 
 api.interceptors.request.use(async (config) => {
   const noAuthPaths = [
@@ -94,6 +96,7 @@ const silentPaths = [
   '/api/users/signup',
   kakaoAuthPath,
   feedbackPath,
+  operationsPath,
 ];
 
 export interface AiSearchBook {
@@ -178,11 +181,41 @@ export const authApi = {
   test: () => api.get('/api/users/test'),
 };
 
-export type FeedbackCategory = 'ERROR' | 'DISCOVERY' | 'USABILITY';
-
 export const feedbackApi = {
   submit: (category: FeedbackCategory, message: string, signal: AbortSignal) =>
     api.post(feedbackPath, { category, message }, { signal }),
+};
+
+export type OperationsSummary = {
+  feedbackCounts: Partial<Record<FeedbackStatus, number>>;
+  recommendation: {
+    completedJobs: number;
+    withResults: number;
+    fallbackResults: number;
+    noMatch: number;
+    errors: number;
+    p50TotalMs: number | null;
+    p95TotalMs: number | null;
+  };
+};
+
+export type OperationsFeedback = {
+  id: number;
+  createdAt: string;
+  category: FeedbackCategory;
+  status: FeedbackStatus;
+  statusVersion: number;
+  message: string;
+};
+
+export type OperationsFeedbackPage = { items: OperationsFeedback[]; nextBeforeId: number | null };
+
+export const operationsApi = {
+  summary: (signal: AbortSignal) => api.get<OperationsSummary>(operationsPath + '/summary', { signal }),
+  feedback: (params: { category: FeedbackCategory | ''; status: FeedbackStatus | ''; before_id?: number }, signal: AbortSignal) =>
+    api.get<OperationsFeedbackPage>(operationsPath + '/feedback', { params, signal }),
+  updateStatus: (entry: OperationsFeedback, status: FeedbackStatus, signal: AbortSignal) =>
+    api.put(operationsPath + `/feedback/${entry.id}/status`, { status, version: entry.statusVersion }, { signal }),
 };
 
 // 🔹 책 관련 API

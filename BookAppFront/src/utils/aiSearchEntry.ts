@@ -14,6 +14,7 @@ export function aiSearchHref(prompt?: unknown) {
 
 export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unknown) {
   if (returnTo === 'my-library') return { returnTo: 'my-library' as const };
+  if (returnTo === 'operations') return { returnTo: 'operations' as const };
   if (returnTo === 'book-detail' && typeof isbn === 'string' && isbn && getIsbn13({ isbn13: isbn }) === isbn) {
     return { returnTo: 'book-detail' as const, isbn };
   }
@@ -24,6 +25,7 @@ export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unkn
 
 export function authReturnHref(params: ReturnType<typeof authReturnParams>) {
   if (params.returnTo === 'my-library') return '/my-library' as const;
+  if (params.returnTo === 'operations') return '/operations' as const;
   if (params.returnTo === 'ai-books') return aiSearchHref(params.prompt);
   if (params.returnTo === 'book-detail') {
     return { pathname: '/book/[isbn]' as const, params: { isbn: params.isbn } };

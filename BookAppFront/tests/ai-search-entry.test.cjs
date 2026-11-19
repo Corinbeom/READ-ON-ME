@@ -123,6 +123,13 @@ test('Kakao callback preserves the exact book on a matching, one-time login', ()
   assert.equal(consumeKakaoCallback(storage, query, 1000), null);
 });
 
+test('login returns to the operations screen through the fixed return destination', () => {
+  const destination = authReturnParams('operations', 'unrelated prompt');
+  assert.equal(authReturnHref(destination), '/operations');
+  const result = consumeKakaoCallback(callbackStorage(destination), '?state=' + state + '&code=example', 1000);
+  assert.equal(authReturnHref(result.returnParams), '/operations');
+});
+
 test('Kakao cancellation keeps the return destination while expired or untrusted input cannot sign in', () => {
   const cancel = consumeKakaoCallback(callbackStorage({ returnTo: 'my-library' }),
     '?state=' + state + '&error=access_denied', 1000);

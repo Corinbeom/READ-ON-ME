@@ -2,12 +2,16 @@ package bookapp.bookappback.config;
 
 import bookapp.bookappback.common.filter.RateLimitFilter;
 import bookapp.bookappback.common.util.JwtUtil;
+import bookapp.bookappback.operations.OperationsAccess;
 import bookapp.bookappback.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,11 +23,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@EnableConfigurationProperties(OperationsAccess.class)
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
     private final RateLimitFilter rateLimitFilter;
+    private final OperationsAccess operationsAccess;
 
     
 
@@ -40,10 +46,16 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         return http
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Allow preflight OPTIONS requests
+                        .requestMatchers("/api/operations", "/api/operations/**")
+                        .access((authentication, context) -> {
+                            var current = authentication.get();
+                            return new AuthorizationDecision(current.isAuthenticated() && operationsAccess.allows(current.getPrincipal()));
+                        })
                         .requestMatchers("/api/users/signup", "/api/users/signin").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/users/kakao/start", "/api/users/kakao/exchange").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/feedback").permitAll()
