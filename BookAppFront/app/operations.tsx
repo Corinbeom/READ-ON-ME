@@ -23,12 +23,15 @@ const seconds = (value: number | null) => value == null ? '—' : `${(value / 10
 
 export default function OperationsScreen() {
   const { isAuthenticated, isLoading, user } = useSelector((state: RootState) => state.auth);
-  if (isLoading) return <ScreenState title="로그인 상태를 확인하고 있어요" loading />;
-  if (!isAuthenticated || !user) {
-    return <ScreenState title="운영 계정으로 로그인해주세요" action="로그인"
-      onAction={() => router.push({ pathname: '/auth/login', params: { returnTo: 'operations' } })} />;
-  }
-  return <OperationsDashboard key={user.id} />;
+  const colors = Colors[useColorScheme() ?? 'light'];
+  return (
+    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+      {isLoading ? <ScreenState title="로그인 상태를 확인하고 있어요" loading />
+        : isAuthenticated && user ? <OperationsDashboard key={user.id} />
+        : <ScreenState title="운영 계정으로 로그인해주세요" action="로그인"
+          onAction={() => router.push({ pathname: '/auth/login', params: { returnTo: 'operations' } })} />}
+    </View>
+  );
 }
 
 function OperationsDashboard() {
@@ -256,6 +259,7 @@ function OperationsDashboard() {
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
   content: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: Spacing.md, gap: Spacing.sm },
   row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.xs },
   filters: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xxs },
