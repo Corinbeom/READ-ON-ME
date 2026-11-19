@@ -2,11 +2,14 @@ package bookapp.bookappback.user.service;
 
 import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.security.dto.TokenResponse;
+import bookapp.bookappback.user.entity.User;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,16 +45,22 @@ class KakaoLoginServiceTest {
         assertThrows(AppException.class, () -> login.exchange("code", flow.state(), "b".repeat(64)));
         verifyNoInteractions(kakao, users);
 
-        var authenticatedUser = new KakaoLoginClient.KakaoUser(123L, null);
+        var authenticatedUser = new KakaoLoginClient.KakaoUser(123L);
         var token = mock(TokenResponse.class);
         when(kakao.exchange("code", settings)).thenReturn(authenticatedUser);
-        when(users.signInWithKakao(123L, null))
-                .thenThrow(new DataIntegrityViolationException("concurrent signup")).thenReturn(token);
+        when(users.signInWithKakao(123L))
+                .thenThrow(signupConflict(User.NICKNAME_CONSTRAINT), signupConflict(User.KAKAO_ID_CONSTRAINT))
+                .thenReturn(token);
 
         assertSame(token, login.exchange("code", flow.state(), verifier));
         assertThrows(AppException.class, () -> login.exchange("code", flow.state(), verifier));
         verify(kakao, times(1)).exchange("code", settings);
-        verify(users, times(2)).signInWithKakao(123L, null);
+        verify(users, times(3)).signInWithKakao(123L);
+    }
+
+    private static DataIntegrityViolationException signupConflict(String constraint) {
+        return new DataIntegrityViolationException("concurrent signup",
+                new ConstraintViolationException("duplicate", new SQLException("duplicate", "23505"), constraint));
     }
 
     @Test

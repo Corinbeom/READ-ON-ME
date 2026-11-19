@@ -8,6 +8,7 @@ import LibraryShelf, { LibraryBookCard, LibraryDiscovery } from '@/components/Li
 import LibraryBookActions from '@/components/LibraryBookActions';
 import AppButton from '@/components/ui/AppButton';
 import LibraryReadingKeywords from '@/components/LibraryReadingKeywords';
+import LibraryProfile from '@/components/LibraryProfile';
 import ScreenState from '@/components/ui/ScreenState';
 import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import { useLibraryOverview } from '@/hooks/useLibraryOverview';
@@ -103,10 +104,7 @@ export default function MyLibraryScreen() {
           {isAuthenticated ? <AppButton title="로그아웃" variant="ghost" compact onPress={handleLogout} /> : null}
         </TabHeader>
         {isAuthenticated && user ? (
-          <View style={styles.profileBar}>
-            <Text style={styles.profileBarText}>{user.nickname}</Text>
-            {user.email ? <Text style={[styles.profileBarText, styles.profileEmail]} numberOfLines={1}>{user.email}</Text> : null}
-          </View>
+          <LibraryProfile key={user.id} user={user} />
         ) : <LibraryDiscovery guest />}
 
         {isAuthenticated && !overview.library ? overview.libraryError

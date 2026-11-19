@@ -1,5 +1,6 @@
 package bookapp.bookappback.user.service;
 
+import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.common.exception.UserExceptions;
 import bookapp.bookappback.common.util.JwtUtil;
 import bookapp.bookappback.security.UserDetailsImpl;
@@ -12,14 +13,15 @@ import bookapp.bookappback.user.dto.UserResponse;
 import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -91,22 +93,28 @@ public class UserService implements UserDetailsService {
         return issueToken(user);
     }
 
-    public TokenResponse signInWithKakao(long kakaoId, String nickname) {
+    public TokenResponse signInWithKakao(long kakaoId) {
         User user = userRepository.findByKakaoId(kakaoId)
-                .orElseGet(() -> userRepository.saveAndFlush(User.forKakao(kakaoId, availableNickname(nickname))));
+                .orElseGet(() -> userRepository.saveAndFlush(User.forKakao(kakaoId, suggestNickname(null))));
         return issueToken(user);
     }
 
-    private String availableNickname(String requested) {
-        String nickname = requested == null ? "" : requested.replaceAll("[\\p{Cc}\\p{Cf}]", "").strip();
-        nickname = limitNickname(nickname, 10);
-        if (nickname.codePointCount(0, nickname.length()) < 2) nickname = "갈피독자";
-        if (userRepository.findByNickname(nickname).isEmpty()) return nickname;
-        return limitNickname(nickname, 3) + "-" + UUID.randomUUID().toString().substring(0, 6);
+    @Transactional(readOnly = true)
+    public String suggestNickname(String exclude) {
+        for (int i = 0; i < ReadingNickname.MAX_ATTEMPTS; i++) {
+            String candidate = ReadingNickname.next();
+            if (!candidate.equals(exclude) && !userRepository.existsByNickname(candidate)) return candidate;
+        }
+        throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "NICKNAME_UNAVAILABLE", "닉네임을 만들지 못했어요. 잠시 후 다시 시도해주세요.");
     }
 
-    private String limitNickname(String nickname, int limit) {
-        return nickname.substring(0, nickname.offsetByCodePoints(0, Math.min(limit, nickname.codePointCount(0, nickname.length()))));
+    static boolean violatesConstraint(DataIntegrityViolationException failure, String constraint) {
+        for (Throwable cause = failure; cause != null; cause = cause.getCause()) {
+            if (cause instanceof ConstraintViolationException violation) {
+                return constraint.equalsIgnoreCase(violation.getConstraintName());
+            }
+        }
+        return false;
     }
 
     private TokenResponse issueToken(User user) {
@@ -132,24 +140,34 @@ public class UserService implements UserDetailsService {
         return toResponse(user);
     }
 
-    public void updateUserProfile(Long userId, UpdateProfileRequest request) {
+    public UserResponse updateUserProfile(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
 
-        if (request.getNickname() != null) {
-            userRepository.findByNickname(request.getNickname()).ifPresent(existingUser -> {
+        String nickname = request.getNickname() == null ? null : request.getNickname().strip();
+        if (nickname != null) {
+            if (nickname.length() < 2) throw new IllegalArgumentException("닉네임은 2~10자로 입력해주세요.");
+            userRepository.findByNickname(nickname).ifPresent(existingUser -> {
                 if (!existingUser.getId().equals(userId)) {
-                    throw new UserExceptions.NickNameDuplicateException(request.getNickname());
+                    throw new UserExceptions.NickNameDuplicateException(nickname);
                 }
             });
-            user.setNickname(request.getNickname());
+            user.setNickname(nickname);
         }
 
         if (request.getProfileImage() != null) {
             user.setProfileImage(request.getProfileImage());
         }
 
-        userRepository.save(user);
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException failure) {
+            if (nickname != null && violatesConstraint(failure, User.NICKNAME_CONSTRAINT)) {
+                throw new UserExceptions.NickNameDuplicateException(nickname);
+            }
+            throw failure;
+        }
+        return toResponse(user);
     }
 
     public void changePassword(Long userId, ChangePasswordRequest request) {

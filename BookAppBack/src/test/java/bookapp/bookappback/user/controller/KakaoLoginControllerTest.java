@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
 
+import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -58,7 +60,7 @@ class KakaoLoginControllerTest {
         }).when(values).set(anyString(), anyString(), any(Duration.class));
         when(values.getAndDelete(anyString())).thenAnswer(call -> state.remove((String) call.getArgument(0)));
         when(kakao.exchange(eq("test-code"), any(KakaoLoginSettings.class))).thenReturn(
-                new KakaoLoginClient.KakaoUser(99L, new KakaoLoginClient.Account(new KakaoLoginClient.Profile("처음 독자"))));
+                new KakaoLoginClient.KakaoUser(99L));
 
         String verifier = "a".repeat(64);
         String challenge = HexFormat.of().formatHex(
@@ -73,13 +75,27 @@ class KakaoLoginControllerTest {
         var exchange = mapper.writeValueAsString(Map.of("code", "test-code", "state", authState, "verifier", verifier));
         var login = mvc.perform(post("/api/users/kakao/exchange").contentType(MediaType.APPLICATION_JSON).content(exchange))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.user.nickname").value("처음 독자"))
+                .andExpect(jsonPath("$.data.user.nickname").value(matchesPattern("[가-힣 ]{2,10}")))
                 .andExpect(jsonPath("$.data.user.email").doesNotExist())
                 .andReturn();
-        String auth = "Bearer " + mapper.readTree(login.getResponse().getContentAsByteArray()).path("data").path("access_token").asText();
+        var session = mapper.readTree(login.getResponse().getContentAsByteArray()).path("data");
+        String auth = "Bearer " + session.path("access_token").asText();
+        String initialNickname = session.path("user").path("nickname").asText();
+        mvc.perform(post("/api/users/profile/nickname-suggestion").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(Map.of("exclude", initialNickname))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value(not(initialNickname)));
         mvc.perform(get("/api/users/profile").header("Authorization", auth))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.nickname").value("처음 독자"));
+                .andExpect(jsonPath("$.data.nickname").value(initialNickname));
+        mvc.perform(put("/api/users/profile").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"nickname\":\"문장을 줍는 독자\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value("문장을 줍는 독자"));
+        mvc.perform(get("/api/users/profile").header("Authorization", auth))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nickname").value("문장을 줍는 독자"));
 
         Book book = new Book();
         book.setTitle("서재 테스트 책");

@@ -1,5 +1,5 @@
 import { FontDisplay, useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,7 @@ import { store, AppDispatch } from '../src/store';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '@/components/ThemedView';
 import NotificationListener from '@/components/NotificationListener';
+import AppButton from '@/components/ui/AppButton';
 import WebAlertHost from '@/components/WebAlertHost';
 import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { Typography } from '@/src/styles/designTokens';
@@ -101,10 +102,13 @@ export default function RootLayout() {
           <Stack.Screen name="reading-keywords" options={{ headerShown: false, title: '요즘 내가 읽는 세계' }} />
           <Stack.Screen
             name="book/[isbn]"
-            options={{
+            options={({ navigation }) => ({
               title: '',
               headerBackTitle: ' ',
-            }}
+              headerLeft: navigation.canGoBack() ? undefined : () => (
+                <AppButton title="홈으로" variant="ghost" onPress={() => router.replace('/')} />
+              ),
+            })}
           />
           <Stack.Screen name="+not-found" />
         </Stack>

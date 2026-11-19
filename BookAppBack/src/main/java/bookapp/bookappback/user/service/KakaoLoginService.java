@@ -2,6 +2,7 @@ package bookapp.bookappback.user.service;
 
 import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.security.dto.TokenResponse;
+import bookapp.bookappback.user.entity.User;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -23,6 +24,7 @@ import java.util.HexFormat;
 @EnableConfigurationProperties(KakaoLoginSettings.class)
 public class KakaoLoginService {
     private static final Duration FLOW_TTL = Duration.ofMinutes(10);
+    private static final int MAX_SIGNUP_ATTEMPTS = 5;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final HexFormat HEX = HexFormat.of();
 
@@ -57,12 +59,16 @@ public class KakaoLoginService {
         }
 
         var user = client.exchange(code, settings);
-        try {
-            return userService.signInWithKakao(user.id(), user.nickname());
-        } catch (DataIntegrityViolationException e) {
-            // A concurrent first sign-in can create the same account before this transaction commits.
-            return userService.signInWithKakao(user.id(), user.nickname());
+        for (int i = 0; i < MAX_SIGNUP_ATTEMPTS; i++) {
+            try {
+                return userService.signInWithKakao(user.id());
+            } catch (DataIntegrityViolationException failure) {
+                // Each attempt starts a new transaction after a competing insert wins.
+                if (!UserService.violatesConstraint(failure, User.KAKAO_ID_CONSTRAINT)
+                        && !UserService.violatesConstraint(failure, User.NICKNAME_CONSTRAINT)) throw failure;
+            }
         }
+        throw unavailable();
     }
 
     private static String flowKey(String state, String challenge) {

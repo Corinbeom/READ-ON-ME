@@ -166,6 +166,12 @@ export const authApi = {
       headers: { Authorization: `Bearer ${token}` },
     }),
 
+  updateNickname: (nickname: string, signal: AbortSignal) =>
+    api.put<{ data: { id: number; nickname: string } }>('/api/users/profile', { nickname }, { signal }),
+
+  suggestNickname: (exclude: string, signal: AbortSignal) =>
+    api.post<{ data: { nickname: string } }>('/api/users/profile/nickname-suggestion', { exclude }, { signal }),
+
   test: () => api.get('/api/users/test'),
 };
 
