@@ -9,10 +9,14 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -21,6 +25,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = "app.operations.admin-user-ids=5,12")
@@ -29,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OperationsSecurityTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
+    @Autowired JdbcClient jdbc;
 
     @Test
     void anonymousAndRegularUsersCannotReadOrUpdateFeedback() throws Exception {
@@ -40,6 +46,66 @@ class OperationsSecurityTest {
         mvc.perform(put("/api/operations/feedback/1/status").with(user(principal(7L)))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWING\",\"version\":0}"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Transactional
+    void userOverviewIsRestrictedAndCountsMembersOncePerActivity() throws Exception {
+        String path = "/api/operations/users";
+        mvc.perform(get(path)).andExpect(status().isForbidden());
+        mvc.perform(get(path).with(user(principal(7L)))).andExpect(status().isForbidden());
+
+        ZonedDateTime now = ZonedDateTime.now();
+        jdbc.sql("""
+                INSERT INTO users (id, email, password, kakao_id, nickname, created_at) VALUES
+                    (901, 'overview@example.test', 'fixture', NULL, 'Overview01', :today),
+                    (902, NULL, NULL, 98765, 'Overview02', :earlier),
+                    (903, 'older@example.test', 'fixture', NULL, 'Overview03', :older)
+                """).param("today", OperationsUserOverviewController.seoulDayStart(now, 0))
+                .param("earlier", OperationsUserOverviewController.seoulDayStart(now, 6))
+                .param("older", OperationsUserOverviewController.seoulDayStart(now, 7)).update();
+        jdbc.sql("""
+                INSERT INTO books (id, isbn13, title, embedded) VALUES
+                    (901, '9780000000001', 'A', false), (902, '9780000000002', 'B', false)
+                """).update();
+        jdbc.sql("""
+                INSERT INTO user_book_status (user_id, book_id, status) VALUES
+                    (901, 901, 'TO_READ'), (901, 902, 'READING'), (902, 901, 'COMPLETED')
+                """).update();
+        insertOverviewJob(901, "SUCCEEDED", now.minusHours(1));
+        insertOverviewJob(901, "FAILED", now.minusHours(2));
+        insertOverviewJob(902, "QUEUED", now.minusHours(3));
+        insertOverviewJob(903, "SUCCEEDED", now.minusHours(25));
+
+        mvc.perform(get(path).with(user(principal(5L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalUsers").value(3))
+                .andExpect(jsonPath("$.data.joinedToday").value(1))
+                .andExpect(jsonPath("$.data.joinedLastSevenDays").value(2))
+                .andExpect(jsonPath("$.data.emailAccounts").value(2))
+                .andExpect(jsonPath("$.data.kakaoAccounts").value(1))
+                .andExpect(jsonPath("$.data.shelfUsers").value(2))
+                .andExpect(jsonPath("$.data.toReadBooks").value(1))
+                .andExpect(jsonPath("$.data.readingBooks").value(1))
+                .andExpect(jsonPath("$.data.completedBooks").value(1))
+                .andExpect(jsonPath("$.data.galpiUsersLastDay").value(2));
+    }
+
+    @Test
+    void seoulMidnightIsConvertedToTheZoneUsedForStoredTimestamps() {
+        var utc = ZonedDateTime.parse("2026-11-19T16:00:00Z");
+
+        assertEquals(LocalDateTime.parse("2026-11-19T15:00"), OperationsUserOverviewController.seoulDayStart(utc, 0));
+        assertEquals(LocalDateTime.parse("2026-11-13T15:00"), OperationsUserOverviewController.seoulDayStart(utc, 6));
+    }
+
+    private void insertOverviewJob(long userId, String status, ZonedDateTime time) {
+        UUID id = UUID.randomUUID();
+        jdbc.sql("""
+                INSERT INTO ai_search_jobs (id, user_id, idempotency_key, query, status, created_at, expires_at)
+                VALUES (:id, :userId, :key, 'overview fixture', :status, :createdAt, :expiresAt)
+                """).param("id", id).param("userId", userId).param("key", id.toString()).param("status", status)
+                .param("createdAt", time.toLocalDateTime()).param("expiresAt", time.plusHours(24).toLocalDateTime()).update();
     }
 
     @Test
