@@ -14,8 +14,8 @@ function deferred() {
   return { promise, resolve, reject };
 }
 function setup() {
-  const calls = { load: 0, save: [] };
-  const handlers = { load: async () => emptyLibrary(), save: async () => ({ data: {} }) };
+  const calls = { load: 0, save: [], remove: [] };
+  const handlers = { load: async () => emptyLibrary(), save: async () => ({ data: {} }), remove: async () => undefined };
   const api = { getUserLibrary: (options) => {
     assert.equal(options.handleErrorLocally, true);
     calls.load++;
@@ -24,6 +24,10 @@ function setup() {
     assert.equal(options.handleErrorLocally, true);
     calls.save.push({ bookId, status });
     return handlers.save();
+  }, removeLibraryBook: (bookId, options) => {
+    assert.equal(options.handleErrorLocally, true);
+    calls.remove.push(bookId);
+    return handlers.remove();
   } };
   const source = readFileSync(path.join(__dirname, '../src/store/libraryStatusSlice.ts'), 'utf8');
   const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } });
@@ -78,6 +82,29 @@ test('saving changes the confirmed selection and success feedback only after ser
   assert.equal(qa.store.getState().libraryStatus.revision, 1);
   assert.equal(qa.entry().saved, true);
   assert.equal(qa.entry().saving, false);
+});
+
+test('shelf removal is serialized with status changes and can retry without discarding the last confirmed status', async () => {
+  const qa = setup();
+  qa.store.dispatch(qa.rememberShelfStatus({ ...target, status: 'READING' }));
+  const pending = deferred();
+  qa.handlers.remove = () => pending.promise;
+  const removal = qa.store.dispatch(qa.removeLibraryBook(target));
+  await qa.store.dispatch(qa.removeLibraryBook(target));
+  await qa.store.dispatch(qa.saveLibraryStatus({ ...target, status: 'COMPLETED' }));
+  assert.deepEqual(qa.calls.remove, [12]);
+  assert.deepEqual(qa.calls.save, []);
+  assert.equal(qa.entry().status, 'READING');
+  pending.reject(new Error('connection lost'));
+  await removal;
+  assert.equal(qa.entry().error, 'remove');
+  assert.equal(qa.entry().status, 'READING');
+  qa.handlers.remove = async () => undefined;
+  await qa.store.dispatch(qa.removeLibraryBook(target));
+  assert.equal(qa.entry().status, null);
+  assert.equal(qa.store.getState().libraryStatus.revision, 1);
+  await qa.store.dispatch(qa.removeLibraryBook(target));
+  assert.deepEqual(qa.calls.remove, [12, 12]);
 });
 
 test('rapid duplicate taps and taps on the current selection do not issue extra writes', async () => {

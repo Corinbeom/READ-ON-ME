@@ -14,6 +14,7 @@ import bookapp.bookappback.userbookstatus.dto.UserLibraryResponse;
 import bookapp.bookappback.book.dto.BookDto; // Import BookDto
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -43,6 +44,13 @@ public class UserBookStatusService {
         userBookStatus.setStatus(status);
 
         return userBookStatusRepository.save(userBookStatus);
+    }
+
+    @Transactional
+    public void removeBook(String userEmail, Long bookId) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UserExceptions.EmailNotFoundException(userEmail));
+        userBookStatusRepository.removeLibraryEntry(user.getId(), bookId);
     }
 
     public UserLibraryResponse getUserLibrary(String userEmail) {

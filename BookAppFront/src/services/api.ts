@@ -187,6 +187,8 @@ export const bookApi = {
   updateBookStatus: (bookId: number, status: ReadingStatus, options?: LocalRequestOptions) =>
     api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() }, ...options }),
 
+  removeLibraryBook: (bookId: number, options?: LocalRequestOptions) => api.delete(`/api/library/${bookId}`, options),
+
   getUserLibrary: (options?: LocalRequestOptions) => api.get('/api/library', options),
 
   getBooksByIds: (ids: number[], options?: LocalRequestOptions) => api.post('/api/books/details', ids, options),
