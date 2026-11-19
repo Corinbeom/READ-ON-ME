@@ -9,6 +9,7 @@ import LibraryBookActions from '@/components/LibraryBookActions';
 import AppButton from '@/components/ui/AppButton';
 import LibraryReadingKeywords from '@/components/LibraryReadingKeywords';
 import LibraryProfile from '@/components/LibraryProfile';
+import OperationsShortcut from '@/components/OperationsShortcut';
 import ScreenState from '@/components/ui/ScreenState';
 import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import { useLibraryOverview } from '@/hooks/useLibraryOverview';
@@ -101,7 +102,12 @@ export default function MyLibraryScreen() {
     <TabScreen testID="library-tab-screen">
       <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <TabHeader title="서재.">
-          {isAuthenticated ? <AppButton title="로그아웃" variant="ghost" compact onPress={handleLogout} /> : null}
+          {isAuthenticated ? (
+            <View style={styles.headerActions}>
+              {user ? <OperationsShortcut key={user.id} userId={user.id} /> : null}
+              <AppButton title="로그아웃" variant="ghost" compact onPress={handleLogout} />
+            </View>
+          ) : null}
         </TabHeader>
         {isAuthenticated && user ? (
           <LibraryProfile key={user.id} user={user} />

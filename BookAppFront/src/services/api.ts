@@ -218,6 +218,11 @@ export type OperationsUserOverview = {
   galpiUsersLastDay: number;
 };
 
+export type OperationsUserPage = {
+  items: { id: number; nickname: string; joinedAt: string; provider: 'KAKAO' | 'EMAIL' }[];
+  nextBeforeId: number | null;
+};
+
 export type OperationsFeedback = {
   id: number;
   createdAt: string;
@@ -246,7 +251,10 @@ export type OperationsRecommendationFeedbackPage = {
 
 export const operationsApi = {
   summary: (signal: AbortSignal) => api.get<OperationsSummary>(operationsPath + '/summary', { signal }),
+  access: (signal: AbortSignal) => api.get<AiJobResponse<{ user_id: number }>>(operationsPath + '/access', { signal }),
   users: (signal: AbortSignal) => api.get<AiJobResponse<OperationsUserOverview>>(operationsPath + '/users', { signal }),
+  userList: (beforeId: number | undefined, signal: AbortSignal) =>
+    api.get<AiJobResponse<OperationsUserPage>>(operationsPath + '/users/list', { params: { before_id: beforeId }, signal }),
   feedback: (params: { category: FeedbackCategory | ''; status: FeedbackStatus | ''; before_id?: number }, signal: AbortSignal) =>
     api.get<OperationsFeedbackPage>(operationsPath + '/feedback', { params, signal }),
   recommendationFeedback: (params: { rating?: RecommendationRating; before_id?: number }, signal: AbortSignal) =>

@@ -1,6 +1,8 @@
 package bookapp.bookappback.operations;
 
+import bookapp.bookappback.common.dto.ApiResponse;
 import bookapp.bookappback.common.exception.AppException;
+import bookapp.bookappback.security.UserDetailsImpl;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -32,6 +35,11 @@ public class OperationsController {
     private static final String FEEDBACK_STATUSES = "NEW|REVIEWING|RESOLVED";
 
     private final JdbcClient jdbc;
+
+    @GetMapping("/access")
+    public ApiResponse<Access> access(@AuthenticationPrincipal UserDetailsImpl principal) {
+        return new ApiResponse<>(true, "운영 권한 확인 완료", new Access(principal.getUser().getId()));
+    }
 
     @GetMapping("/summary")
     public Summary summary() {
@@ -89,6 +97,8 @@ public class OperationsController {
 
     public record StatusChange(@NotBlank @Pattern(regexp = FEEDBACK_STATUSES) String status,
                                @NotNull @PositiveOrZero Integer version) {}
+
+    public record Access(long userId) {}
 
     @JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
     public record FeedbackItem(long id, @JsonFormat(shape = JsonFormat.Shape.STRING) OffsetDateTime createdAt, String category,
