@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +34,8 @@ class OperationsSecurityTest {
     void anonymousAndRegularUsersCannotReadOrUpdateFeedback() throws Exception {
         mvc.perform(get("/api/operations/feedback")).andExpect(status().isForbidden());
         mvc.perform(get("/api/operations/summary").with(user(principal(7L))))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/operations/recommendation-feedback").with(user(principal(7L))))
                 .andExpect(status().isForbidden());
         mvc.perform(put("/api/operations/feedback/1/status").with(user(principal(7L)))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWING\",\"version\":0}"))
@@ -55,8 +58,23 @@ class OperationsSecurityTest {
     void allowlistedUsersReachControllerValidation() throws Exception {
         mvc.perform(get("/api/operations/feedback").with(user(principal(5L))).param("status", "unknown"))
                 .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/operations/recommendation-feedback").with(user(principal(5L))).param("rating", "6"))
+                .andExpect(status().isBadRequest());
         mvc.perform(put("/api/operations/feedback/1/status").with(user(principal(12L)))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWING\",\"version\":-1}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void recommendationRatingsRequireAuthenticationAndRejectInvalidSubmissionsBeforeTouchingTheJob() throws Exception {
+        String path = "/api/ai/jobs/" + UUID.randomUUID() + "/feedback";
+        mvc.perform(get(path)).andExpect(status().isForbidden());
+        mvc.perform(put(path).contentType(MediaType.APPLICATION_JSON).content("{\"rating\":5}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(put(path).with(user(principal(7L))).contentType(MediaType.APPLICATION_JSON).content("{\"rating\":0}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put(path).with(user(principal(7L))).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"rating\":5,\"comment\":\"" + "가".repeat(501) + "\"}"))
                 .andExpect(status().isBadRequest());
     }
 

@@ -12,3 +12,6 @@ export const feedbackStatuses = [
 
 export type FeedbackCategory = typeof feedbackCategories[number]['value'];
 export type FeedbackStatus = typeof feedbackStatuses[number]['value'];
+
+export const recommendationRatings = [1, 2, 3, 4, 5] as const;
+export type RecommendationRating = typeof recommendationRatings[number];
