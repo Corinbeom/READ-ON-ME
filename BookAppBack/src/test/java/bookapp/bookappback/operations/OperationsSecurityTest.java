@@ -1,0 +1,48 @@
+package bookapp.bookappback.operations;
+
+import bookapp.bookappback.security.UserDetailsImpl;
+import bookapp.bookappback.user.entity.User;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(properties = "app.operations.admin-user-ids=5,12")
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class OperationsSecurityTest {
+    @Autowired MockMvc mvc;
+
+    @Test
+    void anonymousAndRegularUsersCannotReadOrUpdateFeedback() throws Exception {
+        mvc.perform(get("/api/operations/feedback")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/operations/summary").with(user(principal(7L))))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/operations/feedback/1/status").with(user(principal(7L)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWING\",\"version\":0}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void allowlistedUsersReachControllerValidation() throws Exception {
+        mvc.perform(get("/api/operations/feedback").with(user(principal(5L))).param("status", "unknown"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/operations/feedback/1/status").with(user(principal(12L)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"REVIEWING\",\"version\":-1}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    private static UserDetailsImpl principal(long id) {
+        var user = new User();
+        user.setId(id);
+        return new UserDetailsImpl(user);
+    }
+}

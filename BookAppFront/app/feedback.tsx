@@ -8,15 +8,10 @@ import { FormField } from '@/components/ui/AppTextInput';
 import ScreenState from '@/components/ui/ScreenState';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { feedbackApi, type FeedbackCategory } from '@/src/services/api';
+import { feedbackApi } from '@/src/services/api';
 import { Spacing, Typography } from '@/src/styles/designTokens';
 import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
-
-const categories: { value: FeedbackCategory; label: string }[] = [
-  { value: 'ERROR', label: '오류' },
-  { value: 'DISCOVERY', label: '검색·추천' },
-  { value: 'USABILITY', label: '사용성' },
-];
+import { feedbackCategories, type FeedbackCategory } from '@/src/utils/feedback';
 
 export default function FeedbackScreen() {
   const c = Colors[useColorScheme() ?? 'light'];
@@ -62,7 +57,7 @@ export default function FeedbackScreen() {
           <View style={styles.field}>
             <Text style={[Typography.label, { color: c.text }]}>어떤 의견인가요?</Text>
             <View role="radiogroup" accessibilityLabel="의견 유형" style={styles.categories}>
-              {categories.map(({ value, label }) => (
+              {feedbackCategories.map(({ value, label }) => (
                 <AppButton key={value} compact title={label} variant={category === value ? 'primary' : 'secondary'}
                   accessibilityRole="radio" accessibilityState={{ checked: category === value }} disabled={sending}
                   onPress={() => setCategory(value)} />
