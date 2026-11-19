@@ -136,8 +136,7 @@ export default function SearchScreen() {
         keyboardDismissMode="on-drag" ItemSeparatorComponent={() => <View style={styles.divider} />}
         ListHeaderComponent={header}
         ListEmptyComponent={search.status === 'success' && !search.books.length
-          ? <ScreenState title="검색 결과가 없어요" description="다른 제목이나 작가 이름으로 다시 찾아보세요."
-            action="갈피와 찾아보기" onAction={() => router.push(aiSearchHref())} /> : null}
+          ? <ScreenState title="검색 결과가 없어요" description="제목의 일부나 작가 이름으로 다시 검색해보세요." /> : null}
       />
     </TabScreen>
   );

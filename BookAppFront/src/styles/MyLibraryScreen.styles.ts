@@ -51,6 +51,8 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
     modalTitle: { ...Typography.section, color: c.text, letterSpacing: -0.3, flexShrink: 1 },
     modalBookListContent: { padding: 16 },
     modalReviewListContent: { paddingVertical: Spacing.xs },
+    bookActions: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: Spacing.lg, gap: Spacing.sm },
+    actionDescription: { ...Typography.body, color: c.inkSoft },
     bookItemContainer: { flex: 1, margin: 8, alignItems: 'center' },
   });
 };

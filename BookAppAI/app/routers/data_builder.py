@@ -1,12 +1,11 @@
-from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.book_corpus import BookCorpus
-from app.services import book_ai_service, corpus_ingestion
+from app.services import book_ai_service, corpus_ingestion, reading_keyword_picks
 from app.security import require_internal_token
-from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest
+from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
 
 router = APIRouter()
 # --- Endpoints ---
@@ -72,27 +71,34 @@ async def ai_search(
 @router.post("/api/user/reading-tags", dependencies=[Depends(require_internal_token)])
 async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depends(get_db)):
     """
-    Aggregates tags from user's book corpus entries and returns top N keywords.
+    Returns top keywords with the ISBNs of the requested books that support them.
     """
     if not request.isbns:
         return {"keywords": [], "analyzed": 0}
 
     result = await db.execute(
-        select(BookCorpus.tags).where(BookCorpus.isbn.in_(request.isbns))
+        select(BookCorpus.isbn, BookCorpus.tags).where(BookCorpus.isbn.in_(request.isbns))
     )
-    rows = result.scalars().all()
-    analyzed = len(rows)
+    rows = result.all()
 
-    all_tags: list[str] = []
-    for tags in rows:
+    books_by_tag: dict[str, set[str]] = {}
+    for isbn, tags in rows:
         if isinstance(tags, list):
-            all_tags.extend(t for t in tags if isinstance(t, str) and t)
+            for raw_tag in tags:
+                if not isinstance(raw_tag, str):
+                    continue
+                tag = raw_tag.strip()
+                if tag and tag.casefold() != "user_added":
+                    books_by_tag.setdefault(tag, set()).add(isbn)
+    ranked = sorted(books_by_tag.items(), key=lambda item: (-len(item[1]), item[0]))
+    keywords = [
+        {"tag": tag, "count": len(isbns), "book_isbns": sorted(isbns)}
+        for tag, isbns in ranked[:max(0, request.limit)]
+    ]
 
-    if not all_tags:
-        return {"keywords": [], "analyzed": analyzed}
+    return {"keywords": keywords, "analyzed": len(rows)}
 
-    counter = Counter(all_tags)
-    top_tags = counter.most_common(request.limit)
-    keywords = [{"tag": tag, "count": count} for tag, count in top_tags]
 
-    return {"keywords": keywords, "analyzed": analyzed}
+@router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])
+async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest, db: AsyncSession = Depends(get_db)):
+    return await reading_keyword_picks.find_reading_keyword_isbns(db, request.keywords)

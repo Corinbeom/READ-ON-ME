@@ -21,7 +21,7 @@ services:
     mem_limit: 48m
     command: [redis-server, --maxmemory, 16mb, --maxmemory-policy, noeviction, --save, "", --appendonly, "no"]
   backend:
-    image: readonme-back:beta-20261116
+    image: readonme-back:beta-20261119-keyword-share
     restart: unless-stopped
     mem_limit: 448m
     memswap_limit: 768m
@@ -55,7 +55,7 @@ services:
       postgres: {condition: service_healthy}
       redis: {condition: service_started}
   ai:
-    image: readonme-ai:beta-20261115
+    image: readonme-ai:beta-20261119-keyword-share
     restart: unless-stopped
     mem_limit: 192m
     memswap_limit: 384m

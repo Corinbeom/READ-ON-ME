@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
+import { Ellipsis } from 'lucide-react-native';
 import BookmarkMascot from '@/components/BookmarkMascot';
 import AppButton from '@/components/ui/AppButton';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import type { BookDto } from '@/src/types/BookDto';
 import { aiSearchHref } from '@/src/utils/aiSearchEntry';
@@ -10,27 +12,43 @@ import { getIsbn13 } from '@/src/utils/bookUtils';
 import { secureImageUri } from '@/src/utils/imageUri';
 import { getLibraryShelfStyles } from './styles/LibraryShelf.styles';
 
-export function LibraryBookCard({ book, onPress }: { book: Pick<BookDto, 'title' | 'isbn13' | 'authors' | 'thumbnail'>; onPress?: () => void }) {
-  const styles = getLibraryShelfStyles(useColorScheme() ?? 'light');
+export function LibraryBookCard({ book, onPress, onManage, compact = false }: {
+  book: Pick<BookDto, 'title' | 'isbn13' | 'authors' | 'thumbnail'>;
+  onPress?: () => void;
+  onManage?: () => void;
+  compact?: boolean;
+}) {
+  const theme = useColorScheme() ?? 'light';
+  const styles = getLibraryShelfStyles(theme);
   const uri = secureImageUri(book.thumbnail);
   const isbn = getIsbn13(book);
   const [imageFailed, setImageFailed] = useState(false);
   useEffect(() => setImageFailed(false), [uri]);
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors;
+  const cover = compact ? styles.compactCover : styles.cover;
   const content = (
-    <TouchableOpacity style={styles.book} onPress={onPress} disabled={!isbn} activeOpacity={0.75}
+    <TouchableOpacity style={compact ? styles.compactBook : styles.book} onPress={onPress} onLongPress={onManage}
+      disabled={!isbn && !onManage} activeOpacity={0.75}
       accessibilityLabel={`${book.title}${authors ? ` · ${authors}` : ''} · ${isbn ? '책 상세 보기' : '상세 보기 불가'}`}>
-      {uri && !imageFailed ? <Image source={{ uri }} style={styles.cover} resizeMode="cover" onError={() => setImageFailed(true)} />
-        : <View style={[styles.cover, styles.placeholder]}><Text style={styles.coverLabel}>표지 없음</Text></View>}
+      {uri && !imageFailed ? <Image source={{ uri }} style={cover} resizeMode="cover" onError={() => setImageFailed(true)} />
+        : <View style={[cover, styles.placeholder]}><Text style={styles.coverLabel}>표지 없음</Text></View>}
       <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
       <Text style={styles.author} numberOfLines={1}>{isbn ? authors || '저자 정보 없음' : '상세 보기 불가'}</Text>
     </TouchableOpacity>
   );
-  return isbn ? <Link href={`/book/${isbn}`} asChild>{content}</Link> : content;
+  const card = isbn ? <Link href={`/book/${isbn}`} asChild>{content}</Link> : content;
+  return onManage ? (
+    <View>
+      {card}
+      <TouchableOpacity style={styles.manage} accessibilityRole="button" accessibilityLabel={`${book.title} 관리`} onPress={onManage}>
+        <Ellipsis size={20} color={Colors[theme].text} aria-hidden />
+      </TouchableOpacity>
+    </View>
+  ) : card;
 }
 
-export default function LibraryShelf({ title, books, onShowAll }: {
-  title: string; books: BookDto[]; onShowAll: () => void;
+export default function LibraryShelf({ title, books, onShowAll, onManage }: {
+  title: string; books: BookDto[]; onShowAll: () => void; onManage?: (book: BookDto) => void;
 }) {
   const styles = getLibraryShelfStyles(useColorScheme() ?? 'light');
   if (!books.length) return null;
@@ -44,7 +62,8 @@ export default function LibraryShelf({ title, books, onShowAll }: {
         <AppButton title="전체 보기" compact variant="ghost" accessibilityLabel={`${title} 전체 ${books.length}권 보기`} onPress={onShowAll} />
       </View>
       <FlatList horizontal data={books.slice(0, 6)} contentContainerStyle={styles.books} showsHorizontalScrollIndicator={false}
-        keyExtractor={(book) => String(book.id)} renderItem={({ item }) => <LibraryBookCard book={item} />} />
+        keyExtractor={(book) => String(book.id)}
+        renderItem={({ item }) => <LibraryBookCard book={item} onManage={onManage ? () => onManage(item) : undefined} />} />
     </View>
   );
 }

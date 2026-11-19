@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
+from pydantic import BaseModel, Field, StringConstraints
+from typing import Annotated, Optional, List
 
 class KeywordRequest(BaseModel):
     keywords: List[str]
@@ -28,3 +28,9 @@ class ContentRecommendRequest(BaseModel):
 class ReadingTagsRequest(BaseModel):
     isbns: List[str]
     limit: int = 7
+
+
+class ReadingKeywordPicksRequest(BaseModel):
+    keywords: list[Annotated[str, StringConstraints(
+        strip_whitespace=True, min_length=1, max_length=100, pattern=r"^[^\x00-\x1f\x7f-\x9f]+$",
+    )]] = Field(min_length=1, max_length=3)

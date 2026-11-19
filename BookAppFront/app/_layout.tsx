@@ -97,6 +97,7 @@ export default function RootLayout() {
           <Stack.Screen name="auth/login" options={{ title: '로그인' }} />
           <Stack.Screen name="auth/register" options={{ title: '회원가입' }} />
           <Stack.Screen name="ai-books" options={{ headerShown: false }} />
+          <Stack.Screen name="reading-keywords" options={{ headerShown: false, title: '요즘 내가 읽는 세계' }} />
           <Stack.Screen
             name="book/[isbn]"
             options={{

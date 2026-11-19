@@ -39,6 +39,19 @@ class UserBookStatusServiceTest {
     }
 
     @Test
+    @DisplayName("서재에서 뺄 때 요청자의 서재 항목만 삭제")
+    void removeBook_usesAuthenticatedOwner() {
+        User user = new User("reader@test.com", "encoded", "reader", null, null);
+        user.setId(1L);
+        when(userRepository.findByEmail("reader@test.com")).thenReturn(Optional.of(user));
+
+        userBookStatusService.removeBook("reader@test.com", 100L);
+
+        verify(userBookStatusRepository).removeLibraryEntry(1L, 100L);
+        verifyNoInteractions(bookRepository);
+    }
+
+    @Test
     @DisplayName("사용자 서재 상태 업데이트 성공")
     void updateStatus_success() {
         User user = new User("reader@test.com", "encoded", "reader", null, null);
