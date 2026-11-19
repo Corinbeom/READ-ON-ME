@@ -7,7 +7,6 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 
-import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -29,17 +28,15 @@ class KakaoLoginClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().formData(form))
                 .andRespond(withSuccess("{\"access_token\":\"provider-token\",\"expires_in\":600}", MediaType.APPLICATION_JSON));
-        mock.expect(requestTo(startsWith("https://kapi.kakao.com/v2/user/me?property_keys=")))
+        mock.expect(requestTo("https://kapi.kakao.com/v1/user/access_token_info"))
                 .andExpect(method(HttpMethod.GET))
                 .andExpect(header("Authorization", "Bearer provider-token"))
-                .andExpect(request -> assertEquals("property_keys=[\"kakao_account.profile\"]", request.getURI().getQuery()))
                 .andRespond(withSuccess("""
-                        {"id":9007199254740993,"kakao_account":{"profile":{"nickname":"독자"}}}
+                        {"id":9007199254740993,"expires_in":600,"app_id":12}
                         """, MediaType.APPLICATION_JSON));
 
         var account = client.exchange("example-code", settings);
         assertEquals(9007199254740993L, account.id());
-        assertEquals("독자", account.nickname());
         mock.verify();
     }
 }

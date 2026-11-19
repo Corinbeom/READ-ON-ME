@@ -10,9 +10,6 @@ export const getMyLibraryScreenStyles = (colorScheme: 'light' | 'dark') => {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: c.background },
     content: { paddingBottom: SCREEN_LAYOUT.bottomPadding },
-    profileBar: { borderTopWidth: 1, borderBottomWidth: 1, borderColor: c.line, paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: 8, flexDirection: 'row', justifyContent: 'space-between', backgroundColor: c.background, flexWrap: 'wrap', gap: Spacing.xs },
-    profileBarText: { ...Typography.caption, letterSpacing: 0.2, textTransform: 'uppercase', color: c.inkSoft, flexShrink: 1 },
-    profileEmail: { minWidth: 0, maxWidth: '100%' },
     statsRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: c.line, backgroundColor: c.background },
     statItem: { flex: 1, alignItems: 'center', paddingVertical: Spacing.sm, minHeight: 80 },
     statDivider: { width: 1, backgroundColor: c.line, marginVertical: 16 },

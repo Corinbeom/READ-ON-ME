@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -64,13 +65,24 @@ public class UserController {
     @PutMapping("/profile")
     @Operation(summary = "프로필 수정", description = "현재 로그인한 사용자의 프로필 정보를 수정합니다.")
     @SecurityRequirement(name = "bearerAuth")
-    public ResponseEntity<ApiResponse<Void>> updateProfile(
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
             @AuthenticationPrincipal UserDetailsImpl userDetails,
             @Valid @RequestBody UpdateProfileRequest request
     ) {
-        userService.updateUserProfile(userDetails.getUser().getId(), request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "프로필이 성공적으로 수정되었습니다."));
+        var profile = userService.updateUserProfile(userDetails.getUser().getId(), request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "프로필이 성공적으로 수정되었습니다.", profile));
     }
+
+    @PostMapping("/profile/nickname-suggestion")
+    @Operation(summary = "닉네임 제안", description = "현재 입력한 값과 다른, 사용 가능한 닉네임을 제안합니다.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<NicknameSuggestion>> suggestNickname(@Valid @RequestBody NicknameSuggestionRequest request) {
+        var suggestion = new NicknameSuggestion(userService.suggestNickname(request.exclude()));
+        return ResponseEntity.ok(new ApiResponse<>(true, "닉네임 제안 성공", suggestion));
+    }
+
+    public record NicknameSuggestionRequest(@Size(max = 10) String exclude) {}
+    public record NicknameSuggestion(String nickname) {}
 
     @PutMapping("/password")
     @Operation(summary = "비밀번호 변경", description = "현재 로그인한 사용자의 비밀번호를 변경합니다.")

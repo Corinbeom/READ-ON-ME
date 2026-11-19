@@ -53,8 +53,7 @@ public class KakaoLoginClient {
                     .body(form).retrieve().body(Token.class);
             if (token == null || !StringUtils.hasText(token.accessToken())) throw unavailable();
 
-            KakaoUser user = client.get().uri("https://kapi.kakao.com/v2/user/me?property_keys={fields}",
-                            "[\"kakao_account.profile\"]")
+            KakaoUser user = client.get().uri("https://kapi.kakao.com/v1/user/access_token_info")
                     .headers(headers -> headers.setBearerAuth(token.accessToken()))
                     .retrieve().body(KakaoUser.class);
             if (user == null || user.id() == null || user.id() <= 0) throw unavailable();
@@ -76,14 +75,5 @@ public class KakaoLoginClient {
     private record Token(@JsonProperty("access_token") String accessToken) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record KakaoUser(Long id, @JsonProperty("kakao_account") Account account) {
-        public String nickname() {
-            return account != null && account.profile() != null ? account.profile().nickname() : null;
-        }
-    }
-
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Account(Profile profile) {}
-    @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Profile(String nickname) {}
+    public record KakaoUser(Long id) {}
 }

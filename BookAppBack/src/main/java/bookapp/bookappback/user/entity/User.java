@@ -11,11 +11,16 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(name = User.NICKNAME_CONSTRAINT, columnNames = "nickname"),
+        @UniqueConstraint(name = User.KAKAO_ID_CONSTRAINT, columnNames = "kakao_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
 public class User {
+    public static final String NICKNAME_CONSTRAINT = "users_nickname_key";
+    public static final String KAKAO_ID_CONSTRAINT = "users_kakao_id_key";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,10 +33,10 @@ public class User {
     private String password;
 
     @JsonIgnore
-    @Column(name = "kakao_id", unique = true)
+    @Column(name = "kakao_id")
     private Long kakaoId;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String nickname;
 
     @Column(name = "profile_image")

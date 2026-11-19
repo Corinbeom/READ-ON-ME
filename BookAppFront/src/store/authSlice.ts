@@ -112,6 +112,11 @@ const authSlice = createSlice({
     setToken: (state, action: PayloadAction<string>) => {
       state.token = action.payload;
     },
+    setProfileNickname: (state, action: PayloadAction<{ id: number; nickname: string }>) => {
+      if (state.isAuthenticated && state.user?.id === action.payload.id) {
+        state.user.nickname = action.payload.nickname;
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -172,5 +177,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, clearError, setToken } = authSlice.actions;
+export const { logout, clearError, setToken, setProfileNickname } = authSlice.actions;
 export default authSlice.reducer;
