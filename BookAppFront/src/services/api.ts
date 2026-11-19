@@ -6,7 +6,7 @@ import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
 import type { BookDto } from '../types/BookDto';
 import type { KakaoExchange, KakaoStart } from '../utils/kakaoLogin';
-import type { FeedbackCategory, FeedbackStatus } from '../utils/feedback';
+import type { FeedbackCategory, FeedbackStatus, RecommendationRating } from '../utils/feedback';
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
 import { handleApiError } from '../utils/apiErrorHandler'; // 아래에 따로 만들 파일
 
@@ -126,11 +126,17 @@ export interface AiSearchJob {
 
 interface AiJobResponse<T> { success: boolean; message: string; data: T }
 
+export type RecommendationFeedback = { rating: RecommendationRating | null; comment: string | null };
+
 export const aiJobApi = {
   submit: (query: string, key: string) =>
     api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, { headers: { 'Idempotency-Key': key } }),
   recent: () => api.get<AiJobResponse<AiSearchJob[]>>('/api/ai/jobs/recent'),
   get: (id: string) => api.get<AiJobResponse<AiSearchJob>>(`/api/ai/jobs/${id}`),
+  feedback: (id: string, signal: AbortSignal) =>
+    api.get<AiJobResponse<RecommendationFeedback>>(`/api/ai/jobs/${id}/feedback`, { signal }),
+  sendFeedback: (id: string, rating: RecommendationRating, comment: string, signal: AbortSignal) =>
+    api.put<AiJobResponse<RecommendationFeedback>>(`/api/ai/jobs/${id}/feedback`, { rating, comment }, { signal }),
 };
 
 // ✅ 전역 인터셉터 — 모든 API 오류를 한 곳에서 처리
@@ -210,10 +216,27 @@ export type OperationsFeedback = {
 
 export type OperationsFeedbackPage = { items: OperationsFeedback[]; nextBeforeId: number | null };
 
+export type OperationsRecommendationFeedback = {
+  id: number;
+  query: string;
+  outcome: 'MODEL' | 'FALLBACK' | 'NO_MATCH';
+  books: Pick<AiSearchBook, 'isbn' | 'title' | 'authors' | 'reason'>[];
+  rating: RecommendationRating;
+  comment: string | null;
+  submittedAt: string;
+};
+
+export type OperationsRecommendationFeedbackPage = {
+  items: OperationsRecommendationFeedback[];
+  nextBeforeId: number | null;
+};
+
 export const operationsApi = {
   summary: (signal: AbortSignal) => api.get<OperationsSummary>(operationsPath + '/summary', { signal }),
   feedback: (params: { category: FeedbackCategory | ''; status: FeedbackStatus | ''; before_id?: number }, signal: AbortSignal) =>
     api.get<OperationsFeedbackPage>(operationsPath + '/feedback', { params, signal }),
+  recommendationFeedback: (params: { rating?: RecommendationRating; before_id?: number }, signal: AbortSignal) =>
+    api.get<AiJobResponse<OperationsRecommendationFeedbackPage>>(operationsPath + '/recommendation-feedback', { params, signal }),
   updateStatus: (entry: OperationsFeedback, status: FeedbackStatus, signal: AbortSignal) =>
     api.put(operationsPath + `/feedback/${entry.id}/status`, { status, version: entry.statusVersion }, { signal }),
 };

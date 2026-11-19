@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import AppButton from '@/components/ui/AppButton';
+import OperationsRecommendationFeedback from '@/components/OperationsRecommendationFeedback';
 import ScreenState from '@/components/ui/ScreenState';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -41,7 +42,7 @@ function OperationsDashboard() {
   const [summaryError, setSummaryError] = useState('');
   const [denied, setDenied] = useState(false);
   const [revision, setRevision] = useState(0);
-  const [section, setSection] = useState<'feedback' | 'health'>('feedback');
+  const [section, setSection] = useState<'feedback' | 'recommendation-feedback' | 'health'>('feedback');
   const [uptime, setUptime] = useState<UptimeRun | null>();
   const [category, setCategory] = useState<FeedbackCategory | ''>('');
   const [status, setStatus] = useState<FeedbackStatus | ''>('');
@@ -164,8 +165,11 @@ function OperationsDashboard() {
       contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom, Spacing.xl) }]}>
       <View style={styles.row}>
         <View style={styles.filters}>
-          <AppButton title="피드백" compact variant={section === 'feedback' ? 'primary' : 'ghost'}
+          <AppButton title="일반 피드백" compact variant={section === 'feedback' ? 'primary' : 'ghost'}
             accessibilityState={{ selected: section === 'feedback' }} disabled={!!saving} onPress={() => setSection('feedback')} />
+          <AppButton title="추천 피드백" compact variant={section === 'recommendation-feedback' ? 'primary' : 'ghost'}
+            accessibilityState={{ selected: section === 'recommendation-feedback' }} disabled={!!saving}
+            onPress={() => setSection('recommendation-feedback')} />
           <AppButton title="운영 현황" compact variant={section === 'health' ? 'primary' : 'ghost'}
             accessibilityState={{ selected: section === 'health' }} disabled={!!saving} onPress={() => setSection('health')} />
         </View>
@@ -243,7 +247,7 @@ function OperationsDashboard() {
             }} />
           </View>
         ) : null}
-      </> : <>
+      </> : section === 'recommendation-feedback' ? <OperationsRecommendationFeedback revision={revision} /> : <>
         <View style={[styles.card, { borderColor: colors.line, backgroundColor: colors.card }]}>
           <Text style={[Typography.section, text]}>갈피 추천 · 최근 24시간</Text>
           <View style={styles.metrics}>

@@ -23,6 +23,7 @@ import { useSelector } from 'react-redux';
 
 import AiBookChoiceCard from '@/components/AiBookChoiceCard';
 import BookmarkMascot from '@/components/BookmarkMascot';
+import RecommendationFeedback from '@/components/RecommendationFeedback';
 import { ArrowLeft } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -54,6 +55,8 @@ export default function AiBookSelectionScreen() {
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
   const storageKey = user?.id ? `${STORAGE_PREFIX}:${user.id}` : null;
   const scrollRef = useRef<ScrollView>(null);
+  const feedbackOffset = useRef(0);
+  const revealFeedbackAfterLayout = useRef(false);
   const pendingSubmission = useRef<{ query: string; key: string } | null>(null);
   const resetInProgress = useRef(false);
   const submittedEntryKey = useRef<string | null>(null);
@@ -233,6 +236,8 @@ export default function AiBookSelectionScreen() {
   const hasFallback = job?.result_outcome === 'FALLBACK' || books.some((book) => book.ranking_status === 'FALLBACK');
   const chosenBook = books.find((book) => book.isbn === chosenIsbn);
   const showCompareAction = job?.status === 'SUCCEEDED' && step === 'results' && selectedIsbns.length === 2;
+  const feedbackJob = isAuthenticated && user && !restoring && !restoreFailed
+    && job?.status === 'SUCCEEDED' && job.result_outcome !== 'DEGRADED_EMPTY' ? job : null;
 
   return (
     <KeyboardAvoidingView style={[styles.screen, { paddingTop: insets.top }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -348,7 +353,6 @@ export default function AiBookSelectionScreen() {
             <AiBookChoiceCard book={chosenBook} label="선택한 책" showDetailsAction={false} onDetails={() => openDetail(chosenBook.isbn)} />
             <AppButton title={"책 상세 보기 →"} variant="primary" style={styles.primaryButton} onPress={() => openDetail(chosenBook.isbn)} accessibilityRole="button" />
             <AppButton title={"다른 후보 살펴보기"} variant="ghost" compact style={styles.textButton} onPress={() => setStep(selectedIsbns.length === 2 ? 'compare' : 'results')} />
-            <AppButton title={"새 추천 받기"} variant="ghost" compact style={styles.textButton} onPress={() => { void startOver(); }} />
           </View>
         ) : step === 'compare' ? (
           <View style={styles.stage}>
@@ -384,7 +388,13 @@ export default function AiBookSelectionScreen() {
                   : '조건에 맞는 책을 찾았어요. 상세에서 소개를 확인해 주세요.'}</Text>
               </View>
             ) : null}
-            <Text style={styles.countText}>{hasFallback ? '찾은 책' : '추천 후보'} {books.length}권</Text>
+            <View style={styles.countRow}>
+              <Text style={styles.countText}>{hasFallback ? '찾은 책' : '추천 후보'} {books.length}권</Text>
+              {feedbackJob && books.length >= 3 ? (
+                <AppButton title="추천 평가 ↓" compact variant="ghost" style={styles.feedbackShortcut}
+                  onPress={() => scrollRef.current?.scrollTo({ y: feedbackOffset.current, animated: true })} />
+              ) : null}
+            </View>
             {books.map((book, index) => (
               <AiBookChoiceCard
                 key={`${book.isbn}-${index}`}
@@ -397,9 +407,24 @@ export default function AiBookSelectionScreen() {
               />
             ))}
             {selectionMessage ? <Text style={styles.helperText}>{selectionMessage}</Text> : null}
-            <AppButton title={"새 추천 받기"} variant="ghost" compact style={styles.textButton} onPress={() => { void startOver(); }} />
           </View>
         )}
+        {feedbackJob ? (
+          <View key={`${user?.id}:${feedbackJob.id}`} style={styles.feedbackStage}
+            onLayout={event => {
+              feedbackOffset.current = event.nativeEvent.layout.y;
+              if (revealFeedbackAfterLayout.current) {
+                revealFeedbackAfterLayout.current = false;
+                scrollRef.current?.scrollTo({ y: feedbackOffset.current, animated: true });
+              }
+            }}>
+            <RecommendationFeedback jobId={feedbackJob.id} hasBooks={books.length > 0}
+              onExpand={() => { revealFeedbackAfterLayout.current = true; }} />
+            {books.length > 0 && step !== 'compare' ? (
+              <AppButton title="새 추천 받기" variant="ghost" compact style={styles.textButton} onPress={() => { void startOver(); }} />
+            ) : null}
+          </View>
+        ) : null}
       </ScrollView>
       {showCompareAction ? (
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -446,7 +471,10 @@ const getStyles = (theme: 'light' | 'dark') => {
     textButton: { alignSelf: 'stretch', marginTop: Spacing.xs },
     resultIntro: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.xs },
     resultIntroText: { flex: 1 },
-    countText: { ...Typography.section, color: c.text, marginBottom: Spacing.sm },
+    countRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+    countText: { ...Typography.section, color: c.text },
+    feedbackShortcut: { minHeight: UI.iconButtonSize, paddingHorizontal: Spacing.xs },
+    feedbackStage: { marginTop: Spacing.sm, gap: Spacing.xs },
     footer: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: Spacing.sm, backgroundColor: c.card, borderTopWidth: 1, borderTopColor: c.line },
     footerButton: {},
   });
