@@ -14,6 +14,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy import func, select, update
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.services.embedding_backend import (
@@ -28,6 +29,7 @@ BATCH_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_EM
 
 
 async def embed_documents(contents: list[str]) -> list[list[float]]:
+    corpus_policy.require_verified_corpus()
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_API_KEY is required for backfill")
@@ -66,6 +68,7 @@ def load_pilot_cache(path: Path | None) -> dict:
 
 
 async def run(*, apply: bool, limit: int, pace: float, batch_size: int, cache_path: Path | None) -> None:
+    corpus_policy.require_verified_corpus()
     database.init_db()
     try:
         async with database.async_session() as db:

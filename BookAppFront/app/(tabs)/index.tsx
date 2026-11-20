@@ -17,6 +17,7 @@ import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import BookCarousel from '@/components/BookCarousel';
 import AppButton from '@/components/ui/AppButton';
 import HomeAiPrompt from '@/components/HomeAiPrompt';
+import GalpiAvailability from '@/components/GalpiAvailability';
 import HomeBookCollection from '@/components/HomeBookCollection';
 import HomeRecentBooks from '@/components/HomeRecentBooks';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
@@ -92,8 +93,10 @@ export default function HomeScreen() {
         <Text style={styles.issueBarText}>다음에 읽을 한 권</Text>
       </View>
 
-      <HomeAiPrompt />
-      <HomeBookCollection />
+      <GalpiAvailability>
+        <HomeAiPrompt />
+        <HomeBookCollection />
+      </GalpiAvailability>
       <HomeRecentBooks />
 
       {/* ── 인기 책 (도서관 정보나루) ── */}
@@ -108,6 +111,11 @@ export default function HomeScreen() {
             <Text style={styles.sectionCount}>{popular.books.length}권</Text>
           )}
         </View>
+        {popular.books[0]?.loanRanking && (
+          <Text style={styles.birthYearHint}>
+            {popular.books[0].loanRanking.source} · {popular.books[0].loanRanking.date} 기준 · {popular.books[0].loanRanking.ageGroup ? `${popular.books[0].loanRanking.ageGroup}대` : '전체 연령'}
+          </Text>
+        )}
         {isAuthenticated && !user?.birth_year && (
           <Text style={styles.birthYearHint}>
             출생연도를 설정하면 나이대에 맞는 인기 책을 볼 수 있어요

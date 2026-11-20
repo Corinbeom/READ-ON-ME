@@ -1,5 +1,6 @@
 package bookapp.bookappback.book.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import bookapp.bookappback.book.dto.LibraryBookDto;
 import jakarta.persistence.*;
 import lombok.*;
@@ -44,8 +45,11 @@ public class PopularNaruBook {
     @Column(length = 100)
     private String classNm;
 
-    @Column(length = 1000)
-    private String bookImageUrl;
+    @JsonIgnore
+    @Column(name = "book_image_url", insertable = false, updatable = false)
+    private String legacyCover;
+
+    private boolean archived;
 
     @Column(length = 20)
     private String loanCount;
@@ -62,8 +66,10 @@ public class PopularNaruBook {
                 publicationYear,
                 isbn13,
                 classNm,
-                bookImageUrl,
-                loanCount
+                loanCount,
+                ageGroup,
+                fetchedAt.toLocalDate(),
+                "도서관 정보나루"
         );
     }
 }

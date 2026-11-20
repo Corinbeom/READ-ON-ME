@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from app import corpus_policy
 from app.services import llm_cooldown
 from app.services.text_utils import (
     has_fiction_evidence, infer_book_form, is_school_anthology,
@@ -224,6 +225,7 @@ async def _rerank_with_groq(
     prompt: str, candidates: List[Dict[str, Any]], evidence_by_isbn: dict[str, str],
     trace_id: str, trigger: str, diagnostics: dict | None,
 ) -> Optional[List[Dict[str, Any]]]:
+    corpus_policy.require_verified_corpus()
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key or not groq_cooldown.available():
         return None
@@ -294,6 +296,7 @@ async def rerank_with_gemini(
     verified_fallback: List[Dict[str, Any]] | None = None,
     diagnostics: dict | None = None,
 ) -> List[Dict[str, Any]]:
+    corpus_policy.require_verified_corpus()
     trace_id = (request_id or "-")[:64]
     fallback = []
     fallback_candidates = verified_fallback if verified_fallback is not None else candidates

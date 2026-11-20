@@ -1,16 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.corpus_policy import require_verified_corpus
 from app.database import get_db
-from app.models.book_corpus import BookCorpus
-from app.services import book_ai_service, corpus_ingestion, reading_keyword_picks
+from app.services import book_ai_service, corpus_ingestion
 from app.security import require_internal_token
 from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
 
 router = APIRouter()
 # --- Endpoints ---
 
-@router.post("/api/books/fetch-and-filter", status_code=202, dependencies=[Depends(require_internal_token)])
+@router.post("/api/books/fetch-and-filter", status_code=202, dependencies=[Depends(require_internal_token), Depends(require_verified_corpus)])
 async def fetch_and_filter_books(request: KeywordRequest, db: AsyncSession = Depends(get_db)):
     try:
         job = await corpus_ingestion.create_batch_job(
@@ -41,7 +40,7 @@ async def ingestion_job_status(job_id: str, db: AsyncSession = Depends(get_db)):
     return job
 
 
-@router.post("/api/books/embed-single", status_code=202, dependencies=[Depends(require_internal_token)])
+@router.post("/api/books/embed-single", status_code=202, dependencies=[Depends(require_internal_token), Depends(require_verified_corpus)])
 async def embed_single_book(request: SingleBookRequest, db: AsyncSession = Depends(get_db)):
     status, job = await corpus_ingestion.enqueue_book(db, request.model_dump(), source="USER_LIBRARY")
     if status == "INVALID_ISBN":
@@ -49,7 +48,7 @@ async def embed_single_book(request: SingleBookRequest, db: AsyncSession = Depen
     return {"status": status, "job_id": job.id if job else None}
 
 
-@router.post("/api/ai/search", dependencies=[Depends(require_internal_token)])
+@router.post("/api/ai/search", dependencies=[Depends(require_internal_token), Depends(require_verified_corpus)])
 async def ai_search(
     request: AiSearchRequest, response: Response, db: AsyncSession = Depends(get_db),
     x_request_id: str | None = Header(default=None),
@@ -69,36 +68,10 @@ async def ai_search(
 
 
 @router.post("/api/user/reading-tags", dependencies=[Depends(require_internal_token)])
-async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depends(get_db)):
-    """
-    Returns top keywords with the ISBNs of the requested books that support them.
-    """
-    if not request.isbns:
-        return {"keywords": [], "analyzed": 0}
-
-    result = await db.execute(
-        select(BookCorpus.isbn, BookCorpus.tags).where(BookCorpus.isbn.in_(request.isbns))
-    )
-    rows = result.all()
-
-    books_by_tag: dict[str, set[str]] = {}
-    for isbn, tags in rows:
-        if isinstance(tags, list):
-            for raw_tag in tags:
-                if not isinstance(raw_tag, str):
-                    continue
-                tag = raw_tag.strip()
-                if tag and tag.casefold() != "user_added":
-                    books_by_tag.setdefault(tag, set()).add(isbn)
-    ranked = sorted(books_by_tag.items(), key=lambda item: (-len(item[1]), item[0]))
-    keywords = [
-        {"tag": tag, "count": len(isbns), "book_isbns": sorted(isbns)}
-        for tag, isbns in ranked[:max(0, request.limit)]
-    ]
-
-    return {"keywords": keywords, "analyzed": len(rows)}
+async def get_reading_tags(request: ReadingTagsRequest):
+    return {"keywords": [], "analyzed": 0}
 
 
 @router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])
-async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest, db: AsyncSession = Depends(get_db)):
-    return await reading_keyword_picks.find_reading_keyword_isbns(db, request.keywords)
+async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest):
+    return []

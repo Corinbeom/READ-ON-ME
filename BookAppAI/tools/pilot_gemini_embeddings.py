@@ -15,6 +15,7 @@ import httpx
 import numpy as np
 from sqlalchemy import select
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.services import book_ai_service as svc
@@ -47,6 +48,7 @@ def _write(path: Path, value: dict) -> None:
 
 
 async def _gemini_embedding(client: httpx.AsyncClient, api_key: str, content: str, task_type: str) -> tuple[list[float], float]:
+    corpus_policy.require_verified_corpus()
     payload = {
         "model": f"models/{MODEL}", "content": {"parts": [{"text": content}]},
         "taskType": task_type, "outputDimensionality": DIMENSIONS,
@@ -127,6 +129,7 @@ async def _candidate_report(books: list[dict], vectors: dict[str, np.ndarray], q
 
 
 async def run(cache_path: Path, output_path: Path, random_count: int, pace: float) -> None:
+    corpus_policy.require_verified_corpus()
     if embedding_provider() != "local":
         raise RuntimeError("Pilot compares against local vectors; set EMBEDDING_PROVIDER=local")
     api_key = os.getenv("GEMINI_API_KEY")

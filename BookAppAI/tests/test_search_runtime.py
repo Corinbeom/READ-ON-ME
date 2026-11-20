@@ -1,164 +1,32 @@
 import asyncio
 import time
-from types import SimpleNamespace
 
 import httpx
 import pytest
 
 from app.main import app
-from app.database import get_db
-from app.services import corpus_ingestion
 from app.services import book_ai_service
-from app.services import query_rewriter
 from app.services import reranker
+from app.services import query_rewriter
 from app.services.search_retrieval import RetrievalCounts
 from app.services.reference_search import ReferenceAnchor
 
 
 @pytest.mark.asyncio
-async def test_search_keeps_array_body_and_exposes_outcome_headers(monkeypatch):
+async def test_maintenance_blocks_admission_before_opening_database(monkeypatch):
     monkeypatch.setenv("APP_ENV", "prod")
     monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-
-    async def fake_db():
-        yield object()
-
-    async def fake_search(query, db, request_id=None, outcome=None):
-        assert request_id == "job-1"
-        outcome.update(status="FALLBACK", reason_code="HTTP_503", basis="SHARED_THEMES")
-        return [{"isbn": "1", "ranking_status": "FALLBACK"}]
-
-    monkeypatch.setattr(book_ai_service, "search_by_natural_language", fake_search)
-    app.dependency_overrides[get_db] = fake_db
-    try:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            response = await client.post(
-                "/api/ai/search", json={"query": "비슷한 소설"},
-                headers={"X-Internal-Token": "test-only-token", "X-Request-ID": "job-1"},
-            )
-        assert response.status_code == 200
-        assert response.json() == [{"isbn": "1", "ranking_status": "FALLBACK"}]
-        assert response.headers["X-Search-Outcome"] == "FALLBACK"
-        assert response.headers["X-Search-Reason"] == "HTTP_503"
-        assert response.headers["X-Search-Basis"] == "SHARED_THEMES"
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
-async def test_search_requires_internal_token_in_production(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "prod")
-    monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-    async def fake_db():
-        yield object()
-    app.dependency_overrides[get_db] = fake_db
-    try:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            denied = await client.post("/api/ai/search", json={"query": "책 추천"})
-            assert denied.status_code == 403
-            assert (await client.get("/recommendations/1")).status_code == 403
-            allowed = await client.post(
-                "/api/books/fetch-and-filter",
-                headers={"X-Internal-Token": "test-only-token"},
-                json={"keywords": []},
-            )
-            assert allowed.status_code == 400
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
-async def test_embed_endpoint_accepts_durable_job(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "prod")
-    monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-    request = {"title": "책", "isbn": "9780000000000", "authors": ["작가"]}
-    calls = []
-
-    async def fake_db():
-        yield object()
-
-    async def saved(db, book, *, source):
-        calls.append((book["isbn"], source))
-        await asyncio.sleep(0)
-        return "QUEUED", SimpleNamespace(id="book-job")
-
-    monkeypatch.setattr(corpus_ingestion, "enqueue_book", saved)
-    app.dependency_overrides[get_db] = fake_db
-    try:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            response = await client.post(
-                "/api/books/embed-single", json=request, headers={"X-Internal-Token": "test-only-token"},
-            )
-            assert response.status_code == 202
-            assert response.json() == {"status": "QUEUED", "job_id": "book-job"}
-            assert calls == [(request["isbn"], "USER_LIBRARY")]
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
-async def test_data_build_returns_durable_run_id(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "prod")
-    monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-    async def fake_db():
-        yield object()
-
-    async def create_job(db, keywords, *, max_pages_per_term, max_new_books):
-        assert keywords == ["소설"]
-        assert (max_pages_per_term, max_new_books) == (1, 5)
-        return SimpleNamespace(id="batch-job", status="PENDING")
-
-    monkeypatch.setattr(corpus_ingestion, "create_batch_job", create_job)
-    app.dependency_overrides[get_db] = fake_db
-    try:
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
-            response = await client.post(
-                "/api/books/fetch-and-filter",
-                json={"keywords": ["소설"], "max_pages_per_term": 1, "max_new_books": 5},
-                headers={"X-Internal-Token": "test-only-token"},
-            )
-        assert response.status_code == 202
-        assert response.json() == {"run_id": "batch-job", "status": "PENDING"}
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.mark.asyncio
-async def test_reading_tags_count_distinct_books_and_return_their_isbns(monkeypatch):
-    monkeypatch.setenv("APP_ENV", "prod")
-    monkeypatch.setenv("INTERNAL_API_TOKEN", "test-only-token")
-
-    class BookTagsDb:
-        async def execute(self, _):
-            rows = [("1", ["user_added", " 성장 ", "성장"]), ("2", ["user_added", " 성장 "]),
-                    ("3", [" USER_ADDED ", "SF", " "])]
-            return SimpleNamespace(all=lambda: rows)
-
-    async def fake_db():
-        yield BookTagsDb()
-
-    app.dependency_overrides[get_db] = fake_db
-    try:
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
-            response = await client.post(
-                "/api/user/reading-tags",
-                json={"isbns": ["1", "2", "3"], "limit": 2},
-                headers={"X-Internal-Token": "test-only-token"},
-            )
-        assert response.status_code == 200
-        assert response.json() == {
-            "keywords": [
-                {"tag": "성장", "count": 2, "book_isbns": ["1", "2"]},
-                {"tag": "SF", "count": 1, "book_isbns": ["3"]},
-            ],
-            "analyzed": 3,
-        }
-    finally:
-        app.dependency_overrides.pop(get_db, None)
+    marker = "BLOCKED_KAKAO_TEST"
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver") as client:
+        for path, body, code in [
+            ("/api/ai/search", {"query": marker}, "AI_SEARCH_MAINTENANCE"),
+            ("/api/books/embed-single", {"title": marker, "isbn": "9781127241347"}, "SOURCE_PERMISSION_UNVERIFIED"),
+            ("/api/books/fetch-and-filter", {"keywords": [marker]}, "SOURCE_PERMISSION_UNVERIFIED"),
+        ]:
+            assert (await client.post(path, json=body)).status_code == 403
+            response = await client.post(path, json=body, headers={"X-Internal-Token": "test-only-token"})
+            assert response.status_code == 503
+            assert response.json()["code"] == code
 
 
 @pytest.mark.asyncio
@@ -303,6 +171,7 @@ async def test_reference_author_search_uses_anchor_and_excludes_author(monkeypat
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("synthetic_model_inputs")
 async def test_other_author_similar_search_uses_verified_fallback(monkeypatch):
     async def anchor(db, author):
         assert author == "김영하"
@@ -339,6 +208,7 @@ async def test_other_author_similar_search_uses_verified_fallback(monkeypatch):
     ("양귀자의 모순을 찾아줘", ["original", "other-author", "other-work"]),
     ("모순적인 인물이 나오는 한국 소설", ["original", "other-author", "other-work"]),
 ])
+@pytest.mark.usefixtures("synthetic_model_inputs")
 async def test_reference_work_filtered_before_rerank_and_fallback(monkeypatch, query, expected):
     async def embed(prompt):
         return [0.1]

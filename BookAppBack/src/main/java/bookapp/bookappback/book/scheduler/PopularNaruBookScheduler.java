@@ -52,8 +52,6 @@ public class PopularNaruBookScheduler {
                     continue;
                 }
 
-                popularNaruBookRepository.deleteByAgeGroup(ageGroup);
-
                 List<PopularNaruBook> entities = new ArrayList<>();
                 for (int i = 0; i < books.size(); i++) {
                     LibraryBookDto dto = books.get(i);
@@ -66,12 +64,11 @@ public class PopularNaruBookScheduler {
                             .publicationYear(dto.getPublicationYear())
                             .isbn13(dto.getIsbn13())
                             .classNm(dto.getClassNm())
-                            .bookImageUrl(dto.getBookImageUrl())
                             .loanCount(dto.getLoanCount())
                             .fetchedAt(LocalDateTime.now())
                             .build());
                 }
-                popularNaruBookRepository.saveAll(entities);
+                popularNaruBookRepository.replaceRanking(ageGroup, entities);
                 log.info("[PopularNaruBookScheduler] ageGroup={} → {}건 저장 완료", ageGroup, entities.size());
 
             } catch (Exception e) {

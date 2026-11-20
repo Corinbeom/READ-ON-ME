@@ -8,6 +8,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.models.corpus_ingestion_job import CorpusIngestionJob
@@ -19,6 +20,7 @@ def _write(path: Path, value: object) -> None:
 
 
 async def discover(args) -> None:
+    corpus_policy.require_verified_corpus()
     if args.isbn_file:
         source = json.loads(args.isbn_file.read_text())
         candidates = source.get("candidates") if isinstance(source, dict) else source
@@ -71,6 +73,7 @@ async def discover(args) -> None:
 
 
 async def queue(args) -> None:
+    corpus_policy.require_verified_corpus()
     manifest = json.loads(args.manifest.read_text())
     records = {row["candidate"]["isbn"]: row for row in manifest["records"]}
     selected = list(dict.fromkeys(isbn.strip() for isbn in args.isbns.split(",")))
@@ -111,6 +114,7 @@ async def queue(args) -> None:
 
 
 async def review(args) -> None:
+    corpus_policy.require_verified_corpus()
     if args.apply and not args.decision:
         raise ValueError("--apply requires --decision")
     database.init_db()

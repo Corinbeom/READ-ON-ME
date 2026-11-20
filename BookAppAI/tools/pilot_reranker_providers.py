@@ -14,6 +14,7 @@ ROOT = Path(__file__).parents[2]
 load_dotenv(ROOT / ".env")
 load_dotenv(ROOT / "BookAppAI/.env", override=False)
 
+from app import corpus_policy
 from app.services import reranker  # noqa: E402
 
 DEFAULT_INPUT = ROOT / "BookAppAI/evaluation/search_quality_baseline_2026-11-11.json"
@@ -41,6 +42,7 @@ def _summarize(books: list[dict] | None) -> list[dict] | None:
 
 
 async def _gemini(prompt: str, books: list[dict], evidence: dict[str, str]) -> dict:
+    corpus_policy.require_verified_corpus()
     payload = {
         "contents": [{"parts": [{"text": prompt + "\n\n결과는 JSON 배열로 반환하세요. 적합한 책이 없으면 빈 배열로 답하세요."}]}],
         "generationConfig": {
@@ -74,6 +76,7 @@ async def _gemini(prompt: str, books: list[dict], evidence: dict[str, str]) -> d
 
 
 async def _groq(prompt: str, books: list[dict], evidence: dict[str, str], case_id: int) -> dict:
+    corpus_policy.require_verified_corpus()
     diagnostics = {}
     started = time.perf_counter()
     selected = await reranker._rerank_with_groq(prompt, books, evidence, f"pilot-{case_id}", "PILOT", diagnostics)
@@ -86,6 +89,7 @@ async def _groq(prompt: str, books: list[dict], evidence: dict[str, str], case_i
 
 
 async def run(source: Path, output: Path, case_indices: tuple[int, ...], delay: float) -> None:
+    corpus_policy.require_verified_corpus()
     if not reranker.GEMINI_API_KEY or not os.getenv("GROQ_API_KEY"):
         raise RuntimeError("Both GEMINI_API_KEY and GROQ_API_KEY are required")
     cases = json.loads(source.read_text())

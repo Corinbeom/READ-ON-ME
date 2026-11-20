@@ -1,0 +1,1 @@
+ALTER TABLE popular_naru_books ADD COLUMN archived BOOLEAN NOT NULL DEFAULT FALSE;

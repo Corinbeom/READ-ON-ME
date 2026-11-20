@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 load_dotenv()
 
+from app import corpus_policy
 from app import database  # noqa: E402
 from app.models.book_corpus import BookCorpus  # noqa: E402
 from app.services.intent_classifier import IntentAnalyzer  # noqa: E402
@@ -31,6 +32,7 @@ DEFAULT_QUERIES = (
 
 
 async def run(input_path: Path, output_path: Path, pace: float, queries: tuple[str, ...], models: tuple[str, ...]) -> None:
+    corpus_policy.require_verified_corpus()
     pilot = json.loads(input_path.read_text())
     cases = [case for case in pilot["results"] if case["query"] in queries]
     if len(cases) != len(queries):

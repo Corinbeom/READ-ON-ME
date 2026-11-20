@@ -1,5 +1,6 @@
 package bookapp.bookappback.ai.controller;
 
+import bookapp.bookappback.ai.service.GalpiAvailability;
 import bookapp.bookappback.common.dto.ApiResponse;
 import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.security.UserDetailsImpl;
@@ -30,6 +31,7 @@ public class RecommendationFeedbackController {
             """;
 
     private final JdbcClient jdbc;
+    private final GalpiAvailability availability;
 
     @GetMapping
     public ApiResponse<Rating> read(@AuthenticationPrincipal UserDetailsImpl principal, @PathVariable UUID jobId) {
@@ -45,6 +47,7 @@ public class RecommendationFeedbackController {
     @PutMapping
     public ApiResponse<Rating> submit(@AuthenticationPrincipal UserDetailsImpl principal, @PathVariable UUID jobId,
                                       @Valid @RequestBody Submission submission) {
+        availability.requireAvailable();
         String comment = submission.comment() == null ? "" : submission.comment().strip();
         Rating rating = jdbc.sql("""
                 INSERT INTO recommendation_feedback (job_id, query, outcome, books, rating, comment)

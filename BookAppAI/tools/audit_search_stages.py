@@ -9,6 +9,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.services import book_ai_service, reranker
@@ -36,6 +37,7 @@ async def _status_counts(db, diagnostics: dict) -> dict:
 
 
 async def run(cases: list[dict], limit: int, delay: float, output: Path) -> None:
+    corpus_policy.require_verified_corpus()
     if not reranker.GEMINI_API_KEY:
         raise RuntimeError("GEMINI_API_KEY is required to measure model reason coverage")
     database.init_db()

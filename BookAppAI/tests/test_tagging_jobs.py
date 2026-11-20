@@ -27,6 +27,7 @@ def test_auth_error_pauses_for_manual_requeue():
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("status,code", [(429, "RATE_LIMIT"), (401, "AUTH_ERROR")])
+@pytest.mark.usefixtures("synthetic_model_inputs")
 async def test_tagger_records_api_failure_type(monkeypatch, status, code):
     original_client = httpx.AsyncClient
     transport = httpx.MockTransport(lambda request: httpx.Response(status))

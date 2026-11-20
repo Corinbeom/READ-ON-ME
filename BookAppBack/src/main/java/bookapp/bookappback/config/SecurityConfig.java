@@ -60,7 +60,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/users/kakao/start", "/api/users/kakao/exchange").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/feedback").permitAll()
                         .requestMatchers("/api/books/search", "/api/books/detail/**", "/api/books/popular", "/api/books/popular/naru", "/api/books/*/editions", "/api/books/test", "/api/books/details").permitAll() // 책 조회는 인증 없이 허용
-                        .requestMatchers(HttpMethod.GET, "/api/books/reading-keyword-picks").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/ai/availability", "/api/books/reading-keyword-picks").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/books/*/reviews").permitAll() // 리뷰 조회는 인증 없이 허용
                         // 내부 추천용 API: Security는 열어두되 Controller에서 X-Internal-Token으로 2차 보호
                         .requestMatchers("/api/library/all").permitAll()

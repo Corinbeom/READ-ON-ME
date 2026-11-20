@@ -1,5 +1,6 @@
 package bookapp.bookappback.common.filter;
 
+import bookapp.bookappback.ai.service.GalpiAvailability;
 import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
 import jakarta.servlet.FilterChain;
@@ -30,7 +31,7 @@ class RateLimitFilterTest {
         values = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(values);
         when(values.increment(anyString())).thenReturn(1L);
-        filter = new RateLimitFilter(redis);
+        filter = new RateLimitFilter(redis, mock(GalpiAvailability.class));
     }
 
     @AfterEach

@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import httpx
 from sqlalchemy import select, update
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.services.corpus_metadata import fetch_naru_kdc
@@ -26,6 +27,7 @@ def _fiction_candidate(book: BookCorpus) -> bool:
 
 
 async def run(*, apply: bool, limit: int, pace: float, retry_missing: bool) -> None:
+    corpus_policy.require_verified_corpus()
     if apply and not os.getenv("LIBRARY_BIGDATA_API_KEY"):
         raise RuntimeError("LIBRARY_BIGDATA_API_KEY is required for KDC backfill")
     database.init_db()

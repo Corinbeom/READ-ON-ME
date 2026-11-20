@@ -1,8 +1,10 @@
 package bookapp.bookappback.ai.controller;
 
+import org.springframework.http.CacheControl;
 import bookapp.bookappback.ai.service.AiSearchService;
 import bookapp.bookappback.ai.service.AiSearchJobService;
 import bookapp.bookappback.ai.service.AiSearchCapacity;
+import bookapp.bookappback.ai.service.GalpiAvailability;
 import bookapp.bookappback.ai.service.AiSearchCapacityException;
 import bookapp.bookappback.ai.dto.AiSearchRequestDto;
 import bookapp.bookappback.ai.dto.AiSearchJobResponse;
@@ -24,12 +26,20 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AiSearchController {
 
+    private final GalpiAvailability availability;
     private final AiSearchService aiSearchService;
     private final AiSearchJobService jobService;
     private final AiSearchCapacity capacity;
 
+    @GetMapping("/availability")
+    public ResponseEntity<ApiResponse<Boolean>> availability() {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(new ApiResponse<>(true, "갈피 이용 상태", !availability.underMaintenance()));
+    }
+
     @PostMapping("/search")
     public Mono<ResponseEntity<List<?>>> search(@RequestBody @Valid AiSearchRequestDto requestDto) {
+        availability.requireAvailable();
         return Mono.defer(() -> {
             if (jobService.hasQueuedJobs() || !capacity.tryAcquire()) return Mono.error(new AiSearchCapacityException());
             return aiSearchService.search(requestDto.getQuery())

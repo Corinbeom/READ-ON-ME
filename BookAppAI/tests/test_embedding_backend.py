@@ -19,6 +19,7 @@ def test_provider_selects_one_fixed_database_column(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("synthetic_model_inputs")
 async def test_gemini_embedding_uses_retrieval_task_and_normalizes(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-only-key")
     observed = []
@@ -40,6 +41,7 @@ async def test_gemini_embedding_uses_retrieval_task_and_normalizes(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("synthetic_model_inputs")
 async def test_gemini_embedding_retries_once_and_rejects_bad_vectors(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-only-key")
     original_client = httpx.AsyncClient

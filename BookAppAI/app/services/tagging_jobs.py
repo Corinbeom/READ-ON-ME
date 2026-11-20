@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import corpus_policy
 import app.database as database
 from app.models.book_corpus import BookCorpus
 from app.models.book_tagging_job import BookTaggingJob
@@ -134,6 +135,7 @@ async def _mark_failed_attempt(isbn: str) -> None:
 
 
 async def run_worker(stop: asyncio.Event) -> None:
+    corpus_policy.require_verified_corpus()
     classifier = BookClassifier(llm_tagger=GeminiTagger(model_name=MODEL_VERSION))
     while not stop.is_set():
         isbn = None

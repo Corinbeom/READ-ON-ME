@@ -1,5 +1,6 @@
 package bookapp.bookappback.book.service;
 
+import lombok.RequiredArgsConstructor;
 import bookapp.bookappback.book.dto.KakaoBookDto;
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
 import bookapp.bookappback.book.entity.Book;
@@ -9,48 +10,24 @@ import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.userbookstatus.entity.ReadingStatus;
 import bookapp.bookappback.userbookstatus.repository.UserBookStatusRepository;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.time.Duration;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class BookService {
 
     private final BookRepository bookRepository;
     private final KakaoSearchCacheService kakaoSearchCacheService;
-    private final WebClient.Builder webClientBuilder;
     private final UserBookStatusRepository userBookStatusRepository;
-
-    private final String aiBaseUrl;
-    private final String internalToken;
-
-    @Autowired
-    public BookService(BookRepository bookRepository,
-                       KakaoSearchCacheService kakaoSearchCacheService,
-                       WebClient.Builder webClientBuilder,
-                       UserBookStatusRepository userBookStatusRepository,
-                       @org.springframework.beans.factory.annotation.Value("${ai.base-url}") String aiBaseUrl,
-                       @org.springframework.beans.factory.annotation.Value("${internal.api.token:}") String internalToken) {
-        this.bookRepository = bookRepository;
-        this.kakaoSearchCacheService = kakaoSearchCacheService;
-        this.webClientBuilder = webClientBuilder;
-        this.userBookStatusRepository = userBookStatusRepository;
-        this.aiBaseUrl = aiBaseUrl;
-        this.internalToken = internalToken;
-    }
-
 
     // 카카오 API에서 책 검색 (캐싱은 KakaoSearchCacheService에서 처리)
     public KakaoBookSearchResponse searchBooksFromKakao(
@@ -128,12 +105,7 @@ public class BookService {
             }
 
             Book bookToSave = Book.fromKakaoApiResponse(kakaoBook);
-            Book savedBook = bookRepository.save(bookToSave);
-
-            // Submit after the library book is stored; AI admission runs asynchronously.
-            submitCorpusIngestion(savedBook);
-
-            return savedBook;
+            return bookRepository.save(bookToSave);
         } catch (Exception e) {
             log.error("책 저장 중 오류 발생: {}", e.getMessage());
             throw new BookExceptions.ExternalApiException("DB 저장 실패: " + e.getMessage());
@@ -169,34 +141,5 @@ public class BookService {
 
     public List<Book> getBooksByIds(List<Long> ids) {
         return bookRepository.findAllById(ids);
-    }
-
-    public void submitCorpusIngestion(Book book) {
-        WebClient webClient = webClientBuilder.baseUrl(aiBaseUrl).build();
-
-        Map<String, Object> bookData = Map.of(
-                "title", book.getTitle(),
-                "contents", Optional.ofNullable(book.getContents()).orElse(""),
-                "isbn", book.getIsbn13(),
-                "authors", Optional.ofNullable(book.getAuthors()).map(a -> a.split(",")).orElse(new String[0]),
-                "publisher", Optional.ofNullable(book.getPublisher()).orElse(""),
-                "thumbnail", Optional.ofNullable(book.getThumbnail()).orElse("")
-        );
-
-        webClient.post()
-                .uri("/api/books/embed-single")
-                .headers(headers -> {
-                    if (internalToken != null && !internalToken.isBlank()) headers.set("X-Internal-Token", internalToken);
-                })
-                .bodyValue(bookData)
-                .retrieve()
-                .bodyToMono(String.class)
-                .timeout(Duration.ofSeconds(45))
-                .flatMap(response -> Mono.fromRunnable(() -> {
-                    log.info("AI 코퍼스 작업 접수 [isbn={}]", book.getIsbn13());
-                    bookRepository.markCorpusJobSubmitted(book.getIsbn13());
-                }).subscribeOn(Schedulers.boundedElastic()).thenReturn(response))
-                .doOnError(error -> log.error("AI 코퍼스 작업 접수 실패 [isbn={}]: {} — 스케줄러가 재시도합니다", book.getIsbn13(), error.getMessage()))
-                .subscribe();
     }
 }

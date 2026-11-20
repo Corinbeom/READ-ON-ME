@@ -26,12 +26,15 @@ import java.util.List;
 @Slf4j
 public class AiRecommendationService {
 
+    private final GalpiAvailability availability;
     private final WebClient webClient;
 
     public AiRecommendationService(
+            GalpiAvailability availability,
             WebClient.Builder webClientBuilder,
             @Value("${ai.base-url}") String aiBaseUrl
     ) {
+        this.availability = availability;
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3_000)
                 .responseTimeout(Duration.ofSeconds(15));
@@ -48,7 +51,7 @@ public class AiRecommendationService {
      * @return 추천 ISBN 목록 (유사도 내림차순). 실패 시 빈 리스트.
      */
     public List<String> getContentRecommendations(List<UserBookIsbnDto> userBooks, int limit) {
-        if (userBooks == null || userBooks.isEmpty()) {
+        if (availability.underMaintenance() || userBooks == null || userBooks.isEmpty()) {
             return Collections.emptyList();
         }
 

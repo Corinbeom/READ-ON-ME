@@ -1,5 +1,6 @@
 package bookapp.bookappback.common.filter;
 
+import bookapp.bookappback.ai.service.GalpiAvailability;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,6 +33,7 @@ import java.time.Duration;
 public class RateLimitFilter extends OncePerRequestFilter {
 
     private final StringRedisTemplate redisTemplate;
+    private final GalpiAvailability availability;
 
     private static final long BOOK_SEARCH_LIMIT = 60;
     private static final long AI_SEARCH_LIMIT    = 20;
@@ -63,7 +65,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 (path.equals("/api/ai/search") || path.equals("/api/ai/jobs"))) {
             // Authorization rejects anonymous AI requests; do not spend Redis/API quota on them.
             var auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl &&
+            if (!availability.underMaintenance() && auth != null && auth.getPrincipal() instanceof UserDetailsImpl &&
                     !consumeOrRespond(request, response, "ai-search", AI_SEARCH_LIMIT)) {
                 return;
             }

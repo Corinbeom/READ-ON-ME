@@ -6,6 +6,8 @@ import os
 
 import httpx
 
+from app import corpus_policy
+
 
 GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSIONS = 768
@@ -41,6 +43,7 @@ def normalize(values: list[float]) -> list[float]:
 
 
 async def gemini_embed(text: str, task_type: str) -> list[float]:
+    corpus_policy.require_verified_corpus()
     if task_type not in {"RETRIEVAL_QUERY", "RETRIEVAL_DOCUMENT"}:
         raise ValueError("Unsupported Gemini embedding task type")
     api_key = os.getenv("GEMINI_API_KEY")

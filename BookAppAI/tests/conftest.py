@@ -13,3 +13,10 @@ def default_embedding_provider(monkeypatch):
     """Keep tests offline when the developer's .env selects Gemini."""
     monkeypatch.setenv("EMBEDDING_PROVIDER", "local")
     monkeypatch.delenv("LIBRARY_BIGDATA_API_KEY", raising=False)
+
+
+@pytest.fixture
+def synthetic_model_inputs(monkeypatch):
+    """Exercise provider algorithms with the unit tests' synthetic inputs and mocked transports."""
+    from app import corpus_policy
+    monkeypatch.setattr(corpus_policy, "require_verified_corpus", lambda: None)

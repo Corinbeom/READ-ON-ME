@@ -1,6 +1,7 @@
 // BookAppFront/src/types/Book.ts
 export interface Book {
-    id: number; // Add this
+    loanRanking?: { rank: string; count: string; date: string; source: string; ageGroup: number };
+    id: number;
     title: string;
     contents: string;
     url: string;

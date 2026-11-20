@@ -29,18 +29,21 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ReadingKeywordService {
 
+    private final GalpiAvailability availability;
     private final WebClient webClient;
     private final UserBookStatusService userBookStatusService;
     private final BookRepository bookRepository;
     private final String internalToken;
 
     public ReadingKeywordService(
+            GalpiAvailability availability,
             WebClient.Builder webClientBuilder,
             @Value("${ai.base-url}") String aiBaseUrl,
             UserBookStatusService userBookStatusService,
             BookRepository bookRepository,
             @Value("${internal.api.token:}") String internalToken
     ) {
+        this.availability = availability;
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3_000)
                 .responseTimeout(Duration.ofSeconds(15));
@@ -62,6 +65,7 @@ public class ReadingKeywordService {
      * @return 키워드별 책 수와 근거 ISBN 목록, 분석한 책 수
      */
     public Map<String, Object> getReadingKeywords(Long userId) {
+        if (availability.underMaintenance()) return Map.of("keywords", List.of(), "analyzed", 0);
         List<UserBookIsbnDto> userBooks = userBookStatusService.getUserBooksWithIsbn(userId);
 
         List<String> isbns = userBooks.stream()
@@ -91,6 +95,7 @@ public class ReadingKeywordService {
     }
 
     public Mono<List<ReadingKeywordPickDto>> getPublicPicks(List<String> keywords) {
+        if (availability.underMaintenance()) return Mono.just(List.of());
         return webClient.post()
                 .uri("/api/books/reading-keyword-picks")
                 .headers(this::setInternalToken)

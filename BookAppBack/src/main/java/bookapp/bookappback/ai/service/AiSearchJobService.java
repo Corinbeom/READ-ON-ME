@@ -30,6 +30,7 @@ import java.util.concurrent.locks.ReentrantLock;
 @RequiredArgsConstructor
 @Slf4j
 public class AiSearchJobService {
+    private final GalpiAvailability availability;
     private final AiSearchJobRepository repository;
     private final AiSearchService searchService;
     private final AiSearchCapacity capacity;
@@ -42,6 +43,7 @@ public class AiSearchJobService {
     private boolean dispatchEnabled;
 
     public AiSearchJobResponse submit(Long userId, String query, String key) {
+        availability.requireAvailable();
         if (key == null || key.isBlank()) key = UUID.randomUUID().toString();
         if (key.length() > 100) throw new IllegalArgumentException("Idempotency-Key는 100자 이하로 입력해주세요");
         String finalKey = key;
@@ -97,13 +99,17 @@ public class AiSearchJobService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void recover() {
+        if (availability.underMaintenance()) {
+            transactions.executeWithoutResult(tx -> repository.failForMaintenance(GalpiAvailability.MAINTENANCE, LocalDateTime.now()));
+            return;
+        }
         transactions.executeWithoutResult(tx -> repository.failInterrupted(LocalDateTime.now()));
         ready = true;
     }
 
     @Scheduled(fixedDelay = 1000)
     public void dispatch() {
-        if (!ready || !dispatchEnabled) return;
+        if (availability.underMaintenance() || !ready || !dispatchEnabled) return;
         while (capacity.tryAcquire()) {
             AiSearchJob job;
             try {
@@ -182,6 +188,11 @@ public class AiSearchJobService {
     }
 
     private AiSearchJobResponse toResponse(AiSearchJob job) {
+        if (availability.underMaintenance()) {
+            return new AiSearchJobResponse(job.getId(), job.getQuery(), "FAILED", null,
+                    GalpiAvailability.MAINTENANCE, null, null, null, job.getCreatedAt(),
+                    job.getStartedAt(), job.getCompletedAt(), job.getExpiresAt());
+        }
         JsonNode results = null;
         if (job.getResultJson() != null) {
             try { results = objectMapper.readTree(job.getResultJson()); }

@@ -64,7 +64,6 @@ public class LibraryApiService {
                     .bodyToMono(String.class)
                     .block();
 
-            log.debug("도서관 정보나루 응답 (앞 500자): {}", responseBody != null ? responseBody.substring(0, Math.min(500, responseBody.length())) : "null");
             return parseBooks(responseBody);
         } catch (Exception e) {
             log.error("도서관 정보나루 API 호출 실패 [age={}]: {} - {}", ageGroup, e.getClass().getSimpleName(), e.getMessage());
@@ -92,7 +91,7 @@ public class LibraryApiService {
         JsonNode docs = root.path("response").path("docs");
 
         if (docs.isMissingNode() || docs.isNull()) {
-            log.warn("도서관 정보나루 응답에 docs 필드 없음. 전체 응답: {}", json);
+            log.warn("도서관 정보나루 응답에 docs 필드 없음");
             return Collections.emptyList();
         }
 
@@ -117,7 +116,7 @@ public class LibraryApiService {
             return books;
         }
 
-        log.warn("도서관 정보나루 응답 구조 예상과 다름. docs: {}", docs);
+        log.warn("도서관 정보나루 응답 구조 예상과 다름");
         return Collections.emptyList();
     }
 }

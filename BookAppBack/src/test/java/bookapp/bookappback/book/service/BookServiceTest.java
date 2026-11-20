@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Collections;
 import java.util.List;
@@ -28,9 +27,6 @@ class BookServiceTest {
 
     @Mock
     private KakaoSearchCacheService kakaoSearchCacheService;
-
-    @Mock
-    private WebClient.Builder webClientBuilder;
 
     @Mock
     private UserBookStatusRepository userBookStatusRepository;
@@ -89,10 +85,7 @@ class BookServiceTest {
 
     @Test
     void savesKakaoBookUnderValidatedIsbnInsteadOfInvalidThirteenDigitValue() {
-        BookService service = spy(new BookService(
-                bookRepository, kakaoSearchCacheService, webClientBuilder,
-                userBookStatusRepository, "http://localhost:8000", "test-token"));
-        doNothing().when(service).submitCorpusIngestion(any(Book.class));
+        BookService service = spy(bookService);
         when(bookRepository.findByIsbn13("9781127241347")).thenReturn(Optional.empty());
         when(bookRepository.save(any(Book.class))).thenAnswer(invocation -> invocation.getArgument(0));
         KakaoBookDto dto = new KakaoBookDto();
@@ -104,14 +97,12 @@ class BookServiceTest {
         assertEquals("9781127241347", saved.getIsbn13());
         verify(bookRepository).findByIsbn13("9781127241347");
         verify(bookRepository, never()).findByIsbn13("1400000309490");
-        verify(service).submitCorpusIngestion(saved);
+        assertFalse(saved.isEmbedded());
     }
 
     @Test
     void findsCanonicalIsbn13ThroughKakaoIsbn10AndChecksTheReturnedBook() {
-        BookService service = spy(new BookService(
-                bookRepository, kakaoSearchCacheService, webClientBuilder,
-                userBookStatusRepository, "http://localhost:8000", "test-token"));
+        BookService service = spy(bookService);
         KakaoBookDto wrong = new KakaoBookDto();
         wrong.setIsbn("9780306406157");
         KakaoBookDto matching = new KakaoBookDto();

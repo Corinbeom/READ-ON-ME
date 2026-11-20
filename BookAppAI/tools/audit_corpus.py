@@ -8,6 +8,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.services.corpus_quality import preflight_candidate, validate_classification
@@ -18,6 +19,7 @@ CLEAR_REJECT_REASONS = {"MULTI_BOOK_SET", "EDUCATIONAL_MATERIAL", "PERIODICAL"}
 
 
 async def audit(limit: int, after_id: int, output: Path, with_ai: bool, apply_ids: set[int], delay: float) -> None:
+    corpus_policy.require_verified_corpus()
     database.init_db()
     tagger = GeminiTagger() if with_ai else None
     if with_ai and not tagger.enabled:
