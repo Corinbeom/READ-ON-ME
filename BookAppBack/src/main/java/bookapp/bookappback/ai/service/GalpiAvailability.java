@@ -8,8 +8,19 @@ import org.springframework.stereotype.Component;
 public class GalpiAvailability {
     public static final String MAINTENANCE = "AI_SEARCH_MAINTENANCE";
 
+    private final AiSearchService client;
+    private final String release;
+
+    public GalpiAvailability(AiSearchService client,
+                             @org.springframework.beans.factory.annotation.Value("${galpi.reviewed-release:}") String release) {
+        this.client = client;
+        this.release = release;
+    }
+
+    public String release() { return release; }
+
     public boolean underMaintenance() {
-        return true;
+        return release.isBlank() || !client.releaseReady(release);
     }
 
     public void requireAvailable() {

@@ -24,3 +24,17 @@ async def hold_pending_jobs(db) -> None:
     await db.execute(update(BookTaggingJob).where(BookTaggingJob.status.in_(pending)).values(
         status="POLICY_HOLD", last_error_code=HOLD_REASON, updated_at=func.now(),
     ))
+
+
+# The policy registry is operator-maintained. Legacy source labels and job payloads never grant uses.
+MODEL_FIELDS = ("title", "authors", "contents")
+MODEL_USES = frozenset({"store", "display", "publish_derivative", "external_ai", "commercial"})
+EMBEDDING_USES = MODEL_USES | {"store_embedding"}
+
+
+def permits(provider, active, allowed, required):
+    if not provider or not provider.strip() or not active or not required or not required.issubset(allowed or ()):
+        return False
+    return provider.strip().upper() not in {"KAKAO", "UNKNOWN", "UNVERIFIED"} or not required.intersection(
+        {"external_ai", "store_embedding", "publish_derivative"}
+    )

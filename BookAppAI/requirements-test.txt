@@ -7,3 +7,5 @@ SQLAlchemy[asyncio]
 alembic
 pgvector
 numpy<2
+asyncpg
+psycopg2-binary

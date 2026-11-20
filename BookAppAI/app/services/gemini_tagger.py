@@ -81,6 +81,9 @@ class GeminiTagger:
         self, title: str, contents: str, authors: str
     ) -> Optional[Dict[str, Any]]:
         corpus_policy.require_verified_corpus()
+        return await self._classify(title, contents, authors)
+
+    async def _classify(self, title: str, contents: str, authors: str) -> Optional[Dict[str, Any]]:
         self.last_error_code = None
         if not self.enabled:
             self.last_error_code = "NO_API_KEY"

@@ -31,6 +31,6 @@ public interface AiSearchJobRepository extends JpaRepository<AiSearchJob, UUID> 
     int failForMaintenance(@Param("code") String code, @Param("now") LocalDateTime now);
 
     @Modifying
-    @Query("DELETE FROM AiSearchJob j WHERE j.expiresAt <= :now")
-    int deleteExpired(@Param("now") LocalDateTime now);
+    @Query("DELETE FROM AiSearchJob j WHERE j.expiresAt <= :now AND j.corpusRelease = :release")
+    int deleteExpired(@Param("release") String release, @Param("now") LocalDateTime now);
 }

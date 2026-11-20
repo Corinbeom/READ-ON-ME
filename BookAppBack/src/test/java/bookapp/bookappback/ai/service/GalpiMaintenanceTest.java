@@ -57,6 +57,7 @@ class GalpiMaintenanceTest {
     @Autowired ObjectMapper mapper;
     @Autowired UserRepository users;
     @Autowired BookRepository books;
+    @Autowired bookapp.bookappback.book.service.BookService catalog;
     @Autowired AiSearchJobRepository jobs;
     @Autowired AiSearchJobService worker;
     @Autowired PopularNaruBookRepository rankings;
@@ -75,10 +76,18 @@ class GalpiMaintenanceTest {
         doc.setTitle("BLOCKED_KAKAO_TEST");
         when(kakao.searchBookByIsbn(isbn)).thenReturn(new KakaoBookSearchResponse(null, List.of(doc)));
         var detail = mvc.perform(get("/api/books/detail/" + isbn)).andExpect(status().isOk()).andReturn();
-        long id = mapper.readTree(detail.getResponse().getContentAsByteArray()).get("id").asLong();
+        assertTrue(mapper.readTree(detail.getResponse().getContentAsByteArray()).path("id").isNull());
+        assertTrue(books.findByIsbn13(isbn).isEmpty());
+        mvc.perform(post("/api/library/isbn/" + isbn).with(user(principal)).param("status", "READING"))
+                .andExpect(status().isOk());
+        var identity = books.findByIsbn13(isbn).orElseThrow();
+        assertNull(identity.getTitle());
+        assertEquals("KAKAO", jdbc.queryForObject(
+                "SELECT provider FROM catalog_field_observation WHERE isbn=? AND field_name='title'", String.class, isbn));
+        long id = identity.getId();
         mvc.perform(post("/api/library/" + id).with(user(principal)).param("status", "READING"))
                 .andExpect(status().isOk());
-        mvc.perform(post("/api/books/" + id + "/review").with(user(principal)).contentType("application/json")
+        mvc.perform(post("/api/books/isbn/" + isbn + "/review").with(user(principal)).contentType("application/json")
                 .content("{\"comment\":\"읽었어요\",\"rating\":4}")).andExpect(status().isCreated());
         var oldJob = new AiSearchJob();
         oldJob.setId(UUID.randomUUID());
@@ -105,6 +114,31 @@ class GalpiMaintenanceTest {
         }
         assertFalse(books.findById(id).orElseThrow().isEmbedded());
         assertEquals(0, externalRequests.get());
+    }
+
+    @Test
+    void concurrentSelectionsResolveToTheSameIdentity() throws Exception {
+        String isbn = "9780451524935";
+        var doc = new KakaoBookDto();
+        doc.setIsbn(isbn);
+        doc.setTitle("Concurrent catalog fixture");
+        when(kakao.searchBookByIsbn(isbn)).thenReturn(new KakaoBookSearchResponse(null, List.of(doc)));
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.Callable<Long> select = () -> {
+            start.await();
+            return catalog.resolveSelectedIsbn(isbn);
+        };
+        try {
+            var first = pool.submit(select);
+            var second = pool.submit(select);
+            start.countDown();
+            assertEquals(first.get(10, java.util.concurrent.TimeUnit.SECONDS),
+                         second.get(10, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM books WHERE isbn13=?", Integer.class, isbn));
+        } finally {
+            pool.shutdownNow();
+        }
     }
 
     @Test

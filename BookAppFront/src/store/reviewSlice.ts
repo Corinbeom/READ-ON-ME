@@ -31,11 +31,11 @@ export const fetchReviewsForBook = createAsyncThunk(
 export const addReviewForBook = createAsyncThunk(
   'reviews/addForBook',
   async (
-    { bookId, comment, rating }: { bookId: number; comment: string; rating: number },
+    { bookId, isbn, comment, rating }: { bookId: number | null; isbn: string; comment: string; rating: number },
     { rejectWithValue }
   ) => {
     try {
-      const response = await reviewApi.createReview(bookId, { comment, rating });
+      const response = await (bookId == null ? reviewApi.createReviewByIsbn(isbn, { comment, rating }) : reviewApi.createReview(bookId, { comment, rating }));
       return response.data.data; // Returns reviewId, but we may need to refetch
     } catch (error: any) {
       return rejectWithValue(error.response?.data);

@@ -25,6 +25,12 @@ public class UserBookStatusController {
     @Value("${internal.api.token:}")
     private String internalApiToken;
 
+    @PostMapping("/isbn/{isbn}")
+    public ResponseEntity<Long> updateByIsbn(@AuthenticationPrincipal UserDetailsImpl principal,
+            @PathVariable String isbn, @RequestParam ReadingStatus status) {
+        return ResponseEntity.ok(userBookStatusService.updateStatusByIsbn(principal.getUser().getId(), isbn, status));
+    }
+
     @PostMapping("/{bookId}")
     public ResponseEntity<UserBookStatus> updateBookStatus(
             @AuthenticationPrincipal UserDetailsImpl userDetails,

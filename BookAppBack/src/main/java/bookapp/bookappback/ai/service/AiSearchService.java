@@ -20,6 +20,8 @@ public class AiSearchService {
 
     private final WebClient webClient;
     private final String internalToken;
+    @Value("${galpi.reviewed-release:}")
+    private String release = "";
 
     public AiSearchService(
             WebClient.Builder webClientBuilder,
@@ -35,6 +37,24 @@ public class AiSearchService {
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
         this.internalToken = internalToken;
+    }
+
+    public boolean releaseReady(String expected) {
+        return Boolean.TRUE.equals(webClient.get().uri("/api/ai/reviewed-release")
+                .header("X-Internal-Token", internalToken).retrieve()
+                .bodyToMono(com.fasterxml.jackson.databind.JsonNode.class)
+                .map(node -> expected.equals(node.path("release").asText()))
+                .timeout(Duration.ofSeconds(3)).onErrorReturn(false).block());
+    }
+
+    public bookapp.bookappback.book.entity.Book reviewedDetail(String isbn, String release) {
+        if (release.isBlank()) return null;
+        return webClient.get().uri("/api/ai/reviewed-books/{isbn}", isbn)
+                .header("X-Internal-Token", internalToken)
+                .header("X-Reviewed-Release", release).retrieve()
+                .bodyToMono(bookapp.bookappback.book.entity.Book.class)
+                .filter(book -> isbn.equals(book.getIsbn13()) && book.getTitle() != null)
+                .timeout(Duration.ofSeconds(3)).onErrorResume(error -> Mono.empty()).block();
     }
 
     public Mono<List<?>> search(String query) {
@@ -53,6 +73,7 @@ public class AiSearchService {
                             headers.set("X-Internal-Token", internalToken);
                         }
                         headers.set("X-Request-ID", requestId);
+                        headers.set("X-Reviewed-Release", release);
                     })
                     .bodyValue(new AiSearchRequestDto(query))
                     .retrieve()

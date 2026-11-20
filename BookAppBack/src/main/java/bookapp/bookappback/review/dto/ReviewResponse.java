@@ -22,25 +22,15 @@ public class ReviewResponse {
     private BookDto book; // Added book information
 
     public ReviewResponse(BookReview bookReview) {
-        this.id = bookReview.getId();
-        this.comment = bookReview.getComment();
-        this.rating = bookReview.getRating();
-        this.author = bookReview.getUser().getNickname();
-        this.authorId = bookReview.getUser().getId();
-        this.createdAt = bookReview.getCreatedAt();
-        this.likeCount = 0; // 기본값
-        this.isLikedByCurrentUser = false; // 기본값
-        this.book = new BookDto( // Map Book entity to BookDto
-                bookReview.getBook().getId(),
-                bookReview.getBook().getTitle(),
-                bookReview.getBook().getAuthors(),
-                bookReview.getBook().getPublisher(),
-                bookReview.getBook().getThumbnail(),
-                bookReview.getBook().getIsbn13()
-        );
+        this(bookReview, 0, false, bookReview.getBook());
     }
 
     public ReviewResponse(BookReview bookReview, long likeCount, boolean isLikedByCurrentUser) {
+        this(bookReview, likeCount, isLikedByCurrentUser, bookReview.getBook());
+    }
+
+    public ReviewResponse(BookReview bookReview, long likeCount, boolean isLikedByCurrentUser,
+                          bookapp.bookappback.book.entity.Book display) {
         this.id = bookReview.getId();
         this.comment = bookReview.getComment();
         this.rating = bookReview.getRating();
@@ -50,12 +40,12 @@ public class ReviewResponse {
         this.likeCount = likeCount;
         this.isLikedByCurrentUser = isLikedByCurrentUser;
         this.book = new BookDto( // Map Book entity to BookDto
-                bookReview.getBook().getId(),
-                bookReview.getBook().getTitle(),
-                bookReview.getBook().getAuthors(),
-                bookReview.getBook().getPublisher(),
-                bookReview.getBook().getThumbnail(),
-                bookReview.getBook().getIsbn13()
+                display.getId(),
+                display.getTitle(),
+                display.getAuthors(),
+                display.getPublisher(),
+                display.getThumbnail(),
+                display.getIsbn13()
         );
     }
 }

@@ -1,12 +1,13 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
+import { bookApi } from '@/src/services/api';
 import AppButton from '@/components/ui/AppButton';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import type { AppDispatch, RootState } from '@/src/store';
-import { emptyLibraryStatus, fetchLibraryStatus, libraryStatusKey, readingStatusLabels, saveLibraryStatus } from '@/src/store/libraryStatusSlice';
+import { emptyLibraryStatus, fetchLibraryStatus, libraryStatusKey, readingStatusLabels, saveLibraryStatus, selectedByIsbn } from '@/src/store/libraryStatusSlice';
 import { ReadingStatus } from '@/src/types/readingStatus';
 import { getBookLibraryStatusStyles } from './styles/BookLibraryStatus.styles';
 
@@ -20,6 +21,36 @@ export function GuestBookLibraryStatus({ isbn }: { isbn: string }) {
       <Text style={styles.guestHint}>로그인 후 이 책을 서재에 담을 수 있어요.</Text>
     </View>
   );
+}
+
+export function NewBookLibraryStatus({ isbn, userId, onSaved }: { isbn: string; userId: number; onSaved: (id: number) => void }) {
+  const styles = getBookLibraryStatusStyles(useColorScheme() ?? 'light');
+  const dispatch = useDispatch<AppDispatch>();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(false);
+  const save = async (status: ReadingStatus) => {
+    setSaving(true);
+    setError(false);
+    try {
+      const { data } = await bookApi.updateBookStatusByIsbn(isbn, status);
+      dispatch(selectedByIsbn({ userId, bookId: data, status }));
+      onSaved(data);
+    } catch {
+      setError(true);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return <View style={styles.section}>
+    <Text style={styles.heading}>내 서재</Text>
+    <View style={styles.options}>
+      {Object.values(ReadingStatus).map(status => (
+        <AppButton key={status} title={readingStatusLabels[status]} compact variant="ghost"
+          disabled={saving} onPress={() => void save(status)} />
+      ))}
+    </View>
+    {error && <Text role="alert" style={styles.error}>서재 저장에 실패했어요. 다시 선택해주세요.</Text>}
+  </View>;
 }
 
 export default function BookLibraryStatus({ bookId, userId }: { bookId: number; userId: number }) {

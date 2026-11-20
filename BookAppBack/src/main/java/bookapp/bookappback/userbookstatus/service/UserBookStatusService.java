@@ -1,6 +1,7 @@
 package bookapp.bookappback.userbookstatus.service;
 
 import bookapp.bookappback.book.entity.Book;
+import bookapp.bookappback.book.service.BookService;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
@@ -28,6 +29,12 @@ public class UserBookStatusService {
     private final UserBookStatusRepository userBookStatusRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
+    private final BookService bookService;
+
+    @Transactional
+    public Long updateStatusByIsbn(Long userId, String isbn, ReadingStatus status) {
+        return updateStatus(userId, bookService.resolveSelectedIsbn(isbn), status).getBook().getId();
+    }
 
     public UserBookStatus updateStatus(Long userId, Long bookId, ReadingStatus status) {
         User user = userRepository.findById(userId)
@@ -75,7 +82,8 @@ public class UserBookStatusService {
         return new UserLibraryResponse(toReadBooks, readingBooks, completedBooks);
     }
 
-    private BookDto convertToDto(Book book) {
+    private BookDto convertToDto(Book stored) {
+        Book book = stored.getTitle() == null ? bookService.forDisplay(stored) : stored;
         return new BookDto(
                 book.getId(),
                 book.getTitle(),

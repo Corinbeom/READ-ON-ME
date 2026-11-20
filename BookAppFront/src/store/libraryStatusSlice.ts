@@ -78,6 +78,12 @@ export const removeLibraryBook = createAsyncThunk<void, LibraryStatusTarget, { s
 const libraryStatusSlice = createSlice({
   name: 'libraryStatus', initialState,
   reducers: {
+    selectedByIsbn: (state, action: PayloadAction<LibraryStatusTarget & { status: ReadingStatus }>) => {
+      state.entries[libraryStatusKey(action.payload)] = {
+        ...emptyLibraryStatus, loaded: true, saved: true, status: action.payload.status,
+      };
+      state.revision++;
+    },
     rememberShelfStatus: (state, action: PayloadAction<LibraryStatusTarget & { status: ReadingStatus }>) => {
       const key = libraryStatusKey(action.payload);
       const entry = state.entries[key];
@@ -135,5 +141,5 @@ const libraryStatusSlice = createSlice({
     .addMatcher((action) => action.type === 'auth/logout' || action.type === 'auth/signIn/pending', () => initialState),
 });
 
-export const { rememberShelfStatus } = libraryStatusSlice.actions;
+export const { rememberShelfStatus, selectedByIsbn } = libraryStatusSlice.actions;
 export default libraryStatusSlice.reducer;

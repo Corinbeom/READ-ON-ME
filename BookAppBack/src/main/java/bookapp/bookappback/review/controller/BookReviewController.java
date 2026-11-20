@@ -23,6 +23,15 @@ public class BookReviewController {
 
     private final BookReviewService bookReviewService;
 
+    @PostMapping("/books/isbn/{isbn}/review")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Long>> createByIsbn(@PathVariable String isbn, @RequestBody ReviewRequest request,
+                                                         @AuthenticationPrincipal UserDetailsImpl principal) {
+        Long id = bookReviewService.createReviewByIsbn(isbn, request, principal.getUser().getId());
+        return ResponseEntity.created(URI.create("/api/book/" + id + "/review"))
+                .body(new ApiResponse<>(true, "리뷰가 성공적으로 등록되었습니다.", id));
+    }
+
     @PostMapping("/books/{bookId}/review") // Updated path
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ApiResponse<Long>> createReview(

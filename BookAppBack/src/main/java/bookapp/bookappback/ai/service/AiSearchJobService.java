@@ -64,6 +64,7 @@ public class AiSearchJobService {
                 var now = LocalDateTime.now();
                 job.setId(UUID.randomUUID());
                 job.setUserId(userId);
+                job.setCorpusRelease(availability.release());
                 job.setIdempotencyKey(finalKey);
                 job.setQuery(query);
                 job.setStatus("QUEUED");
@@ -101,6 +102,7 @@ public class AiSearchJobService {
     public void recover() {
         if (availability.underMaintenance()) {
             transactions.executeWithoutResult(tx -> repository.failForMaintenance(GalpiAvailability.MAINTENANCE, LocalDateTime.now()));
+            ready = availability.release() != null && !availability.release().isBlank();
             return;
         }
         transactions.executeWithoutResult(tx -> repository.failInterrupted(LocalDateTime.now()));
@@ -109,7 +111,7 @@ public class AiSearchJobService {
 
     @Scheduled(fixedDelay = 1000)
     public void dispatch() {
-        if (availability.underMaintenance() || !ready || !dispatchEnabled) return;
+        if (!ready || !dispatchEnabled || !hasQueuedJobs() || availability.underMaintenance()) return;
         while (capacity.tryAcquire()) {
             AiSearchJob job;
             try {
@@ -131,6 +133,10 @@ public class AiSearchJobService {
                 return;
             }
             UUID jobId = job.getId();
+            if (!java.util.Objects.equals(availability.release(), job.getCorpusRelease())) {
+                finish(jobId, null, new IllegalStateException(GalpiAvailability.MAINTENANCE));
+                continue;
+            }
             try {
                 searchService.searchWithOutcome(job.getQuery(), jobId.toString())
                         .publishOn(Schedulers.boundedElastic())
@@ -184,11 +190,11 @@ public class AiSearchJobService {
 
     @Scheduled(fixedDelay = 3600000)
     public void cleanup() {
-        if (ready) transactions.executeWithoutResult(tx -> repository.deleteExpired(LocalDateTime.now()));
+        if (ready) transactions.executeWithoutResult(tx -> repository.deleteExpired(availability.release(), LocalDateTime.now()));
     }
 
     private AiSearchJobResponse toResponse(AiSearchJob job) {
-        if (availability.underMaintenance()) {
+        if (!java.util.Objects.equals(availability.release(), job.getCorpusRelease()) || availability.underMaintenance()) {
             return new AiSearchJobResponse(job.getId(), job.getQuery(), "FAILED", null,
                     GalpiAvailability.MAINTENANCE, null, null, null, job.getCreatedAt(),
                     job.getStartedAt(), job.getCompletedAt(), job.getExpiresAt());

@@ -34,7 +34,6 @@ public class Book {
     @Column(name = "isbn10")
     private String isbn10;
 
-    @Column(nullable = false)
     private String title;
 
     @Column(name = "group_title")
