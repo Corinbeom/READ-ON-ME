@@ -10,6 +10,8 @@ import bookapp.bookappback.user.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -17,6 +19,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import reactor.core.publisher.Mono;
 import reactor.core.Disposable;
 
@@ -34,6 +37,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import org.springframework.http.MediaType;
 
 @SpringBootTest
@@ -42,6 +46,7 @@ import org.springframework.http.MediaType;
 class AiSearchJobServiceTest {
     @Autowired AiSearchJobService service;
     @Autowired AiSearchJobRepository repository;
+    @Autowired AiSearchCapacity capacity;
     @MockBean AiSearchService searchService;
     @MockBean org.springframework.data.redis.core.StringRedisTemplate rateLimitRedis;
     @Autowired MockMvc mvc;
@@ -176,6 +181,43 @@ class AiSearchJobServiceTest {
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/ai/jobs/recent").with(user(owner)))
                 .andExpect(status().isOk());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void terminalJobSignalsReachOnlyTheOwnerStreams(boolean successful) throws Exception {
+        var ownerStream = openNotificationStream(1L);
+        var otherOwnerStream = openNotificationStream(1L);
+        var strangerStream = openNotificationStream(2L);
+        try {
+            assertTrue(ownerStream.getResponse().getContentAsString().contains("\"aiSearchCompletion\":true"));
+            var job = service.submit(1L, "추천을 완료할 책", "completion-signal");
+            assertTrue(capacity.tryAcquire());
+            var result = successful ? new AiSearchOutcome(List.of("book"), "MODEL", "NONE", "NONE") : null;
+            var error = successful ? null : new TimeoutException("slow");
+            ReflectionTestUtils.invokeMethod(service, "finish", job.id(), result, error);
+
+            var done = service.get(1L, job.id());
+            assertEquals(successful ? "SUCCEEDED" : "FAILED", done.status());
+            assertNotNull(done.completedAt());
+            for (var stream : List.of(ownerStream, otherOwnerStream)) {
+                var events = stream.getResponse().getContentAsString();
+                assertTrue(events.contains("event:ai-search-finished"));
+                assertTrue(events.contains("data:" + job.id()));
+            }
+            assertFalse(strangerStream.getResponse().getContentAsString().contains(job.id().toString()));
+        } finally {
+            for (var stream : List.of(ownerStream, otherOwnerStream, strangerStream)) {
+                stream.getRequest().getAsyncContext().complete();
+            }
+        }
+    }
+
+    private MvcResult openNotificationStream(Long userId) throws Exception {
+        return mvc.perform(get("/api/notifications/stream").accept(MediaType.TEXT_EVENT_STREAM).with(user(principal(userId))))
+                .andExpect(status().isOk())
+                .andExpect(request().asyncStarted())
+                .andReturn();
     }
 
     @Test

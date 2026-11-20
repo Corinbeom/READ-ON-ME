@@ -9,6 +9,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { isAxiosError } from 'axios';
 import {
   ActivityIndicator,
+  AppState,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -30,9 +31,12 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { aiJobApi, type AiSearchJob } from '@/src/services/api';
 import type { RootState } from '@/src/store';
 import { AI_SEARCH_EXAMPLES } from '@/src/constants/aiSearchExamples';
+import { watchAiJob } from '@/src/utils/aiJobStatusWatcher';
 import { normalizeAiPrompt, resolveAiSearchEntry } from '@/src/utils/aiSearchEntry';
 
 const STORAGE_PREFIX = 'ai-book-selection-job';
+const STATUS_POLL_INTERVAL_MS = 3000;
+const COMPLETION_SIGNAL_CHECK_INTERVAL_MS = 6000;
 type SelectionStep = 'results' | 'compare' | 'selected';
 
 const isPending = (job: AiSearchJob | null) => job?.status === 'QUEUED' || job?.status === 'RUNNING';
@@ -72,8 +76,11 @@ export default function AiBookSelectionScreen() {
   const [selectedIsbns, setSelectedIsbns] = useState<string[]>([]);
   const [chosenIsbn, setChosenIsbn] = useState<string | null>(null);
   const [step, setStep] = useState<SelectionStep>('results');
-  const jobId = job?.id;
-  const jobStatus = job?.status;
+  const pendingJobId = isAuthenticated && isPending(job) ? job?.id : undefined;
+  const aiSearchStreamReady = useSelector((state: RootState) => state.notifications.aiSearchStreamReady);
+  const completionSignaled = useSelector((state: RootState) =>
+    !!pendingJobId && state.notifications.completedAiSearchIds.includes(pendingJobId),
+  );
 
   useEffect(() => {
     if (submittedEntryKey.current && submittedEntryKey.current === storageKey && isAuthenticated && !entryPrompt) {
@@ -126,28 +133,31 @@ export default function AiBookSelectionScreen() {
   }, [isAuthenticated, storageKey, restoreAttempt, entryPrompt]);
 
   useEffect(() => {
-    if (!isFocused || !jobId || (jobStatus !== 'QUEUED' && jobStatus !== 'RUNNING')) return;
-    let active = true;
-    let inFlight = false;
-    const refresh = async () => {
-      if (inFlight) return;
-      inFlight = true;
+    if (!isFocused || !pendingJobId) return;
+    const intervalMs = aiSearchStreamReady && !completionSignaled
+      ? COMPLETION_SIGNAL_CHECK_INTERVAL_MS
+      : STATUS_POLL_INTERVAL_MS;
+    const watcher = watchAiJob(async (signal) => {
       try {
-        const response = await aiJobApi.get(jobId);
-        if (active) {
-          setJob(response.data.data);
-          setErrorText('');
-        }
+        const response = await aiJobApi.get(pendingJobId, signal);
+        if (signal.aborted) return false;
+        const current = response.data.data;
+        setJob(current);
+        setErrorText('');
+        return isPending(current);
       } catch {
-        if (active) setErrorText('검색 상태를 확인하지 못했어요. 연결을 확인해 주세요.');
-      } finally {
-        inFlight = false;
+        if (!signal.aborted) setErrorText('검색 상태를 확인하지 못했어요. 연결을 확인해 주세요.');
+        return true;
       }
+    }, intervalMs);
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void watcher.checkNow();
+    });
+    return () => {
+      appState?.remove();
+      watcher.stop();
     };
-    void refresh();
-    const timer = setInterval(() => { void refresh(); }, 3000);
-    return () => { active = false; clearInterval(timer); };
-  }, [isFocused, jobId, jobStatus]);
+  }, [aiSearchStreamReady, completionSignaled, isFocused, pendingJobId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
