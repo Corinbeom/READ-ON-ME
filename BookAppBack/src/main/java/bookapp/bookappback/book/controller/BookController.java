@@ -5,6 +5,7 @@ import bookapp.bookappback.book.dto.LibraryBookDto;
 import bookapp.bookappback.book.entity.Book;
 import bookapp.bookappback.book.repository.PopularNaruBookRepository;
 import bookapp.bookappback.book.service.BookService;
+import bookapp.bookappback.book.service.LibraryApiService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Validated
 @RestController
@@ -27,9 +27,12 @@ public class BookController {
 
     private final BookService bookService;
     private final PopularNaruBookRepository popularNaruBookRepository;
+    private final LibraryApiService libraryApiService;
 
     @Autowired
-    public BookController(BookService bookService, PopularNaruBookRepository popularNaruBookRepository) {
+    public BookController(BookService bookService, PopularNaruBookRepository popularNaruBookRepository,
+                          LibraryApiService libraryApiService) {
+        this.libraryApiService = libraryApiService;
         this.bookService = bookService;
         this.popularNaruBookRepository = popularNaruBookRepository;
     }
@@ -73,11 +76,13 @@ public class BookController {
     public ResponseEntity<List<LibraryBookDto>> getPopularBooksFromLibrary(
             @RequestParam(required = false) Integer ageGroup) {
         int group = ageGroup != null ? ageGroup : 0;
-        List<LibraryBookDto> books = popularNaruBookRepository
-                .findByAgeGroupAndArchivedFalseOrderByRankingAsc(group)
-                .stream()
-                .map(e -> e.toDto())
-                .collect(Collectors.toList());
+        var ranking = popularNaruBookRepository.findByAgeGroupAndArchivedFalseOrderByRankingAsc(group);
+        if (ranking.isEmpty()) return ResponseEntity.ok(List.of());
+
+        var covers = libraryApiService.getCoverUrls(group, ranking.get(0).getFetchedAt().toLocalDate());
+        List<LibraryBookDto> books = ranking.stream()
+                .map(book -> book.toDto(book.getIsbn13() == null ? null : covers.get(book.getIsbn13())))
+                .toList();
         return ResponseEntity.ok(books);
     }
 

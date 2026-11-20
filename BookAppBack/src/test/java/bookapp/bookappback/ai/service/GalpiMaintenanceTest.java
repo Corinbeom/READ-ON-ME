@@ -4,7 +4,6 @@ import bookapp.bookappback.ai.entity.AiSearchJob;
 import bookapp.bookappback.ai.repository.AiSearchJobRepository;
 import bookapp.bookappback.book.dto.KakaoBookDto;
 import bookapp.bookappback.book.dto.KakaoBookSearchResponse;
-import bookapp.bookappback.book.dto.LibraryBookDto;
 import bookapp.bookappback.book.entity.PopularNaruBook;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.book.repository.PopularNaruBookRepository;
@@ -142,16 +141,21 @@ class GalpiMaintenanceTest {
     }
 
     @Test
-    void rankingsKeepLegacyCoverForAuditAndNeverSerializeIt() throws Exception {
+    void rankingsShowOnlyTheCoverMatchedToTheCurrentEdition() throws Exception {
         var legacy = PopularNaruBook.builder().ranking(1).ageGroup(30).fetchedAt(LocalDateTime.now())
                 .isbn13("9780306406157").loanCount("12").build();
         rankings.saveAndFlush(legacy);
         String marker = "BLOCKED_NARU_COVER";
         jdbc.update("UPDATE popular_naru_books SET book_image_url = ? WHERE id = ?", marker, legacy.getId());
-        var dto = mapper.readValue("{\"bookImageURL\":\"BLOCKED_NARU_COVER\",\"loan_count\":\"12\"}", LibraryBookDto.class);
-        assertFalse(mapper.writeValueAsString(dto).contains(marker));
+        String currentCover = "https://example.org/current-cover.jpg";
+        when(naru.getCoverUrls(30, legacy.getFetchedAt().toLocalDate()))
+                .thenReturn(java.util.Map.of(legacy.getIsbn13(), currentCover));
         mvc.perform(get("/api/books/popular/naru").param("ageGroup", "30"))
                 .andExpect(jsonPath("$[0].source").value("도서관 정보나루"))
+                .andExpect(jsonPath("$[0].loan_count").value("12"))
+                .andExpect(jsonPath("$[0].bookImageURL").value(currentCover));
+        when(naru.getCoverUrls(30, legacy.getFetchedAt().toLocalDate())).thenReturn(java.util.Map.of());
+        mvc.perform(get("/api/books/popular/naru").param("ageGroup", "30"))
                 .andExpect(jsonPath("$[0].loan_count").value("12"))
                 .andExpect(jsonPath("$[0].bookImageURL").doesNotExist());
         rankings.replaceRanking(30, List.of(PopularNaruBook.builder().ranking(1).ageGroup(30)
