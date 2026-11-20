@@ -112,7 +112,7 @@ async def index_reviewed(db, isbn):
     await derived(db, isbn, EMBEDDING_USES, "embedding", embedding_backend.GEMINI_EMBEDDING_MODEL, embed)
 
 
-async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY"):
+async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY", checked_form=False):
     """All model inputs are reconstructed inside this transaction, including fallback candidates."""
     from app.corpus_policy import MODEL_USES
     from app.services import reranker
@@ -124,7 +124,8 @@ async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY"):
         fields[isbn], versions[isbn] = await read_inputs(db, isbn, MODEL_USES)
     refs = {f"B{i}": isbn for i, isbn in enumerate(dict.fromkeys(isbns), 1)}
     candidates = [{"isbn": ref, **fields[isbn]} for ref, isbn in refs.items()]
-    results = await reranker._rank_candidates(query, candidates, requested_form=requested_form, outcome=outcome)
+    results = await reranker._rank_candidates(query, candidates, requested_form=requested_form, outcome=outcome,
+                                               verified_fallback=candidates if checked_form else None)
     context = digest(json.dumps([query, list(refs.values()), versions], sort_keys=True))
     books = []
     for row in results:
@@ -156,6 +157,7 @@ async def search_reviewed(db, query, outcome=None):
     from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL
     intent = await IntentAnalyzer().analyze(query)
     named_award = re.search(r"([가-힣A-Za-z·]{2,}(?:문학상|도서상|작품상|소설상))", query)
+    award_request = named_award or re.search(r"(문학상|도서상|작품상|소설상)(?:을|를)?\s*(받|수상)|수상작", query)
     practical = intent.requested_form == "PRACTICAL" or (
         intent.requested_form != "STORY" and (intent.domain in {"비즈니스", "금융", "심리", "자기계발"} or "저축" in query)
     )
@@ -174,9 +176,13 @@ async def search_reviewed(db, query, outcome=None):
                "tag": GEMINI_DEFAULT_MODEL})).mappings().one_or_none()
         if artifacts is None:
             continue
+        if award_request and not re.search(r"(상.{0,25}(받|수상)|수상작)", fields["contents"]):
+            continue
         if named_award and named_award.group(1) not in fields["contents"]:
             continue
         if practical and artifacts["tags"].get("book_type") not in {"NONFICTION", "PRACTICAL", "EDUCATIONAL"}:
+            continue
+        if intent.requested_form == "STORY" and artifacts["tags"].get("book_type") != "STORY":
             continue
         vectors.append((isbn, fields, artifacts["vector"]))
     if intent.reference_author:
@@ -186,8 +192,14 @@ async def search_reviewed(db, query, outcome=None):
         qv = [sum(values)/len(anchors) for values in zip(*anchors)]
         vectors = [item for item in vectors if item[1]["authors"] != intent.reference_author]
     else:
-        if intent.focus_author:
-            vectors = [item for item in vectors if item[1]["authors"] == intent.focus_author]
+        author = intent.focus_author
+        for _, fields, _ in vectors:
+            name = fields["authors"]
+            if query.startswith((name + " 작가가 쓴", name + " 작가가 지은")):
+                author = name
+                break
+        if author:
+            vectors = [item for item in vectors if item[1]["authors"] == author]
         if not vectors:
             return []
         qv = await embedding_backend._embed(query, "RETRIEVAL_QUERY")
@@ -195,4 +207,4 @@ async def search_reviewed(db, query, outcome=None):
     candidates = [{"isbn": isbn, **fields} for isbn, fields, _ in vectors]
     selected = exclude_comparison_work(query, candidates)[:10]
     return await rank_reviewed(db, query, [book["isbn"] for book in selected], outcome,
-                               "PRACTICAL" if practical else intent.requested_form)
+                               "PRACTICAL" if practical else intent.requested_form, checked_form=True)

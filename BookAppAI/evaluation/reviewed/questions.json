@@ -1,0 +1,102 @@
+[
+  {
+    "query": "SF 소설 추천",
+    "expect_empty": false,
+    "rubric": "SF 서사 작품임이 작품 자체의 제목이나 소개에서 확인됨"
+  },
+  {
+    "query": "추리소설을 읽고 싶어. 수사 기법을 설명하는 실용서는 빼줘",
+    "expect_empty": false,
+    "rubric": "사건이나 미스터리를 다루는 추리 서사이며 수사 해설서는 제외"
+  },
+  {
+    "query": "감성적인 에세이",
+    "expect_empty": false,
+    "rubric": "에세이 형식에 서정적이거나 감정·삶을 돌아보는 내용"
+  },
+  {
+    "query": "일본 소설 말고 한국 작가가 쓴 가족 소설을 추천해줘",
+    "expect_empty": false,
+    "rubric": "한국 소설 근거와 가족 관계 중심 서사가 모두 확인됨"
+  },
+  {
+    "query": "따뜻한 이야기를 읽고 싶어",
+    "expect_empty": false,
+    "rubric": "따뜻함이나 서로 돕는 관계가 드러나는 서사"
+  },
+  {
+    "query": "어두운 분위기의 책",
+    "expect_empty": false,
+    "rubric": "암울함·불안·상실 등 분위기가 구체적으로 확인됨"
+  },
+  {
+    "query": "오래된 서점이나 도서관을 배경으로 사람들이 가까워지는 소설이 읽고 싶어",
+    "expect_empty": false,
+    "rubric": "서점·도서관 배경과 관계 변화가 확인됨. 오래되었다는 수식은 별도 확인"
+  },
+  {
+    "query": "상실을 겪은 뒤 일상을 회복해 가는 이야기가 읽고 싶어",
+    "expect_empty": false,
+    "rubric": "상실과 이후 회복을 함께 다루는 서사"
+  },
+  {
+    "query": "김영하 작가의 소설을 추천해줘",
+    "expect_empty": false,
+    "rubric": "정확한 저자 및 소설 형식"
+  },
+  {
+    "query": "조지 오웰 작가가 쓴 책과 유사한 분위기의 책을 추천해줘",
+    "expect_empty": false,
+    "rubric": "다른 작가의 사회 통제·감시 등 오웰과 연결되는 서사"
+  },
+  {
+    "query": "한강 작가가 쓴 소설을 읽고 싶어",
+    "expect_empty": false,
+    "rubric": "정확한 저자 및 소설 형식"
+  },
+  {
+    "query": "『1984』처럼 감시 사회를 그린 소설을 골라줘. 1984 자체는 이미 읽었어",
+    "expect_empty": false,
+    "rubric": "기준 작품 또는 다른 판본 제외, 감시나 사회 통제와 연결되는 소설"
+  },
+  {
+    "query": "동기부여를 얻을 수 있는 자기계발책을 추천해줘",
+    "expect_empty": false,
+    "rubric": "자기계발 형식과 동기·행동을 북돋는 주제"
+  },
+  {
+    "query": "창업 입문자를 위한 책",
+    "expect_empty": false,
+    "rubric": "초보 창업자용 실용적 내용"
+  },
+  {
+    "query": "월급을 받기 시작한 사회초년생이 예산과 저축을 배우기 좋은 책",
+    "expect_empty": false,
+    "rubric": "초보자 눈높이와 예산 관리·저축 방법"
+  },
+  {
+    "query": "심리학을 처음 접하는 일반인이 사례로 배울 수 있는 책을 추천해줘",
+    "expect_empty": false,
+    "rubric": "비전문가 입문용 심리학 및 사례 활용"
+  },
+  {
+    "query": "판타지 소설 중에서 청소년 주인공이 성장하는 이야기를 추천해줘",
+    "expect_empty": false,
+    "rubric": "판타지·청소년 주인공·성장 서사"
+  },
+  {
+    "query": "한국 소설 중 문학상을 받은 작품을 골라줘",
+    "expect_empty": false,
+    "rubric": "한국 소설과 작품 자체의 문학상 수상"
+  },
+  {
+    "query": "달빛운하유리문학상 수상작을 추천해줘",
+    "expect_empty": true,
+    "rubric": "실험용 가상 상. 코퍼스에 근거가 없을 때 빈 결과 기대"
+  },
+  {
+    "query": "작가 달빛운하유리별의 책과 비슷한 소설을 추천해줘",
+    "expect_empty": true,
+    "rubric": "실험용 가상 작가. 기준 작가가 없을 때 빈 결과 기대"
+  }
+]

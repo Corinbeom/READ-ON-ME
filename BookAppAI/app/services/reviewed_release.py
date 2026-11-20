@@ -50,8 +50,10 @@ def configured_release():
 
 async def require_release(db, release):
     runs = (await db.execute(text("""
-        SELECT count(*) FROM corpus_quality_runs WHERE release=:release
-          AND first_match >= 13 AND any_match >= 15 AND controls = 2
+        SELECT count(*) FROM (
+            SELECT first_match,any_match,controls FROM corpus_quality_runs WHERE release=:release
+            ORDER BY checked_at DESC,run_id DESC LIMIT 2
+        ) recent WHERE first_match >= 13 AND any_match >= 15 AND controls = 2
     """), {"release": release})).scalar_one()
     if runs < 2:
         raise CorpusPermissionError("AI_SEARCH_MAINTENANCE")
