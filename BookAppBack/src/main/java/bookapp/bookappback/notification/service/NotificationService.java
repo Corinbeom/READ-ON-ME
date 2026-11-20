@@ -16,11 +16,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,31 +38,31 @@ public class NotificationService {
 
     public SseEmitter subscribe(Long userId) {
         SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT);
-        emitters.computeIfAbsent(userId, key -> new CopyOnWriteArrayList<>()).add(emitter);
-
         emitter.onCompletion(() -> removeEmitter(userId, emitter));
         emitter.onTimeout(() -> removeEmitter(userId, emitter));
         emitter.onError(ex -> removeEmitter(userId, emitter));
 
         try {
-            emitter.send(SseEmitter.event().name("INIT").data("connected"));
+            emitter.send(SseEmitter.event().name("INIT").data(Map.of("aiSearchCompletion", true)));
         } catch (IOException e) {
-            removeEmitter(userId, emitter);
             log.warn("Failed to send initial SSE event to user {}", userId, e);
+            emitter.completeWithError(e);
+            return emitter;
         }
 
+        emitters.compute(userId, (key, list) -> {
+            if (list == null) list = new CopyOnWriteArrayList<>();
+            list.add(emitter);
+            return list;
+        });
         return emitter;
     }
 
     private void removeEmitter(Long userId, SseEmitter emitter) {
-        List<SseEmitter> emitterList = emitters.get(userId);
-        if (emitterList == null) {
-            return;
-        }
-        emitterList.remove(emitter);
-        if (emitterList.isEmpty()) {
-            emitters.remove(userId);
-        }
+        emitters.computeIfPresent(userId, (key, list) -> {
+            list.remove(emitter);
+            return list.isEmpty() ? null : list;
+        });
     }
 
     @Transactional(readOnly = true)
@@ -116,23 +117,28 @@ public class NotificationService {
     }
 
     private void dispatch(Notification notification) {
-        List<SseEmitter> emitterList = emitters.get(notification.getReceiver().getId());
+        send(notification.getReceiver().getId(), () -> SseEmitter.event()
+                .id(String.valueOf(notification.getId()))
+                .name("notification")
+                .data(new NotificationResponse(notification)));
+    }
+
+    public void notifyAiSearchFinished(Long userId, UUID jobId) {
+        send(userId, () -> SseEmitter.event().name("ai-search-finished").data(jobId.toString()));
+    }
+
+    private void send(Long userId, Supplier<SseEmitter.SseEventBuilder> event) {
+        List<SseEmitter> emitterList = emitters.get(userId);
         if (emitterList == null || emitterList.isEmpty()) {
             return;
         }
 
-        List<SseEmitter> deadEmitters = new ArrayList<>();
         for (SseEmitter emitter : emitterList) {
             try {
-                emitter.send(SseEmitter.event()
-                        .id(String.valueOf(notification.getId()))
-                        .name("notification")
-                        .data(new NotificationResponse(notification)));
-            } catch (IOException e) {
-                deadEmitters.add(emitter);
+                emitter.send(event.get());
+            } catch (IOException | IllegalStateException e) {
+                removeEmitter(userId, emitter);
             }
         }
-
-        deadEmitters.forEach(emitter -> removeEmitter(notification.getReceiver().getId(), emitter));
     }
 }

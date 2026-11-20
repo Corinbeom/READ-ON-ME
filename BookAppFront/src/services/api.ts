@@ -132,7 +132,7 @@ export const aiJobApi = {
   submit: (query: string, key: string) =>
     api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, { headers: { 'Idempotency-Key': key } }),
   recent: () => api.get<AiJobResponse<AiSearchJob[]>>('/api/ai/jobs/recent'),
-  get: (id: string) => api.get<AiJobResponse<AiSearchJob>>(`/api/ai/jobs/${id}`),
+  get: (id: string, signal?: AbortSignal) => api.get<AiJobResponse<AiSearchJob>>(`/api/ai/jobs/${id}`, { signal }),
   feedback: (id: string, signal: AbortSignal) =>
     api.get<AiJobResponse<RecommendationFeedback>>(`/api/ai/jobs/${id}/feedback`, { signal }),
   sendFeedback: (id: string, rating: RecommendationRating, comment: string, signal: AbortSignal) =>

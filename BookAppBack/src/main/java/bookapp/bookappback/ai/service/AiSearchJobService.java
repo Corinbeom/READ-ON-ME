@@ -5,6 +5,7 @@ import bookapp.bookappback.ai.dto.AiSearchOutcome;
 import bookapp.bookappback.ai.entity.AiSearchJob;
 import bookapp.bookappback.ai.repository.AiSearchJobRepository;
 import bookapp.bookappback.common.exception.AppException;
+import bookapp.bookappback.notification.service.NotificationService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class AiSearchJobService {
     private final AiSearchCapacity capacity;
     private final TransactionTemplate transactions;
     private final ObjectMapper objectMapper;
+    private final NotificationService notificationService;
     private final ReentrantLock admissionLock = new ReentrantLock();
     private volatile boolean ready;
     @Value("${ai.jobs.dispatch-enabled:true}")
@@ -137,8 +139,9 @@ public class AiSearchJobService {
     }
 
     private void finish(UUID id, AiSearchOutcome result, Throwable error) {
+        Long userId;
         try {
-            transactions.executeWithoutResult(tx -> {
+            userId = transactions.execute(tx -> {
                 var job = repository.findById(id).orElseThrow();
                 if (error == null) {
                     try {
@@ -157,12 +160,19 @@ public class AiSearchJobService {
                 }
                 job.setCompletedAt(LocalDateTime.now());
                 repository.save(job);
+                return job.getUserId();
             });
             if (error != null) log.warn("AI 검색 작업 실패 [{}]: {}", id, error.toString());
         } catch (Exception ex) {
             log.error("AI 검색 결과 저장 실패 [{}]", id, ex);
+            return;
         } finally {
             capacity.release();
+        }
+        try {
+            notificationService.notifyAiSearchFinished(userId, id);
+        } catch (RuntimeException ex) {
+            log.warn("AI 검색 완료 신호 전송 실패 [{}]", id, ex);
         }
     }
 

@@ -7,6 +7,8 @@ interface NotificationState {
   loading: boolean;
   error: any | null;
   unreadCount: number;
+  aiSearchStreamReady: boolean;
+  completedAiSearchIds: string[];
 }
 
 const initialState: NotificationState = {
@@ -14,6 +16,8 @@ const initialState: NotificationState = {
   loading: false,
   error: null,
   unreadCount: 0,
+  aiSearchStreamReady: false,
+  completedAiSearchIds: [],
 };
 
 export const fetchNotifications = createAsyncThunk(
@@ -63,6 +67,17 @@ const notificationSlice = createSlice({
       state.items = action.payload;
       state.unreadCount = action.payload.filter((notification) => !notification.read).length;
     },
+    setAiSearchStreamReady: (state, action: PayloadAction<boolean>) => {
+      state.aiSearchStreamReady = action.payload;
+    },
+    recordAiSearchCompletion: (state, action: PayloadAction<string>) => {
+      if (!state.completedAiSearchIds.includes(action.payload)) {
+        state.completedAiSearchIds = [action.payload, ...state.completedAiSearchIds].slice(0, 20);
+      }
+    },
+    clearAiSearchCompletions: (state) => {
+      state.completedAiSearchIds = [];
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -92,5 +107,7 @@ const notificationSlice = createSlice({
   },
 });
 
-export const { addNotification, setNotifications } = notificationSlice.actions;
+export const {
+  addNotification, setNotifications, setAiSearchStreamReady, recordAiSearchCompletion, clearAiSearchCompletions,
+} = notificationSlice.actions;
 export default notificationSlice.reducer;
