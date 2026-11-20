@@ -9,6 +9,7 @@ from pathlib import Path
 import httpx
 from sqlalchemy import select
 
+from app import corpus_policy
 from app import database
 from app.models.book_corpus import BookCorpus
 from app.services.corpus_quality import normalize_isbn
@@ -54,6 +55,7 @@ def resolve_isbn(book: BookCorpus, documents: list[dict]) -> str | None:
 
 
 async def run(ids: list[int], apply: bool, output: Path) -> None:
+    corpus_policy.require_verified_corpus()
     if not os.getenv("KAKAO_API_KEY"):
         raise RuntimeError("KAKAO_API_KEY is required")
     database.init_db()

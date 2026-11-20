@@ -82,6 +82,13 @@ Gemini 임베딩 모드에서는 `pip install -r requirements.txt`로 로컬 모
 
 - 테스트: `pytest`
 - 테스트 의존성: `pip install -r requirements-test.txt`
+갈피 점검 배포에서는 Spring이 검색 등록 전에 `503 / AI_SEARCH_MAINTENANCE`를 반환합니다. 단건·배치 수집과 재처리 도구도 차단됩니다. AI 서버는 시작 시 기존 대기·재시도·실행 중 작업을 `POLICY_HOLD`로 보류하고 모델이나 워커를 시작하지 않습니다. 일반 도서 검색과 서재·리뷰는 계속 이용할 수 있습니다.
+
+배포 시 이전 AI 워커와 실행 중인 백필 프로세스를 먼저 종료한 뒤 AI 서버와 Spring을 교체합니다. 기존 프로세스에 이미 전달된 요청에는 새 코드가 적용되지 않습니다. `GET /api/ai/availability`의 `data`가 `false`인지 확인합니다.
+
+<details>
+<summary>점검 전 동작과 실험 기록</summary>
+
 - 데이터 빌드: `POST /api/books/fetch-and-filter`에 `{"keywords":["문학"]}` 전달 → `202`와 `run_id` 반환. 소량 검증에는 `{"keywords":["에세이"],"max_pages_per_term":1,"max_new_books":5}`를 사용합니다. 두 제한값은 선택 사항이며 각각 카카오 검색어(프록시 검색어 포함)별 최대 1–5페이지(기본 5), 새로 접수할 책 최대 1–20권(기본 제한 없음)입니다. 이 상한은 추천 품질을 보장하지 않으며 카카오 결과의 앞부분만 검사합니다. 진행 상태는 `GET /api/books/ingestion-runs/{run_id}`로 확인합니다. 동시에 다른 배치를 요청하면 `409`와 실행 중인 ID를 반환합니다. 배치의 `DONE`은 카카오 후보 탐색 종료를 뜻하며, 개별 책의 처리는 응답의 `candidate_counts`로 확인합니다. 같은 ISBN도 새 배치에서는 새 키워드 기준으로 재평가할 수 있습니다. 동일 배치 작업 또는 서재 작업에 더 긴 실제 소개가 다시 들어오면 `PENDING`/`RETRY` 페이로드를 갱신하거나 `HOLD`를 재접수합니다.
 - 단일 도서 접수: `POST /api/books/embed-single` → `202`와 `job_id` 반환. `GET /api/books/ingestion-jobs/{job_id}`에서 `INDEXED`, `REJECTED`, `HOLD`, `FAILED` 등 최종 상태를 확인합니다. `202`는 코퍼스 반영 완료를 뜻하지 않습니다. 같은 ISBN이라도 카카오 배치와 사용자 서재의 검수 작업은 별도로 기록하며, 서재 도서에는 배치 검색어의 주제 유사도 필터를 적용하지 않습니다.
 - 짧은 소개 보강: AI 워커에 `LIBRARY_BIGDATA_API_KEY`를 설정하면 `SHORT_DESCRIPTION` 후보만 도서관 정보나루에서 ISBN 상세 조회합니다. 응답 ISBN이 일치하고 실제 소개가 30자 이상일 때만 처리하며, 조회 실패나 소개 부족은 `HOLD`로 남깁니다. 기존 보류 작업은 `cd BookAppAI && python -m tools.enrich_hold --job-id <ID>`로 미리 보고, 같은 명령에 `--apply`를 붙여 한 건씩 재접수합니다. 재접수 후 `GET /api/books/ingestion-jobs/{id}`에서 최종 상태를 확인합니다.
@@ -112,6 +119,8 @@ Gemini 임베딩 모드에서는 `pip install -r requirements.txt`로 로컬 모
 - 검색 품질 샘플: `python -m tools.evaluate_search --url http://127.0.0.1:8000 --limit 5` (결과는 `/tmp/readonme-search-evaluation.json`). 요청 사이 기본 간격은 6초이며 결과에 요청 ID와 응답 시간이 기록됩니다. 알려진 오추천 사례는 `--cases evaluation/quality_cases.json --limit 5`로 확인합니다.
 - 관리자 ISBN 편입: AI 워커 환경에 `LIBRARY_BIGDATA_API_KEY`를 설정한 뒤 `python -m tools.curated_corpus discover --kdc 8 --start-date 2026-01-01 --end-date 2026-10-31 --pages 1 3 5`로 정보나루 인기대출 후보를 조회하거나, `--library-keyword 한국소설 --pages 1 3`으로 도서 검색 후보를 조회합니다. 출처 URL과 ISBN을 적은 수동 목록은 `--isbn-file /tmp/candidates.json`으로 검증할 수 있습니다. 검토 결과는 `/tmp/readonme-curated-candidates.json`에 저장됩니다. `python -m tools.curated_corpus queue --manifest /tmp/readonme-curated-candidates.json --isbns <ISBN>`으로 미리 보고, 같은 명령에 `--apply`를 붙여 선택한 책만 검수 큐에 접수합니다. 짧지만 책 중심인 정보나루 소개를 사용하려면 해당 ISBN을 `--naru-isbns <ISBN>`에 지정합니다. AI 분류가 유효하면 작업은 `REVIEW_PENDING`이 되며 아직 검색 코퍼스에 들어가지 않습니다. `python -m tools.curated_corpus review --job-id <ID>`로 출처·소개·제안 태그를 확인한 뒤 `--decision approve --apply`로 승인하거나 `--decision hold --note '보류 이유' --apply`로 보류합니다. 태그를 교정해 승인하려면 `--decision approve --keyword SF --tags SF,소설,과학소설 --note '교정 근거' --apply`처럼 키워드·태그·근거를 함께 지정합니다. 승인은 임베딩을 생성하고 `ACTIVE`로 편입합니다. `QUEUED`와 `REVIEW_PENDING`은 편입 완료가 아닙니다.
 - 추천: `GET /recommendations/{userId}`
+
+</details>
 
 ### 3. React Native 앱 (`BookAppFront`)
 

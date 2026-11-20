@@ -47,6 +47,7 @@ class AiSearchJobServiceTest {
     @Autowired AiSearchJobService service;
     @Autowired AiSearchJobRepository repository;
     @Autowired AiSearchCapacity capacity;
+    @MockBean GalpiAvailability availability;
     @MockBean AiSearchService searchService;
     @MockBean org.springframework.data.redis.core.StringRedisTemplate rateLimitRedis;
     @Autowired MockMvc mvc;

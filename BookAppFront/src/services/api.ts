@@ -59,6 +59,7 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const galpiAvailabilityPath = '/api/ai/availability';
 const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
 const kakaoAuthPath = '/api/users/kakao/';
 const feedbackPath = '/api/feedback';
@@ -66,6 +67,7 @@ const operationsPath = '/api/operations';
 
 api.interceptors.request.use(async (config) => {
   const noAuthPaths = [
+    galpiAvailabilityPath,
     '/api/books/search',
     '/api/books/detail',
     readingKeywordPicksPath,
@@ -90,6 +92,7 @@ api.interceptors.request.use(async (config) => {
 // 전역 알림을 띄우지 않을 경로 (화면/슬라이스에서 직접 처리하는 엔드포인트)
 const silentPaths = [
   '/api/ai/jobs',
+  galpiAvailabilityPath,
   readingKeywordPicksPath,
   '/api/users/profile',
   '/api/users/signin',
@@ -129,6 +132,7 @@ interface AiJobResponse<T> { success: boolean; message: string; data: T }
 export type RecommendationFeedback = { rating: RecommendationRating | null; comment: string | null };
 
 export const aiJobApi = {
+  availability: (signal: AbortSignal) => api.get<AiJobResponse<boolean>>(galpiAvailabilityPath, { signal }),
   submit: (query: string, key: string) =>
     api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, { headers: { 'Idempotency-Key': key } }),
   recent: () => api.get<AiJobResponse<AiSearchJob[]>>('/api/ai/jobs/recent'),

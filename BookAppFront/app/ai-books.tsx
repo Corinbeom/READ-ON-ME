@@ -1,3 +1,4 @@
+import GalpiAvailability from '@/components/GalpiAvailability';
 import AppButton from '@/components/ui/AppButton';
 import AppTextInput from '@/components/ui/AppTextInput';
 import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
@@ -48,6 +49,10 @@ function failedMessage(job: AiSearchJob) {
 }
 
 export default function AiBookSelectionScreen() {
+  return <GalpiAvailability><BookSelection /></GalpiAvailability>;
+}
+
+function BookSelection() {
   const router = useRouter();
   const params = useLocalSearchParams<{ prompt?: string | string[] }>();
   const entryPrompt = normalizeAiPrompt(params.prompt);

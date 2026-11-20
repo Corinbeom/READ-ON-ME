@@ -27,6 +27,10 @@ public interface AiSearchJobRepository extends JpaRepository<AiSearchJob, UUID> 
     int failInterrupted(@Param("now") LocalDateTime now);
 
     @Modifying
+    @Query("UPDATE AiSearchJob j SET j.status = 'FAILED', j.errorCode = :code, j.completedAt = :now WHERE j.status IN ('QUEUED', 'RUNNING')")
+    int failForMaintenance(@Param("code") String code, @Param("now") LocalDateTime now);
+
+    @Modifying
     @Query("DELETE FROM AiSearchJob j WHERE j.expiresAt <= :now")
     int deleteExpired(@Param("now") LocalDateTime now);
 }

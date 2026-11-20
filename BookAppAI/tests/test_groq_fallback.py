@@ -6,6 +6,9 @@ import pytest
 from app.services import llm_cooldown, reranker
 
 
+pytestmark = pytest.mark.usefixtures("synthetic_model_inputs")
+
+
 BOOK = {
     "isbn": "9780000000001", "title": "느린 마음", "authors": "홍길동",
     "contents": "작은 동네에서 서로를 돌보는 사람들의 이야기를 담은 장편소설입니다.",

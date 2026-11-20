@@ -6,6 +6,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 import httpx
+from app import corpus_policy
 from app.services import llm_cooldown
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,7 @@ class GeminiTagger:
     async def classify_book(
         self, title: str, contents: str, authors: str
     ) -> Optional[Dict[str, Any]]:
+        corpus_policy.require_verified_corpus()
         self.last_error_code = None
         if not self.enabled:
             self.last_error_code = "NO_API_KEY"

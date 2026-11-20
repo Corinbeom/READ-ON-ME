@@ -9,6 +9,9 @@ from app.services.reranker import _book_evidence, _parse_selection
 from app.services.text_utils import infer_book_form, is_school_anthology, is_search_candidate
 
 
+pytestmark = pytest.mark.usefixtures("synthetic_model_inputs")
+
+
 @pytest.fixture(autouse=True)
 def reset_reranker_cooldown(monkeypatch):
     monkeypatch.setattr(llm_cooldown, "_blocked_until", 0.0)

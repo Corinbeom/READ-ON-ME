@@ -1,5 +1,6 @@
 package bookapp.bookappback.book.dto;
 
+import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -33,9 +34,14 @@ public class LibraryBookDto {
     @JsonProperty("class_nm")
     private String classNm;
 
-    @JsonProperty("bookImageURL")
-    private String bookImageUrl;
-
     @JsonProperty("loan_count")
     private String loanCount;
+
+    @JsonProperty("age_group")
+    private Integer ageGroup;
+
+    @JsonProperty("as_of")
+    private LocalDate asOf;
+
+    private String source;
 }

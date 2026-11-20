@@ -5,6 +5,7 @@ import asyncio
 
 from dotenv import load_dotenv
 
+from app import corpus_policy
 import app.database as database
 from app.models.corpus_ingestion_job import CorpusIngestionJob
 from app.services.corpus_ingestion import enqueue_book
@@ -12,6 +13,7 @@ from app.services.corpus_metadata import fetch_naru_description
 
 
 async def run(job_id: str, apply: bool) -> None:
+    corpus_policy.require_verified_corpus()
     load_dotenv()
     database.init_db()
     try:

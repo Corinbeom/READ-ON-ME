@@ -74,7 +74,7 @@ public class BookController {
             @RequestParam(required = false) Integer ageGroup) {
         int group = ageGroup != null ? ageGroup : 0;
         List<LibraryBookDto> books = popularNaruBookRepository
-                .findByAgeGroupOrderByRankingAsc(group)
+                .findByAgeGroupAndArchivedFalseOrderByRankingAsc(group)
                 .stream()
                 .map(e -> e.toDto())
                 .collect(Collectors.toList());

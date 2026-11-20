@@ -8,6 +8,7 @@ from tools import backfill_gemini_embeddings as backfill
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("synthetic_model_inputs")
 async def test_batch_backfill_preserves_document_order_and_normalizes(monkeypatch):
     monkeypatch.setenv("GEMINI_API_KEY", "test-only-key")
     original_client = httpx.AsyncClient

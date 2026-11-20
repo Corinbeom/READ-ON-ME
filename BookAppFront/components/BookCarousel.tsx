@@ -34,7 +34,8 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
 
     const bookContent = (
       <>
-        <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.bookThumbnail} resizeMode="cover" />
+        <Image source={item.thumbnail ? { uri: secureImageUri(item.thumbnail) } : require('../assets/mascot/bookmark_searching_books_light.png')} style={styles.bookThumbnail} resizeMode="cover" />
+        {item.loanRanking && <Text style={styles.bookAuthor}>{item.loanRanking.rank}위 · {item.loanRanking.count}회 대출</Text>}
         <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.bookAuthor} numberOfLines={1}>
           {Array.isArray(item.authors) ? item.authors.join(', ') : item.authors || item.publisher}

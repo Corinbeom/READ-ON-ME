@@ -10,34 +10,17 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import text
+from fastapi.responses import JSONResponse
+from app.corpus_policy import CorpusPermissionError, hold_pending_jobs
 
 from app.routers import data_builder, recommendation
-from app.services import book_ai_service
-from app.services.tagging_jobs import recover_interrupted_jobs, run_worker
-from app.services.corpus_ingestion import run_worker as run_corpus_worker
 from app.security import require_internal_token
 import app.database as _db
 from app.config import validate_prod_config
-from app.services.embedding_backend import column as embedding_column
-from .recommendation_service import get_recommendations
 
 def upgrade_database() -> None:
     config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
     command.upgrade(config, "head")
-
-
-async def verify_embedding_coverage() -> None:
-    """Fail startup rather than silently searching only part of the active corpus."""
-    vector_column = embedding_column()
-    async with _db.async_session() as db:
-        missing = (await db.execute(text(f"""
-            SELECT count(*) FROM book_corpus
-            WHERE recommendation_status IN ('ACTIVE', 'LEGACY')
-              AND {vector_column} IS NULL
-        """))).scalar_one()
-    if missing:
-        raise RuntimeError(f"{missing} searchable books lack {vector_column}; finish backfill before switching providers")
 
 
 @asynccontextmanager
@@ -45,25 +28,20 @@ async def lifespan(app: FastAPI):
     validate_prod_config()  # 먼저 검증 — DATABASE_URL 포함
     await asyncio.to_thread(upgrade_database)
     _db.init_db()           # 검증 통과 후 엔진 생성
-    worker_stop = asyncio.Event()
-    workers = []
     try:
-        await book_ai_service.init_embedding_model()
-        await verify_embedding_coverage()
-        await recover_interrupted_jobs()
-        workers = [
-            asyncio.create_task(run_worker(worker_stop)),
-            asyncio.create_task(run_corpus_worker(worker_stop)),
-        ]
+        async with _db.async_session() as db, db.begin():
+            await hold_pending_jobs(db)
         yield
     finally:
-        worker_stop.set()
-        if workers:
-            await asyncio.gather(*workers)
-        book_ai_service.shutdown_embedding_model()
         await _db.engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
+
+@app.exception_handler(CorpusPermissionError)
+async def corpus_unavailable(request, exc):
+    code = "AI_SEARCH_MAINTENANCE" if request.url.path == "/api/ai/search" else str(exc)
+    return JSONResponse(status_code=503, content={"code": code})
+
 
 # 기본 요청 타이밍 로깅
 logger = logging.getLogger("app.metrics")
@@ -122,8 +100,7 @@ async def recommend_books(user_id: int):
     """
     특정 사용자에게 도서를 추천합니다.
     """
-    recommendations = await get_recommendations(user_id)
-    return recommendations
+    return []
 
 @app.get("/health")
 def health():

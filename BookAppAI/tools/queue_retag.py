@@ -6,6 +6,7 @@ import asyncio
 from dotenv import load_dotenv
 from sqlalchemy import select
 
+from app import corpus_policy
 import app.database as database
 from app.models.book_corpus import BookCorpus
 from app.models.book_tagging_job import BookTaggingJob
@@ -13,6 +14,7 @@ from app.services.tagging_jobs import enqueue_tagging_jobs, requeue_failed_jobs
 
 
 async def run(limit: int, apply: bool, retry_failed: bool = False) -> None:
+    corpus_policy.require_verified_corpus()
     load_dotenv()
     database.init_db()
     try:

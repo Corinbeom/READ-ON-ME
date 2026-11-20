@@ -13,6 +13,7 @@ from sqlalchemy import case, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import corpus_policy
 import app.database as database
 from app.models.book_corpus import BookCorpus
 from app.models.corpus_ingestion_job import CorpusIngestionJob
@@ -509,6 +510,7 @@ async def recover_stale_jobs() -> None:
 
 
 async def run_worker(stop: asyncio.Event) -> None:
+    corpus_policy.require_verified_corpus()
     await recover_stale_jobs()
     last_recovery = time.monotonic()
     while not stop.is_set():
