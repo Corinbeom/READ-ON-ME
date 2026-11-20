@@ -2,7 +2,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useSyncExternalStore } from 'react';
 import { createRecentBooks } from '@/src/utils/recentBooks';
 
-const history = createRecentBooks(AsyncStorage);
+import { bookApi } from '@/src/services/api';
+
+const history = createRecentBooks(AsyncStorage, async isbn => (await bookApi.getBookDetail(isbn)).data);
 
 export const rememberBookView = history.add;
 

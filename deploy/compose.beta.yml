@@ -26,6 +26,7 @@ services:
     mem_limit: 448m
     memswap_limit: 768m
     environment:
+      GALPI_REVIEWED_RELEASE: ${GALPI_REVIEWED_RELEASE:-}
       SPRING_PROFILES_ACTIVE: prod
       DB_URL: jdbc:postgresql://postgres:5432/readonme
       DB_USERNAME: readonme
@@ -65,6 +66,7 @@ services:
     mem_limit: 192m
     memswap_limit: 384m
     environment:
+      GALPI_REVIEWED_RELEASE: ${GALPI_REVIEWED_RELEASE:-}
       APP_ENV: prod
       EMBEDDING_PROVIDER: gemini
       DATABASE_URL: postgresql+asyncpg://readonme:${POSTGRES_PASSWORD:?required}@postgres:5432/readonme

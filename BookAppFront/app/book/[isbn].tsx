@@ -1,5 +1,5 @@
 import AppButton from '@/components/ui/AppButton';
-import BookLibraryStatus, { GuestBookLibraryStatus } from '@/components/BookLibraryStatus';
+import BookLibraryStatus, { GuestBookLibraryStatus, NewBookLibraryStatus } from '@/components/BookLibraryStatus';
 import AppTextInput from '@/components/ui/AppTextInput';
 import ScreenState from '@/components/ui/ScreenState';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +35,8 @@ import { BookDto } from '../../src/types/BookDto';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { rememberBookView } from '@/hooks/useRecentBooks';
 
+import { createLatestBookRequest } from '@/src/utils/latestBookRequest';
+
 const REVIEW_MAX_LENGTH = 500;
 
 export default function BookDetailScreen() {
@@ -47,22 +49,25 @@ export default function BookDetailScreen() {
   const styles = getBookDetailScreenStyles(colorScheme);
 
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
-  const { reviews, loading: reviewsLoading } = useSelector((state: RootState) => state.reviews);
+  const { reviews: loadedReviews, loading: reviewsLoading } = useSelector((state: RootState) => state.reviews);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [book, setBook] = useState<BookDto | null>(null);
+  const [book, setBook] = useState<(Omit<BookDto, 'id'> & { id: number | null }) | null>(null);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [sort, setSort] = useState('latest');
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const detailRequests = useRef(createLatestBookRequest());
   const flatListRef = useRef<FlatList>(null);
 
   const normalizedIsbn = useMemo(() => {
     const raw = String(isbn ?? '');
     return raw.replace(/[^0-9]/g, '').slice(-13);
   }, [isbn]);
+  const activeIsbn = useRef(normalizedIsbn);
+  activeIsbn.current = normalizedIsbn;
   const bookIsbn = book ? getIsbn13(book) : '';
 
   useFocusEffect(useCallback(() => {
@@ -77,7 +82,9 @@ export default function BookDetailScreen() {
       setLoading(false);
       return;
     }
-    fetchBookDetails(normalizedIsbn);
+    void fetchBookDetails(normalizedIsbn);
+    const requests = detailRequests.current;
+    return () => requests.cancel();
   }, [normalizedIsbn]);
 
   useEffect(() => {
@@ -87,19 +94,22 @@ export default function BookDetailScreen() {
   }, [book, dispatch, sort]);
 
   const fetchBookDetails = async (currentIsbn: string) => {
+    const request = detailRequests.current.begin();
     setLoading(true);
     setError(null);
     try {
-      const res = await bookApi.getBookDetail(currentIsbn);
+      const res = await bookApi.getBookDetail(currentIsbn, request.signal);
+      if (!request.isCurrent()) return;
       if (res.data) {
         setBook(res.data);
       } else {
         throw new Error('책 정보를 찾을 수 없습니다.');
       }
     } catch (err: any) {
+      if (!request.isCurrent()) return;
       setError(err?.message ?? '상세 정보를 불러오지 못했습니다.');
     } finally {
-      setLoading(false);
+      if (request.isCurrent()) setLoading(false);
     }
   };
 
@@ -109,7 +119,7 @@ export default function BookDetailScreen() {
       customAlert('알림', '리뷰 내용과 별점을 모두 입력해주세요.');
       return;
     }
-    if (editingReviewId) {
+    if (editingReviewId && book.id) {
       try {
         await reviewApi.updateReview(editingReviewId, {
           comment: newReviewComment,
@@ -125,13 +135,14 @@ export default function BookDetailScreen() {
       return;
     }
     const result = await dispatch(
-      addReviewForBook({ bookId: book.id, comment: newReviewComment, rating: newReviewRating })
+      addReviewForBook({ bookId: book.id, isbn: bookIsbn, comment: newReviewComment, rating: newReviewRating })
     );
     if (addReviewForBook.fulfilled.match(result)) {
       customAlert('성공', '리뷰가 등록되었습니다.');
       setNewReviewComment('');
       setNewReviewRating(0);
-      dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
+      if (book.id) dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
+      else if (activeIsbn.current === bookIsbn) await fetchBookDetails(bookIsbn);
     } else {
       const errorPayload = result.payload as any;
       if (errorPayload?.code === 'REVIEW_ALREADY_EXISTS') {
@@ -149,6 +160,8 @@ export default function BookDetailScreen() {
     }
     dispatch(toggleLikeForReview(reviewId));
   };
+
+  const reviews = useMemo(() => book?.id ? loadedReviews.filter(review => review.book.id === book.id) : [], [book?.id, loadedReviews]);
 
   const userHasReviewed = useMemo(() => {
     if (!isAuthenticated || !user) return false;
@@ -174,7 +187,7 @@ export default function BookDetailScreen() {
         text: '삭제',
         style: 'destructive',
         onPress: async () => {
-          if (!book) return;
+          if (!book?.id) return;
           try {
             await reviewApi.deleteReview(reviewId);
             customAlert('삭제 완료', '리뷰가 삭제되었습니다.');
@@ -256,7 +269,9 @@ export default function BookDetailScreen() {
               <Text style={styles.meta}>{book?.authors}</Text>
             </View>
 
-            {isAuthenticated && user && book ? <BookLibraryStatus bookId={book.id} userId={user.id} />
+            {isAuthenticated && user && book ? (book.id ? <BookLibraryStatus bookId={book.id} userId={user.id} />
+              : <NewBookLibraryStatus key={bookIsbn} isbn={bookIsbn} userId={user.id} onSaved={id => setBook(current =>
+                  current?.isbn13 === bookIsbn ? { ...current, id } : current)} />)
               : !isAuthenticated && bookIsbn ? <GuestBookLibraryStatus isbn={bookIsbn} /> : null}
 
             {/* ── Description ── */}

@@ -29,6 +29,9 @@ public class AiSearchJob {
     @Column(nullable = false, length = 20)
     private String status;
 
+    @Column(name = "corpus_release", length = 64)
+    private String corpusRelease;
+
     @Column(name = "result_json", columnDefinition = "TEXT")
     private String resultJson;
 

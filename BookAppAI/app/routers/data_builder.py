@@ -1,8 +1,11 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.corpus_policy import require_verified_corpus
 from app.database import get_db
-from app.services import book_ai_service, corpus_ingestion
+from app.services import corpus_ingestion
+from app.services.reviewed_corpus import search_reviewed, read_inputs
+from app.services.reviewed_release import configured_release, require_release
 from app.security import require_internal_token
 from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
 
@@ -48,19 +51,52 @@ async def embed_single_book(request: SingleBookRequest, db: AsyncSession = Depen
     return {"status": status, "job_id": job.id if job else None}
 
 
-@router.post("/api/ai/search", dependencies=[Depends(require_internal_token), Depends(require_verified_corpus)])
+@router.get("/api/ai/reviewed-release", dependencies=[Depends(require_internal_token)])
+async def release_status(release: str = Depends(configured_release), db: AsyncSession = Depends(get_db)):
+    await require_release(db, release)
+    return {"release": release}
+
+
+@router.get("/api/ai/reviewed-books/{isbn}", dependencies=[Depends(require_internal_token)])
+async def reviewed_detail(isbn: str, x_reviewed_release: str = Header(), release: str = Depends(configured_release),
+                          db: AsyncSession = Depends(get_db)):
+    if release != x_reviewed_release:
+        raise HTTPException(status_code=503, detail="AI_SEARCH_MAINTENANCE")
+    await require_release(db, release)
+    from sqlalchemy import text
+    from app.corpus_policy import EMBEDDING_USES
+    from app.services.embedding_backend import GEMINI_EMBEDDING_MODEL
+
+    fields, version = await read_inputs(db, isbn, EMBEDDING_USES)
+    indexed = await db.scalar(text("""
+        SELECT 1 FROM corpus_derived_artifacts WHERE isbn=:isbn AND input_version=:version
+        AND kind='embedding' AND model_version=:model
+    """), {"isbn": isbn, "version": version, "model": GEMINI_EMBEDDING_MODEL})
+    if not indexed:
+        raise HTTPException(status_code=404, detail="No reviewed detail")
+    return {"isbn13": isbn, **fields}
+
+
+@router.post("/api/ai/search", dependencies=[Depends(require_internal_token)])
 async def ai_search(
-    request: AiSearchRequest, response: Response, db: AsyncSession = Depends(get_db),
-    x_request_id: str | None = Header(default=None),
+    request: AiSearchRequest, response: Response, release: str = Depends(configured_release), db: AsyncSession = Depends(get_db),
+    x_reviewed_release: str | None = Header(default=None),
 ):
     """
     Performs a natural language search for books using vector similarity.
     """
+    if x_reviewed_release != release:
+        raise HTTPException(status_code=503, detail="AI_SEARCH_MAINTENANCE")
     if not request.query:
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
     outcome: dict = {}
-    results = await book_ai_service.search_by_natural_language(request.query, db, x_request_id, outcome)
+    async with db.begin():
+        from sqlalchemy import text
+        await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+        await require_release(db, release)
+        results = await search_reviewed(db, request.query, outcome)
+    logging.getLogger("app.metrics").info("reviewed_search outcome=%s books=%d", outcome.get("status"), len(results))
     response.headers["X-Search-Outcome"] = outcome.get("status", "NO_MATCH")
     response.headers["X-Search-Reason"] = outcome.get("reason_code", "NONE")
     response.headers["X-Search-Basis"] = outcome.get("basis", "NONE")

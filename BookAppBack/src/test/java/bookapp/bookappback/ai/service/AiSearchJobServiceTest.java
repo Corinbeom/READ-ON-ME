@@ -58,6 +58,7 @@ class AiSearchJobServiceTest {
     @SuppressWarnings("unchecked")
     void reset() {
         var operations = (org.springframework.data.redis.core.ValueOperations<String, String>) org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(availability.release()).thenReturn("reviewed-test-release");
         when(rateLimitRedis.opsForValue()).thenReturn(operations);
         when(operations.increment(anyString())).thenReturn(1L);
         repository.deleteAll();

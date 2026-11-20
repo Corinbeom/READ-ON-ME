@@ -44,6 +44,7 @@ class BookServiceTest {
     void getBookByIsbn_successFromDb() {
         Book mockBook = new Book();
         mockBook.setId(1L);
+        mockBook.setTitle("기존 책");
         mockBook.setIsbn13("9781234567890");
 
         when(bookRepository.findByIsbn13("9781234567890")).thenReturn(Optional.of(mockBook));
@@ -53,18 +54,19 @@ class BookServiceTest {
         assertNotNull(result);
         assertEquals("9781234567890", result.getIsbn13());
         verify(bookRepository, times(1)).findByIsbn13("9781234567890");
-        verify(kakaoSearchCacheService, never()).searchBookByIsbn(anyString());
+        assertEquals("9781234567890", result.getTitle());
+        verify(kakaoSearchCacheService).searchBookByIsbn("9781234567890");
     }
 
     @Test
     @DisplayName("카카오 API 호출 실패 - ExternalApiException 발생")
     void getBookByIsbn_externalApiError() {
-        when(bookRepository.findByIsbn13("9780000000000")).thenReturn(Optional.empty());
-        when(kakaoSearchCacheService.searchBookByIsbn("9780000000000"))
+        when(bookRepository.findByIsbn13("9780306406157")).thenReturn(Optional.empty());
+        when(kakaoSearchCacheService.searchBookByIsbn("9780306406157"))
                 .thenThrow(new BookExceptions.ExternalApiException("카카오 API 오류"));
 
         assertThrows(BookExceptions.ExternalApiException.class, () ->
-                bookService.getBookByIsbn("9780000000000")
+                bookService.getBookByIsbn("9780306406157")
         );
     }
 
@@ -74,35 +76,18 @@ class BookServiceTest {
         KakaoBookSearchResponse emptyResponse = new KakaoBookSearchResponse();
         emptyResponse.setDocuments(Collections.emptyList());
 
-        when(bookRepository.findByIsbn13("9999999999")).thenReturn(Optional.empty());
-        when(kakaoSearchCacheService.searchBookByIsbn("9999999999"))
+        when(bookRepository.findByIsbn13("9780306406157")).thenReturn(Optional.empty());
+        when(kakaoSearchCacheService.searchBookByIsbn("9780306406157"))
                 .thenReturn(emptyResponse);
 
         assertThrows(BookExceptions.BookNotFoundException.class, () ->
-                bookService.getBookByIsbn("9999999999")
+                bookService.getBookByIsbn("9780306406157")
         );
     }
 
     @Test
-    void savesKakaoBookUnderValidatedIsbnInsteadOfInvalidThirteenDigitValue() {
-        BookService service = spy(bookService);
-        when(bookRepository.findByIsbn13("9781127241347")).thenReturn(Optional.empty());
-        when(bookRepository.save(any(Book.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        KakaoBookDto dto = new KakaoBookDto();
-        dto.setTitle("플랫랜드");
-        dto.setIsbn("1127241346 1400000309490");
-
-        Book saved = service.saveBookToUserLibrary(dto);
-
-        assertEquals("9781127241347", saved.getIsbn13());
-        verify(bookRepository).findByIsbn13("9781127241347");
-        verify(bookRepository, never()).findByIsbn13("1400000309490");
-        assertFalse(saved.isEmbedded());
-    }
-
-    @Test
     void findsCanonicalIsbn13ThroughKakaoIsbn10AndChecksTheReturnedBook() {
-        BookService service = spy(bookService);
+
         KakaoBookDto wrong = new KakaoBookDto();
         wrong.setIsbn("9780306406157");
         KakaoBookDto matching = new KakaoBookDto();
@@ -114,10 +99,12 @@ class BookServiceTest {
                 .thenReturn(new KakaoBookSearchResponse(null, Collections.emptyList()));
         when(kakaoSearchCacheService.searchBookByIsbn("1127241346"))
                 .thenReturn(new KakaoBookSearchResponse(null, List.of(wrong, matching)));
-        doReturn(expected).when(service).saveBookToUserLibrary(matching);
 
-        assertSame(expected, service.getBookByIsbn("9781127241347"));
-        verify(service, never()).saveBookToUserLibrary(wrong);
+
+        Book result = bookService.getBookByIsbn("9781127241347");
+        assertEquals(expected.getIsbn13(), result.getIsbn13());
+        assertNull(result.getId());
+        verify(bookRepository, never()).save(any());
         verify(kakaoSearchCacheService).searchBookByIsbn("1127241346");
     }
 

@@ -70,10 +70,11 @@ public class RecommendationFeedbackController {
                     SELECT COALESCE(NULLIF(CAST(j.result_json AS jsonb), 'null'::jsonb), '[]'::jsonb) AS books
                 ) result
                 """ + ELIGIBLE_JOB + """
+                AND j.corpus_release = :release
                 ON CONFLICT (job_id) DO UPDATE SET rating = EXCLUDED.rating, comment = EXCLUDED.comment
                 RETURNING rating, comment
                 """)
-                .param("jobId", jobId).param("userId", principal.getUser().getId()).param("now", LocalDateTime.now())
+                .param("release", availability.release()).param("jobId", jobId).param("userId", principal.getUser().getId()).param("now", LocalDateTime.now())
                 .param("rating", submission.rating()).param("comment", comment.isEmpty() ? null : comment, Types.VARCHAR)
                 .query(Rating.class).optional().orElseThrow(RecommendationFeedbackController::unavailable);
         return new ApiResponse<>(true, "추천 평가 저장 완료", rating);

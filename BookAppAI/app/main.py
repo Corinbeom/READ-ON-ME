@@ -40,6 +40,7 @@ app = FastAPI(lifespan=lifespan)
 @app.exception_handler(CorpusPermissionError)
 async def corpus_unavailable(request, exc):
     code = "AI_SEARCH_MAINTENANCE" if request.url.path == "/api/ai/search" else str(exc)
+    logging.getLogger("app.metrics").info("corpus_request_blocked path=%s reason=%s", request.url.path, code)
     return JSONResponse(status_code=503, content={"code": code})
 
 

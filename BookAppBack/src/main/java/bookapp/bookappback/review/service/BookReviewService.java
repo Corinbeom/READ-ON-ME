@@ -1,6 +1,7 @@
 package bookapp.bookappback.review.service;
 
 import bookapp.bookappback.book.entity.Book;
+import bookapp.bookappback.book.service.BookService;
 import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.common.exception.ReviewExceptions;
@@ -35,10 +36,16 @@ public class BookReviewService {
     private final BookReviewRepository bookReviewRepository;
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
+    private final BookService bookService;
     private final ReviewLikeRepository reviewLikeRepository;
     private final NotificationService notificationService;
 
     // ✅ 리뷰 작성
+    @Transactional
+    public Long createReviewByIsbn(String isbn, ReviewRequest request, Long userId) {
+        return createReview(bookService.resolveSelectedIsbn(isbn), request, userId);
+    }
+
     public Long createReview(Long bookId, ReviewRequest reviewRequest, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
@@ -85,7 +92,7 @@ public class BookReviewService {
         return reviews.map(review -> {
             boolean isLiked = currentUser != null && review.getLikes().stream()
                     .anyMatch(like -> like.getUser().getId().equals(currentUser.getId()));
-            return new ReviewResponse(review, review.getLikeCount(), isLiked);
+            return reviewResponse(review, isLiked);
         });
     }
 
@@ -97,10 +104,16 @@ public class BookReviewService {
         List<BookReview> reviews = bookReviewRepository.findByUserWithBook(user); // Changed to use findByUserWithBook
 
         return reviews.stream()
-                .map(review -> new ReviewResponse(review, review.getLikeCount(), false)) // isLikedByCurrentUser is false as we are just listing reviews
+                .map(review -> reviewResponse(review, false)) // isLikedByCurrentUser is false as we are just listing reviews
                 .collect(Collectors.toList());
     }
 
+
+    private ReviewResponse reviewResponse(BookReview review, boolean liked) {
+        var book = review.getBook();
+        return new ReviewResponse(review, review.getLikeCount(), liked,
+                book.getTitle() == null ? bookService.forDisplay(book) : book);
+    }
 
     // ✅ 리뷰 수정
     public void updateReview(Long reviewId, ReviewRequest reviewRequest, Long userId) {

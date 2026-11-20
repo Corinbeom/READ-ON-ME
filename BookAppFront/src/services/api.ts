@@ -286,7 +286,7 @@ export const bookApi = {
     target?: 'title' | 'isbn' | 'publisher' | 'person';
   }, options?: LocalRequestOptions) => api.get('/api/books/search', { params, ...options }),
 
-  getBookDetail: (isbn: string) => api.get(`/api/books/detail/${isbn}`),
+  getBookDetail: (isbn: string, signal?: AbortSignal) => api.get(`/api/books/detail/${isbn}`, { signal }),
   getPopularBooks: () => api.get('/api/books/popular'),
   test: () => api.get('/api/books/test'),
 
@@ -294,6 +294,9 @@ export const bookApi = {
 
   updateBookStatus: (bookId: number, status: ReadingStatus, options?: LocalRequestOptions) =>
     api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() }, ...options }),
+
+  updateBookStatusByIsbn: (isbn: string, status: ReadingStatus) =>
+    api.post<number>(`/api/library/isbn/${isbn}`, null, { params: { status } }),
 
   removeLibraryBook: (bookId: number, options?: LocalRequestOptions) => api.delete(`/api/library/${bookId}`, options),
 
@@ -310,6 +313,9 @@ export const bookApi = {
 export const reviewApi = {
   createReview: (bookId: number, data: { comment: string; rating: number }) =>
     api.post(`/api/books/${bookId}/review`, data),
+
+  createReviewByIsbn: (isbn: string, data: { comment: string; rating: number }) =>
+    api.post(`/api/books/isbn/${isbn}/review`, data),
 
   getReviewsByBook: (bookId: number, sort: string) => api.get(`/api/books/${bookId}/reviews`, { params: { sort } }),
 

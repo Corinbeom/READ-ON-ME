@@ -27,8 +27,34 @@ function sanitizeRecentBooks(value: unknown): RecentBook[] {
   return books;
 }
 
-export function createRecentBooks(storage: Parameters<typeof createDeviceHistory>[0]) {
-  const { mutate, ...history } = createDeviceHistory(storage, RECENT_BOOKS_KEY, sanitizeRecentBooks, {
+export function createRecentBooks(
+  storage: Parameters<typeof createDeviceHistory>[0],
+  lookup: (isbn: string) => Promise<RecentBook>,
+) {
+  const identityStorage = {
+    ...storage,
+    getItem: async (key: string) => {
+      const raw = await storage.getItem(key);
+      if (!raw) return null;
+      let entries: unknown;
+      try { entries = JSON.parse(raw); } catch { return null; }
+      if (!Array.isArray(entries)) return null;
+      const ids = entries.map(item => typeof item === 'string' ? item : item?.isbn13)
+        .filter((id): id is string => typeof id === 'string' && id.length === 13 && getIsbn13({ isbn13: id }) === id);
+      const books = await Promise.all([...new Set(ids)].slice(0, MAX_RECENT_BOOKS).map(async isbn13 => {
+        try {
+          const book = await lookup(isbn13);
+          if (book.isbn13 === isbn13) return book;
+        } catch { /* Keep the history entry available offline. */ }
+        return { isbn13, title: isbn13, authors: '', thumbnail: '' };
+      }));
+      return JSON.stringify(books);
+    },
+    setItem: (key: string, value: string) => storage.setItem(key,
+      JSON.stringify((JSON.parse(value) as RecentBook[]).map(book => book.isbn13))),
+    removeItem: (key: string) => storage.removeItem(key),
+  };
+  const { mutate, ...history } = createDeviceHistory(identityStorage, RECENT_BOOKS_KEY, sanitizeRecentBooks, {
     load: '최근 본 책을 불러오지 못했어요.',
     save: '최근 본 책의 변경 사항을 이 기기에 저장하지 못했어요.',
   });

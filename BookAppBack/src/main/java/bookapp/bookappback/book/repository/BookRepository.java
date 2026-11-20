@@ -13,6 +13,17 @@ import java.util.Optional;
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
 
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = """
+            INSERT INTO books (isbn13, created_at, embedded, average_rating)
+            VALUES (:isbn, CURRENT_TIMESTAMP, false, 0) ON CONFLICT DO NOTHING
+            """, nativeQuery = true)
+    int insertIdentity(@Param("isbn") String isbn);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT b FROM Book b WHERE b.isbn13 = :isbn")
+    Optional<Book> lockByIsbn(@Param("isbn") String isbn);
+
     // ISBN13 조회
     Optional<Book> findByIsbn13(String isbn13);
 

@@ -109,22 +109,23 @@ const sampleBooks = ['9791161571188', '9791198363503', '9791165341909', '9780306
 
 test('recent books preserve edition identity, revisit order and the six-book limit across restart', async () => {
   const storage = memoryStorage();
-  const history = createRecentBooks(storage);
+  const history = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
   for (const book of sampleBooks) await history.add(book);
   await history.add(sampleBooks[2]);
-  const restored = createRecentBooks(storage);
+  assert.equal(JSON.stringify(JSON.parse(storage.read())).includes('저자'), false);
+  const restored = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
   await restored.load();
   assert.equal(restored.getSnapshot().items.length, MAX_RECENT_BOOKS);
   assert.deepEqual(plain(restored.getSnapshot().items).map(book => book.isbn13),
     [2, 6, 5, 4, 3, 1].map(index => sampleBooks[index].isbn13));
 });
 
-test('loaded book history rejects invalid links and keeps only the fields needed for a card', async () => {
+test('legacy book history hydrates valid editions and ignores archived metadata', async () => {
   const valid = { ...sampleBooks[0], thumbnail: 'file:///tmp/cover.png', userId: 17, contents: 'private metadata' };
   const storage = memoryStorage(JSON.stringify([null, { ...sampleBooks[1], isbn13: '9791198363504' }, valid, valid]));
-  const history = createRecentBooks(storage);
+  const history = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
   await history.load();
-  assert.deepEqual(plain(history.getSnapshot().items), [{ ...sampleBooks[0], thumbnail: '' }]);
+  assert.deepEqual(plain(history.getSnapshot().items), [sampleBooks[0]]);
 });
 
 test('deleting viewed books after a pending write also clears storage and keeps search terms', async () => {
@@ -134,7 +135,7 @@ test('deleting viewed books after a pending write also clears storage and keeps 
     setItem: async (key, value) => { stored.set(key, value); },
     removeItem: async key => { stored.delete(key); },
   };
-  const history = createRecentBooks(storage);
+  const history = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
   await Promise.all([history.add(sampleBooks[0]), history.clear()]);
   assert.equal(history.getSnapshot().items.length, 0);
   assert.equal(stored.has(RECENT_BOOKS_KEY), false);

@@ -226,6 +226,13 @@ async def _rerank_with_groq(
     trace_id: str, trigger: str, diagnostics: dict | None,
 ) -> Optional[List[Dict[str, Any]]]:
     corpus_policy.require_verified_corpus()
+    return await _request_groq(prompt, candidates, evidence_by_isbn, trace_id, trigger, diagnostics)
+
+
+async def _request_groq(
+    prompt: str, candidates: List[Dict[str, Any]], evidence_by_isbn: dict[str, str],
+    trace_id: str, trigger: str, diagnostics: dict | None,
+) -> Optional[List[Dict[str, Any]]]:
     api_key = os.getenv("GROQ_API_KEY")
     if not api_key or not groq_cooldown.available():
         return None
@@ -297,6 +304,18 @@ async def rerank_with_gemini(
     diagnostics: dict | None = None,
 ) -> List[Dict[str, Any]]:
     corpus_policy.require_verified_corpus()
+    return await _rank_candidates(query, candidates, requested_form, request_id, genre, outcome,
+                                  verified_fallback, diagnostics)
+
+
+async def _rank_candidates(
+    query: str, candidates: List[Dict[str, Any]], requested_form: str = "ANY",
+    request_id: str | None = None,
+    genre: str | None = None,
+    outcome: dict | None = None,
+    verified_fallback: List[Dict[str, Any]] | None = None,
+    diagnostics: dict | None = None,
+) -> List[Dict[str, Any]]:
     trace_id = (request_id or "-")[:64]
     fallback = []
     fallback_candidates = verified_fallback if verified_fallback is not None else candidates
@@ -370,6 +389,8 @@ async def rerank_with_gemini(
         "입문 요청입니다. 전문가 양성·자격시험용 책은 제외하세요. "
         + ("" if school_audience else "학교 수업용 책도 제외하세요. ")
     ) if general_intro else ""
+    if requested_form == "PRACTICAL":
+        intro_instruction += "실용서 요청입니다. 구체적인 방법이나 사례를 소개한 책을 고르세요. 언어 지정이 없으면 외국어판도 후보입니다. "
     prompt = _selection_prompt(query, book_list, intro_instruction)
     payload = {
         "contents": [{"parts": [{"text": prompt + "\n\n결과는 JSON 배열로 반환하세요. 적합한 책이 없으면 빈 배열로 답하세요."}]}],
@@ -381,7 +402,7 @@ async def rerank_with_gemini(
         },
     }
     async def use_groq_or_fallback(trigger: str) -> List[Dict[str, Any]]:
-        groq_result = await _rerank_with_groq(prompt, top, evidence_by_isbn, trace_id, trigger, diagnostics)
+        groq_result = await _request_groq(prompt, top, evidence_by_isbn, trace_id, trigger, diagnostics)
         if groq_result is None:
             return use_fallback(trigger)
         if outcome is not None:
