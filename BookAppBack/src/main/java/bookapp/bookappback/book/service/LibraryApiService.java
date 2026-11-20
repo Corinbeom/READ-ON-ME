@@ -68,13 +68,19 @@ public class LibraryApiService {
     }
 
     public Map<String, String> getCoverUrls(int ageGroup, LocalDate asOf) {
-        // A restart loses only the in-memory covers. Read the same ranking period to refill them.
-        return coversByAge.compute(ageGroup, (group, cached) -> {
-            if (cached != null && cached.asOf().equals(asOf) && Instant.now().isBefore(cached.expiresAt())) {
-                return cached;
-            }
-            return coversFrom(asOf, fetchRanking(group == 0 ? null : group, asOf));
-        }).urls();
+        var cached = coversByAge.get(ageGroup);
+        return cached != null && cached.asOf().equals(asOf) ? cached.urls() : Map.of();
+    }
+
+    public void refreshCoversIfNeeded(int ageGroup, LocalDate asOf) {
+        var cached = coversByAge.get(ageGroup);
+        if (cached != null && cached.asOf().equals(asOf) && Instant.now().isBefore(cached.expiresAt())) {
+            return;
+        }
+        var books = fetchRanking(ageGroup == 0 ? null : ageGroup, asOf);
+        if (!books.isEmpty()) {
+            coversByAge.put(ageGroup, coversFrom(asOf, books));
+        }
     }
 
     private RankingCovers coversFrom(LocalDate asOf, List<LibraryBookDto> books) {
@@ -85,8 +91,7 @@ public class LibraryApiService {
                 urls.put(book.getIsbn13(), url);
             }
         }
-        Duration ttl = books.isEmpty() ? Duration.ofMinutes(1) : Duration.ofDays(7);
-        return new RankingCovers(asOf, Map.copyOf(urls), Instant.now().plus(ttl));
+        return new RankingCovers(asOf, Map.copyOf(urls), Instant.now().plus(Duration.ofDays(7)));
     }
 
     private List<LibraryBookDto> fetchRanking(Integer ageGroup, LocalDate asOf) {
@@ -101,7 +106,7 @@ public class LibraryApiService {
                     .uri(uri)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .block(Duration.ofSeconds(5));
+                    .block(Duration.ofSeconds(25));
 
             return parseBooks(responseBody);
         } catch (Exception e) {

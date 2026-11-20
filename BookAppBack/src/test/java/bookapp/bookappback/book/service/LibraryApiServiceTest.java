@@ -36,6 +36,10 @@ class LibraryApiServiceTest {
         var asOf = LocalDate.of(2026, 11, 16);
         var covers = Map.of("9780306406157", "https://example.org/c.jpg");
 
+        assertTrue(service.getCoverUrls(30, asOf).isEmpty());
+        assertTrue(requests.isEmpty());
+        service.refreshCoversIfNeeded(30, asOf);
+        service.refreshCoversIfNeeded(30, asOf);
         assertEquals(covers, service.getCoverUrls(30, asOf));
         assertEquals(covers, service.getCoverUrls(30, asOf));
         assertEquals(1, requests.size());
@@ -43,7 +47,8 @@ class LibraryApiServiceTest {
         assertTrue(requests.get(0).getQuery().contains("endDt=2026-11-16"));
         assertTrue(requests.get(0).getQuery().contains("startDt=2026-10-17"));
 
-        service.getCoverUrls(30, asOf.plusDays(7));
+        assertTrue(service.getCoverUrls(30, asOf.plusDays(7)).isEmpty());
+        service.refreshCoversIfNeeded(30, asOf.plusDays(7));
         assertEquals(2, requests.size());
         service.getPopularBooks(null);
         assertEquals(covers, service.getCoverUrls(0, LocalDate.now()));
