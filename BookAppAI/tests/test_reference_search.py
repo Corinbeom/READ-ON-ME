@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from app.services.reference_search import (
-    ReferenceAnchor, find_reference_anchor, has_theme_evidence, is_verified_similar_fallback,
+    ReferenceAnchor, exclude_comparison_work, find_reference_anchor, has_theme_evidence, is_verified_similar_fallback,
 )
 
 
@@ -79,3 +79,7 @@ def test_similar_author_fallback_requires_shared_themes_and_a_work():
     assert not is_verified_similar_fallback({**novel, "tags": ["기억"], "contents": "기억을 다룬 장편소설입니다."}, reference)
     assert not is_verified_similar_fallback({**novel, "title": "기억 활용법"}, reference)
     assert not is_verified_similar_fallback({**novel, "title": "기억의 분석", "contents": "기억과 상실을 분석하는 비평서입니다."}, reference)
+
+def test_comparison_word_inside_quoted_title_is_part_of_the_title():
+    books = [{"title": "기적"}, {"title": "기적 같은 하루"}, {"title": "기적 같은 하루 2"}]
+    assert exclude_comparison_work("『기적 같은 하루』처럼 따뜻한 책", books) == [books[0], books[2]]

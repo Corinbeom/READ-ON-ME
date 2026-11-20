@@ -19,7 +19,9 @@ from app.services.gemini_tagger import GeminiTagger
 from app.services.intent_classifier import IntentAnalyzer
 from app.services.keyword_expander import KeywordExpander
 from app.services.prompt_templates import PromptTemplateBuilder
-from app.services.reference_search import find_reference_anchor, has_theme_evidence, is_verified_similar_fallback
+from app.services.reference_search import (
+    exclude_comparison_work, find_reference_anchor, has_theme_evidence, is_verified_similar_fallback,
+)
 from app.services.reranker import rerank_with_gemini
 from app.services.search_retrieval import retrieve_candidates
 from app.services.text_utils import is_school_anthology, is_search_candidate, requests_school_anthology
@@ -214,7 +216,7 @@ async def search_by_natural_language(
         exclude_author=reference.author if reference else None,
     )
     filtered = [
-        book for book in candidates
+        book for book in exclude_comparison_work(query, candidates)
         if is_search_candidate(book, intent.genre, intent.domain, intent.requested_form, intent.constraints)
     ]
     if reference and reference.theme_keywords:

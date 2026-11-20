@@ -1,4 +1,4 @@
-"""Build a local search anchor from books by a named reference author."""
+"""Identify comparison works and build local search anchors for reference authors."""
 
 from collections import Counter
 from dataclasses import dataclass, field
@@ -26,6 +26,39 @@ _GENERIC_TAGS = {
     "소설", "문학", "고전", "고전 소설", "번역", "영미문학", "영국 문학", "classic", "english",
     "필독서", "전문", "정치", "에세이", "인문학", "sf", "사색적", "thought-provoking", "british literature",
 }
+
+
+_QUOTED_TITLE = re.compile(r"""『[^』]+』|「[^」]+」|〈[^〉]+〉|《[^》]+》|“[^”]+”|‘[^’]+’|"[^"]+"|'[^']+'""")
+_COMPARISON = re.compile(r"처럼|(?:이랑|랑|하고|과|와)\s*(?:비슷|유사|같은)|\s+(?:비슷|유사|같은)")
+_EDITION_SUFFIX = re.compile(r"\s*(?:[(\[]\s*)?(?:개정판|개정증보판|증보판|리커버판?|양장본|특별판)(?:\s*[)\]])?$")
+
+
+def exclude_comparison_work(query: str, candidates: list[dict]) -> list[dict]:
+    """Match a comparison's subject against candidate metadata before either ranking path."""
+    # A title such as 『기적 같은 하루』 can itself contain a comparison word.
+    masked = _QUOTED_TITLE.sub(lambda m: "_" * len(m.group()), query)
+    match = _COMPARISON.search(masked)
+    if not match:
+        return candidates
+    subject = _QUOTED_TITLE.sub(lambda m: m.group()[1:-1], query[:match.start()])
+    subject = " ".join(subject.casefold().split())
+
+    def is_reference(book: dict) -> bool:
+        title = " ".join((book.get("title") or "").casefold().split())
+        title = _EDITION_SUFFIX.sub("", title).strip()
+        if not title:
+            return False
+        if subject == title:
+            return True
+        for author in re.split(r"[,;/]", book.get("authors") or ""):
+            name = re.sub(r"\([^)]*\)", "", author).strip().casefold()
+            if name and subject in (
+                f"{title} {name}", f"{name} {title}", f"{name}의 {title}", f"{name} 작가의 {title}",
+            ):
+                return True
+        return False
+
+    return [book for book in candidates if not is_reference(book)]
 
 
 def _work_title(title: str) -> str:
