@@ -2,6 +2,7 @@ package bookapp.bookappback.book.dto;
 
 import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -44,4 +45,8 @@ public class LibraryBookDto {
     private LocalDate asOf;
 
     private String source;
+
+    @JsonProperty("bookImageURL")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String bookImageUrl;
 }

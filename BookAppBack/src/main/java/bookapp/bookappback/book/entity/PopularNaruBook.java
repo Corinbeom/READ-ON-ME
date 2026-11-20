@@ -57,7 +57,7 @@ public class PopularNaruBook {
     @Column(nullable = false)
     private LocalDateTime fetchedAt;
 
-    public LibraryBookDto toDto() {
+    public LibraryBookDto toDto(String coverUrl) {
         return new LibraryBookDto(
                 String.valueOf(ranking),
                 bookName,
@@ -69,7 +69,8 @@ public class PopularNaruBook {
                 loanCount,
                 ageGroup,
                 fetchedAt.toLocalDate(),
-                "도서관 정보나루"
+                "도서관 정보나루",
+                coverUrl
         );
     }
 }

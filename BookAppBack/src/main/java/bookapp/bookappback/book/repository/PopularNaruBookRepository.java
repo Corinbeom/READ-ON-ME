@@ -9,11 +9,23 @@ import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 @Repository
 public interface PopularNaruBookRepository extends JpaRepository<PopularNaruBook, Long> {
 
     List<PopularNaruBook> findByAgeGroupAndArchivedFalseOrderByRankingAsc(Integer ageGroup);
+
+    interface RankingSnapshot {
+        Integer getAgeGroup();
+        LocalDateTime getFetchedAt();
+    }
+
+    @Query("""
+            SELECT b.ageGroup AS ageGroup, MIN(b.fetchedAt) AS fetchedAt
+            FROM PopularNaruBook b WHERE b.archived = false GROUP BY b.ageGroup ORDER BY b.ageGroup
+            """)
+    List<RankingSnapshot> findActiveSnapshots();
 
     @Modifying
     @Query(value = """

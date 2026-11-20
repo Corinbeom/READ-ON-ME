@@ -3,6 +3,7 @@ import { bookApi, recommendationApi } from '@/src/services/api';
 import type { Book } from '@/src/types/book';
 
 interface LibraryBook {
+  bookImageURL?: string | null;
   ranking: string; bookname: string; authors: string; publisher: string; isbn13: string; as_of: string; loan_count: string; source: string; age_group: number;
 }
 interface ListState {
@@ -14,7 +15,7 @@ const start = (previous: ListState, key: string): ListState =>
 export const calcAgeGroup = (birthYear: number): number =>
   Math.max(10, Math.min(60, Math.floor((new Date().getFullYear() - birthYear) / 10) * 10));
 const mapBook = (item: LibraryBook, index: number): Book => ({
-  id: parseInt(item.ranking, 10) || index + 1, title: item.bookname || '', thumbnail: '',
+  id: parseInt(item.ranking, 10) || index + 1, title: item.bookname || '', thumbnail: item.bookImageURL || '',
   loanRanking: { rank: item.ranking, count: item.loan_count, date: item.as_of, source: item.source, ageGroup: item.age_group },
   authors: item.authors || '', publisher: item.publisher || '', isbn13: item.isbn13 || '',
   contents: '', url: '', isbn10: '', datetime: '', price: 0, sale_price: 0, status: '',

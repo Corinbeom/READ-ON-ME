@@ -9,18 +9,26 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
 public class LibraryApiService {
 
-    private static final String LIBRARY_API_BASE_URL = "http://data4library.kr";
+    private static final String LIBRARY_API_BASE_URL = "https://data4library.kr";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    private record RankingCovers(LocalDate asOf, Map<String, String> urls, Instant expiresAt) {}
+    private final Map<Integer, RankingCovers> coversByAge = new ConcurrentHashMap<>();
 
     private final String apiKey;
     private final WebClient webClient;
@@ -51,8 +59,44 @@ public class LibraryApiService {
      * @param ageGroup 10/20/30/40/50/60 중 하나, null이면 전체 연령
      */
     public List<LibraryBookDto> getPopularBooks(Integer ageGroup) {
-        String endDt = LocalDate.now().format(DATE_FMT);
-        String startDt = LocalDate.now().minusDays(30).format(DATE_FMT);
+        LocalDate today = LocalDate.now();
+        var books = fetchRanking(ageGroup, today);
+        if (!books.isEmpty()) {
+            coversByAge.put(ageGroup == null ? 0 : ageGroup, coversFrom(today, books));
+        }
+        return books;
+    }
+
+    public Map<String, String> getCoverUrls(int ageGroup, LocalDate asOf) {
+        var cached = coversByAge.get(ageGroup);
+        return cached != null && cached.asOf().equals(asOf) ? cached.urls() : Map.of();
+    }
+
+    public void refreshCoversIfNeeded(int ageGroup, LocalDate asOf) {
+        var cached = coversByAge.get(ageGroup);
+        if (cached != null && cached.asOf().equals(asOf) && Instant.now().isBefore(cached.expiresAt())) {
+            return;
+        }
+        var books = fetchRanking(ageGroup == 0 ? null : ageGroup, asOf);
+        if (!books.isEmpty()) {
+            coversByAge.put(ageGroup, coversFrom(asOf, books));
+        }
+    }
+
+    private RankingCovers coversFrom(LocalDate asOf, List<LibraryBookDto> books) {
+        Map<String, String> urls = new HashMap<>();
+        for (LibraryBookDto book : books) {
+            String url = book.getBookImageUrl();
+            if (book.getIsbn13() != null && url != null && (url.startsWith("https://") || url.startsWith("http://"))) {
+                urls.put(book.getIsbn13(), url);
+            }
+        }
+        return new RankingCovers(asOf, Map.copyOf(urls), Instant.now().plus(Duration.ofDays(7)));
+    }
+
+    private List<LibraryBookDto> fetchRanking(Integer ageGroup, LocalDate asOf) {
+        String endDt = asOf.format(DATE_FMT);
+        String startDt = asOf.minusDays(30).format(DATE_FMT);
 
         String uri = buildUri(startDt, endDt, ageGroup);
         log.info("도서관 정보나루 API 호출: {}", uri.replaceAll("authKey=[^&]+", "authKey=****"));
@@ -62,11 +106,11 @@ public class LibraryApiService {
                     .uri(uri)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .block();
+                    .block(Duration.ofSeconds(25));
 
             return parseBooks(responseBody);
         } catch (Exception e) {
-            log.error("도서관 정보나루 API 호출 실패 [age={}]: {} - {}", ageGroup, e.getClass().getSimpleName(), e.getMessage());
+            log.warn("도서관 정보나루 API 호출 실패 [age={}]: {}", ageGroup, e.getClass().getSimpleName());
             return Collections.emptyList();
         }
     }

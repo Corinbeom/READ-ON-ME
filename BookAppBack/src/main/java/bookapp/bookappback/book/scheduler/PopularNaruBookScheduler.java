@@ -34,6 +34,14 @@ public class PopularNaruBookScheduler {
         }
     }
 
+    // Reload display-only URLs after a restart without delaying a visitor's ranking request.
+    @Scheduled(initialDelay = 1000, fixedDelay = 120000)
+    public void warmRankingCovers() {
+        for (var snapshot : popularNaruBookRepository.findActiveSnapshots()) {
+            libraryApiService.refreshCoversIfNeeded(snapshot.getAgeGroup(), snapshot.getFetchedAt().toLocalDate());
+        }
+    }
+
     /** 매주 월요일 새벽 3시 갱신 */
     @Scheduled(cron = "0 0 3 * * MON")
     public void weeklyRefresh() {
