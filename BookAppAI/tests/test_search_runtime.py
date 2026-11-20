@@ -329,3 +329,38 @@ async def test_other_author_similar_search_uses_verified_fallback(monkeypatch):
     assert [book["isbn"] for book in results] == ["other"]
     assert results[0]["ranking_status"] == "FALLBACK"
     assert outcome == {"status": "FALLBACK", "reason_code": "NO_API_KEY", "basis": "SHARED_THEMES"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("query", "expected"), [
+    ("모순 양귀자처럼 삶의 선택을 돌아보는 한국 소설을 골라줘", ["other-author", "other-work"]),
+    ("양귀자의 『모순』과 비슷한 한국 소설", ["other-author", "other-work"]),
+    ("『모순』 같은 한국 소설", ["other-work"]),
+    ("양귀자의 모순을 찾아줘", ["original", "other-author", "other-work"]),
+    ("모순적인 인물이 나오는 한국 소설", ["original", "other-author", "other-work"]),
+])
+async def test_reference_work_filtered_before_rerank_and_fallback(monkeypatch, query, expected):
+    async def embed(prompt):
+        return [0.1]
+
+    async def retrieve(*args, **kwargs):
+        books = [
+            {"isbn": isbn, "title": title, "authors": author, "keyword": "소설", "tags": ["한국", "소설"],
+             "contents": "두 세대를 살아가는 가족의 이야기를 그린 한국 장편소설입니다.",
+             "retrieval_score": score}
+            for isbn, title, author, score in [
+                ("original", "모순", "양귀자", 0.9),
+                ("edition", "모순 (개정판)", "양귀자", 0.85),
+                ("other-author", "모순", "다른 저자", 0.8),
+                ("other-work", "희망", "양귀자", 0.7),
+            ]
+        ]
+        return books, RetrievalCounts(vector=4, merged=4)
+
+    monkeypatch.setattr(book_ai_service, "get_embedding", embed)
+    monkeypatch.setattr(book_ai_service, "retrieve_candidates", retrieve)
+    monkeypatch.setattr(reranker, "GEMINI_API_KEY", None)
+    diagnostics = {}
+    results = await book_ai_service.search_by_natural_language(query, object(), diagnostics=diagnostics)
+    assert diagnostics["filtered_isbns"] == expected
+    assert [book["isbn"] for book in results] == expected
