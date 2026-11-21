@@ -58,6 +58,7 @@ class AiSearchJobServiceTest {
     @SuppressWarnings("unchecked")
     void reset() {
         var operations = (org.springframework.data.redis.core.ValueOperations<String, String>) org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
+        when(availability.state()).thenReturn(GalpiAvailability.State.AVAILABLE);
         when(availability.release()).thenReturn("reviewed-test-release");
         when(rateLimitRedis.opsForValue()).thenReturn(operations);
         when(operations.increment(anyString())).thenReturn(1L);
@@ -139,6 +140,34 @@ class AiSearchJobServiceTest {
         repository.saveAndFlush(row);
         service.recover();
         assertEquals("INTERRUPTED", service.get(1L, interrupted.id()).errorCode());
+    }
+
+    @Test
+    void temporaryReadinessFailurePreservesQueuedJobAcrossRestartAndWithholdsResultsUntilVerified() throws Exception {
+        var submitted = service.submit(1L, "추천", "reconnect");
+        when(availability.state()).thenReturn(GalpiAvailability.State.UNCONFIRMED);
+        service.recover();
+        var row = repository.findById(submitted.id()).orElseThrow();
+        assertEquals("QUEUED", row.getStatus());
+        assertEquals("AI_STATUS_UNAVAILABLE", assertThrows(AppException.class,
+                () -> service.get(1L, submitted.id())).getCode());
+        mvc.perform(get("/api/ai/jobs/" + submitted.id()).with(user(principal(1L))))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code")
+                        .value("AI_STATUS_UNAVAILABLE"));
+        when(availability.state()).thenReturn(GalpiAvailability.State.AVAILABLE);
+        when(searchService.searchWithOutcome(anyString(), anyString()))
+                .thenReturn(Mono.just(new AiSearchOutcome(List.of("book"), "MODEL", "NONE", "NONE")));
+        ReflectionTestUtils.setField(service, "dispatchEnabled", true);
+        service.dispatch();
+        awaitSucceeded(1);
+        when(availability.state()).thenReturn(GalpiAvailability.State.UNCONFIRMED);
+        assertEquals("AI_STATUS_UNAVAILABLE", assertThrows(AppException.class,
+                () -> service.recent(1L)).getCode());
+        when(availability.state()).thenReturn(GalpiAvailability.State.AVAILABLE);
+        assertEquals("SUCCEEDED", service.get(1L, submitted.id()).status());
+        when(availability.state()).thenReturn(GalpiAvailability.State.MAINTENANCE);
+        assertNull(service.get(1L, submitted.id()).results());
     }
 
     @Test

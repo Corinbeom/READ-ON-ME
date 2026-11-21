@@ -39,12 +39,26 @@ public class AiSearchService {
         this.internalToken = internalToken;
     }
 
-    public boolean releaseReady(String expected) {
-        return Boolean.TRUE.equals(webClient.get().uri("/api/ai/reviewed-release")
-                .header("X-Internal-Token", internalToken).retrieve()
-                .bodyToMono(com.fasterxml.jackson.databind.JsonNode.class)
-                .map(node -> expected.equals(node.path("release").asText()))
-                .timeout(Duration.ofSeconds(3)).onErrorReturn(false).block());
+    public GalpiAvailability.State releaseState(String expected) {
+        return webClient.get().uri("/api/ai/reviewed-release")
+                .header("X-Internal-Token", internalToken)
+                .exchangeToMono(response -> {
+                    if (response.statusCode().is2xxSuccessful()) {
+                        return response.bodyToMono(com.fasterxml.jackson.databind.JsonNode.class).map(body -> {
+                            var releaseId = body.path("release");
+                            if (!releaseId.isTextual() || releaseId.asText().isBlank()) return GalpiAvailability.State.UNCONFIRMED;
+                            return expected.equals(releaseId.asText()) ? GalpiAvailability.State.AVAILABLE : GalpiAvailability.State.MAINTENANCE;
+                        });
+                    }
+                    if (response.statusCode().value() == 503) {
+                        return response.bodyToMono(com.fasterxml.jackson.databind.JsonNode.class)
+                                .map(body -> GalpiAvailability.MAINTENANCE.equals(body.path("code").asText())
+                                        ? GalpiAvailability.State.MAINTENANCE : GalpiAvailability.State.UNCONFIRMED);
+                    }
+                    return Mono.just(GalpiAvailability.State.UNCONFIRMED);
+                })
+                .defaultIfEmpty(GalpiAvailability.State.UNCONFIRMED)
+                .timeout(Duration.ofSeconds(3)).onErrorReturn(GalpiAvailability.State.UNCONFIRMED).block();
     }
 
     public bookapp.bookappback.book.entity.Book reviewedDetail(String isbn, String release) {

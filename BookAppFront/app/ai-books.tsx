@@ -43,6 +43,7 @@ type SelectionStep = 'results' | 'compare' | 'selected';
 const isPending = (job: AiSearchJob | null) => job?.status === 'QUEUED' || job?.status === 'RUNNING';
 
 function failedMessage(job: AiSearchJob) {
+  if (job.error_code === 'AI_SEARCH_MAINTENANCE') return '이 검색의 추천 결과는 더 이상 제공되지 않아요.';
   if (job.error_code === 'INTERRUPTED') return '서버가 다시 시작되어 검색이 중단됐어요.';
   if (job.error_code === 'TIMEOUT') return '검색 시간이 초과됐어요.';
   return '책을 찾는 중 문제가 생겼어요.';
@@ -105,36 +106,37 @@ function BookSelection() {
       setRestoreFailed(false);
       return;
     }
-    let active = true;
     setRestoring(true);
     setRestoreFailed(false);
-    const restore = async () => {
+    const watcher = watchAiJob(async (signal) => {
       try {
         const id = await AsyncStorage.getItem(storageKey);
-        if (!id || !active) return;
-        try {
-          const response = await aiJobApi.get(id);
-          if (active) {
-            const entry = resolveAiSearchEntry(entryPrompt, response.data.data);
-            setJob(entry.job);
-            setQuery(entry.query);
-            setDeferredPrompt(entry.deferredPrompt);
-          }
-        } catch (error) {
-          if (isAxiosError(error) && error.response?.status === 404) {
-            await AsyncStorage.removeItem(storageKey);
-          } else if (active) {
-            setRestoreFailed(true);
-          }
+        if (signal.aborted) return false;
+        if (id) {
+          const response = await aiJobApi.get(id, signal);
+          if (signal.aborted) return false;
+          const entry = resolveAiSearchEntry(entryPrompt, response.data.data);
+          setJob(entry.job);
+          setQuery(entry.query);
+          setDeferredPrompt(entry.deferredPrompt);
         }
-      } catch {
-        if (active) setRestoreFailed(true);
-      } finally {
-        if (active) setRestoring(false);
+      } catch (error) {
+        if (signal.aborted) return false;
+        if (isAxiosError(error) && error.response?.status === 404) {
+          await AsyncStorage.removeItem(storageKey).catch(() => {});
+        } else {
+          setRestoreFailed(true);
+          setRestoring(false);
+          return true;
+        }
       }
-    };
-    void restore();
-    return () => { active = false; };
+      if (!signal.aborted) {
+        setRestoring(false);
+        setRestoreFailed(false);
+      }
+      return false;
+    }, STATUS_POLL_INTERVAL_MS);
+    return watcher.stop;
   }, [isAuthenticated, storageKey, restoreAttempt, entryPrompt]);
 
   useEffect(() => {
@@ -150,8 +152,17 @@ function BookSelection() {
         setJob(current);
         setErrorText('');
         return isPending(current);
-      } catch {
-        if (!signal.aborted) setErrorText('검색 상태를 확인하지 못했어요. 연결을 확인해 주세요.');
+      } catch (error) {
+        if (signal.aborted) return false;
+        if (isAxiosError(error) && error.response?.data?.code === 'AI_JOB_NOT_FOUND') {
+          if (storageKey) await AsyncStorage.removeItem(storageKey).catch(() => {});
+          if (!signal.aborted) {
+            setJob(null);
+            setErrorText('이전 검색의 조회 기간이 끝났어요. 같은 조건으로 다시 찾을 수 있어요.');
+          }
+          return false;
+        }
+        setErrorText('연결이 돌아오면 이 검색의 상태를 자동으로 다시 확인해요.');
         return true;
       }
     }, intervalMs);
@@ -162,7 +173,7 @@ function BookSelection() {
       appState?.remove();
       watcher.stop();
     };
-  }, [aiSearchStreamReady, completionSignaled, isFocused, pendingJobId]);
+  }, [aiSearchStreamReady, completionSignaled, isFocused, pendingJobId, storageKey]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -198,9 +209,15 @@ function BookSelection() {
         console.warn('AI 검색 복원 정보 저장 실패:', storageError);
       }
     } catch (error) {
-      setErrorText(isAxiosError(error) && error.response?.status === 503
-        ? '지금은 대기 중인 요청이 많아요. 잠시 후 다시 시도해 주세요.'
-        : '검색 요청을 접수하지 못했어요. 다시 시도해 주세요.');
+      if (isAxiosError(error) && error.response?.data?.code === 'AI_STATUS_UNAVAILABLE') {
+        setErrorText('갈피 연결을 잠시 확인할 수 없어요. 잠시 후 다시 시도해 주세요.');
+      } else if (isAxiosError(error) && error.response?.data?.code === 'AI_SEARCH_MAINTENANCE') {
+        setErrorText('갈피의 추천 도서를 정비하고 있어요.');
+      } else {
+        setErrorText(isAxiosError(error) && error.response?.status === 503
+          ? '지금은 대기 중인 요청이 많아요. 잠시 후 다시 시도해 주세요.'
+          : '검색 접수 여부를 확인하지 못했어요. 같은 조건으로 다시 시도해 주세요.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -299,7 +316,7 @@ function BookSelection() {
           <View style={styles.centerStage}>
             <BookmarkMascot state="idle" size={170} />
             <Text style={styles.title}>이전 검색을 확인하지 못했어요</Text>
-            <Text style={styles.description}>연결을 확인한 뒤 다시 시도해 주세요.</Text>
+            <Text style={styles.description}>같은 검색의 결과를 자동으로 다시 확인하고 있어요.</Text>
             <AppButton title={"다시 확인하기"} variant="primary" style={styles.primaryButton} onPress={() => setRestoreAttempt((value) => value + 1)} accessibilityRole="button" />
           </View>
         ) : !job ? (
@@ -332,10 +349,9 @@ function BookSelection() {
           <View style={styles.centerStage}>
             <BookmarkMascot state="searching" size={230} active={isFocused} />
             <Text style={styles.eyebrow}>BOOK SEARCH</Text>
-            <Text style={styles.title}>{job.status === 'QUEUED' ? '차례를 기다리고 있어요' : '책을 찾고 있어요'}</Text>
-            <Text style={styles.description}>{job.status === 'QUEUED' ? '요청을 받았어요. 잠시만 기다려주세요.' : '갈피가 어울리는 책을 살펴보고 있어요.'}</Text>
+            <Text style={styles.title} accessibilityLiveRegion="polite">{errorText ? '검색 결과를 확인하고 있어요' : job.status === 'QUEUED' ? '차례를 기다리고 있어요' : '책을 찾고 있어요'}</Text>
+            <Text style={styles.description}>{errorText || (job.status === 'QUEUED' ? '요청을 받았어요. 잠시만 기다려주세요.' : '갈피가 어울리는 책을 살펴보고 있어요.')}</Text>
             <View style={styles.queryBox}><Text style={styles.queryLabel}>찾고 있는 책</Text><Text style={styles.queryText}>{job.query}</Text></View>
-            {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
             <Text style={styles.helperText}>화면을 닫아도 검색은 계속돼요. 다시 열면 결과를 확인할 수 있어요.</Text>
           </View>
         ) : job.status === 'FAILED' ? (
