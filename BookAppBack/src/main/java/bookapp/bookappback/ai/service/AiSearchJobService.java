@@ -55,7 +55,7 @@ public class AiSearchJobService {
                     if (!existing.get().getQuery().equals(query)) {
                         throw new AppException(HttpStatus.CONFLICT, "IDEMPOTENCY_CONFLICT", "같은 요청 키에 다른 검색어를 사용할 수 없습니다");
                     }
-                    return toResponse(existing.get());
+                    return toResponse(existing.get(), GalpiAvailability.State.AVAILABLE);
                 }
                 if (repository.countByStatusAndExpiresAtAfter("QUEUED", LocalDateTime.now()) >= 10) {
                     throw new AiSearchCapacityException();
@@ -70,7 +70,7 @@ public class AiSearchJobService {
                 job.setStatus("QUEUED");
                 job.setCreatedAt(now);
                 job.setExpiresAt(now.plusHours(24));
-                return toResponse(repository.save(job));
+                return toResponse(repository.save(job), GalpiAvailability.State.AVAILABLE);
             });
         } finally {
             admissionLock.unlock();
@@ -79,7 +79,7 @@ public class AiSearchJobService {
 
     public AiSearchJobResponse get(Long userId, UUID id) {
         return repository.findByIdAndUserIdAndExpiresAtAfter(id, userId, LocalDateTime.now())
-                .map(this::toResponse)
+                .map(job -> toResponse(job, availability.state()))
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "AI_JOB_NOT_FOUND", "검색 작업을 찾을 수 없습니다"));
     }
 
@@ -90,8 +90,10 @@ public class AiSearchJobService {
                 .forEach(job -> byId.put(job.getId(), job));
         repository.findByUserIdAndStatusInAndExpiresAtAfter(userId, List.of("QUEUED", "RUNNING"), now)
                 .forEach(job -> byId.put(job.getId(), job));
+        if (byId.isEmpty()) return List.of();
+        var state = availability.state();
         return byId.values().stream().sorted(Comparator.comparing(AiSearchJob::getCreatedAt).reversed())
-                .map(this::toResponse).toList();
+                .map(job -> toResponse(job, state)).toList();
     }
 
     public boolean hasQueuedJobs() {
@@ -100,7 +102,7 @@ public class AiSearchJobService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void recover() {
-        if (availability.underMaintenance()) {
+        if (availability.state() == GalpiAvailability.State.MAINTENANCE) {
             transactions.executeWithoutResult(tx -> repository.failForMaintenance(GalpiAvailability.MAINTENANCE, LocalDateTime.now()));
             ready = availability.release() != null && !availability.release().isBlank();
             return;
@@ -193,8 +195,8 @@ public class AiSearchJobService {
         if (ready) transactions.executeWithoutResult(tx -> repository.deleteExpired(availability.release(), LocalDateTime.now()));
     }
 
-    private AiSearchJobResponse toResponse(AiSearchJob job) {
-        if (!java.util.Objects.equals(availability.release(), job.getCorpusRelease()) || availability.underMaintenance()) {
+    private AiSearchJobResponse toResponse(AiSearchJob job, GalpiAvailability.State state) {
+        if (!java.util.Objects.equals(availability.release(), job.getCorpusRelease()) || !state.confirmedAvailable()) {
             return new AiSearchJobResponse(job.getId(), job.getQuery(), "FAILED", null,
                     GalpiAvailability.MAINTENANCE, null, null, null, job.getCreatedAt(),
                     job.getStartedAt(), job.getCompletedAt(), job.getExpiresAt());

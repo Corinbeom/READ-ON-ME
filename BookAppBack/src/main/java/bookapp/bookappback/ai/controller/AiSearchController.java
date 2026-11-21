@@ -34,7 +34,7 @@ public class AiSearchController {
     @GetMapping("/availability")
     public ResponseEntity<ApiResponse<Boolean>> availability() {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(new ApiResponse<>(true, "갈피 이용 상태", !availability.underMaintenance()));
+                .body(new ApiResponse<>(true, "갈피 이용 상태", availability.state().confirmedAvailable()));
     }
 
     @PostMapping("/search")
