@@ -48,7 +48,7 @@ export default function ReadingKeywordStoryScreen() {
       <Link href="/" style={StyleSheet.flatten([styles.brand, { color: colors.text }])}>Read On Me</Link>
       <View style={[styles.header, { borderBottomColor: colors.line }]}>
         <Text accessibilityRole="header" style={[Typography.display, { color: colors.text }]}>요즘 내가 읽는 세계</Text>
-        {keywords.length ? (
+        {hasMounted && keywords.length > 0 ? (
           <View style={styles.keywords}>
             {keywords.map(keyword => (
               <Text key={keyword} style={[styles.keyword, { color: colors.text, backgroundColor: colors.surface2 }]}>

@@ -11,10 +11,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BookReviewRepository extends JpaRepository<BookReview, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from BookReview r where r.id = :id")
+    Optional<BookReview> findByIdForUpdate(@Param("id") Long id);
 
     Slice<BookReview> findByBook(Book book, Pageable pageable);
 

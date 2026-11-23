@@ -295,8 +295,8 @@ export const bookApi = {
   updateBookStatus: (bookId: number, status: ReadingStatus, options?: LocalRequestOptions) =>
     api.post(`/api/library/${bookId}`, null, { params: { status: status.toString() }, ...options }),
 
-  updateBookStatusByIsbn: (isbn: string, status: ReadingStatus) =>
-    api.post<number>(`/api/library/isbn/${isbn}`, null, { params: { status } }),
+  updateBookStatusByIsbn: (isbn: string, status: ReadingStatus, options?: LocalRequestOptions) =>
+    api.post<number>(`/api/library/isbn/${isbn}`, null, { params: { status }, ...options }),
 
   removeLibraryBook: (bookId: number, options?: LocalRequestOptions) => api.delete(`/api/library/${bookId}`, options),
 
@@ -317,7 +317,7 @@ export const reviewApi = {
   createReviewByIsbn: (isbn: string, data: { comment: string; rating: number }) =>
     api.post(`/api/books/isbn/${isbn}/review`, data),
 
-  getReviewsByBook: (bookId: number, sort: string) => api.get(`/api/books/${bookId}/reviews`, { params: { sort } }),
+  getReviewsByBook: (bookId: number, sort: string, options?: LocalRequestOptions) => api.get(`/api/books/${bookId}/reviews`, { params: { sort }, ...options }),
 
   updateReview: (reviewId: number, data: { comment: string; rating: number }) =>
     api.put(`/api/books/review/${reviewId}`, data),
@@ -342,7 +342,7 @@ export const userApi = {
 
 // 🔔 알림 관련 API
 export const notificationApi = {
-  getNotifications: () => api.get('/api/notifications'),
+  getNotifications: (options?: LocalRequestOptions) => api.get('/api/notifications', options),
   markAsRead: (notificationId: number) => api.post(`/api/notifications/${notificationId}/read`),
   markAllAsRead: () => api.post('/api/notifications/read-all'),
 };

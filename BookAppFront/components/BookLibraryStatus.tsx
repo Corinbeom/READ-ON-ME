@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
@@ -23,8 +23,9 @@ export function GuestBookLibraryStatus({ isbn }: { isbn: string }) {
   );
 }
 
+const emptyStatusMessage = '읽기 상태를 선택해 서재에 담아보세요.';
+
 export function NewBookLibraryStatus({ isbn, userId, onSaved }: { isbn: string; userId: number; onSaved: (id: number) => void }) {
-  const styles = getBookLibraryStatusStyles(useColorScheme() ?? 'light');
   const dispatch = useDispatch<AppDispatch>();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
@@ -32,7 +33,7 @@ export function NewBookLibraryStatus({ isbn, userId, onSaved }: { isbn: string; 
     setSaving(true);
     setError(false);
     try {
-      const { data } = await bookApi.updateBookStatusByIsbn(isbn, status);
+      const { data } = await bookApi.updateBookStatusByIsbn(isbn, status, { handleErrorLocally: true });
       dispatch(selectedByIsbn({ userId, bookId: data, status }));
       onSaved(data);
     } catch {
@@ -41,16 +42,9 @@ export function NewBookLibraryStatus({ isbn, userId, onSaved }: { isbn: string; 
       setSaving(false);
     }
   };
-  return <View style={styles.section}>
-    <Text style={styles.heading}>내 서재</Text>
-    <View style={styles.options}>
-      {Object.values(ReadingStatus).map(status => (
-        <AppButton key={status} title={readingStatusLabels[status]} compact variant="ghost"
-          disabled={saving} onPress={() => void save(status)} />
-      ))}
-    </View>
-    {error && <Text role="alert" style={styles.error}>서재 저장에 실패했어요. 다시 선택해주세요.</Text>}
-  </View>;
+  return <LibraryStatusControl status={null} busy={saving} error={error} onSave={save}
+    message={error ? '서재 저장에 실패했어요. 다시 선택해주세요.'
+      : saving ? '서재에 저장하고 있어요.' : emptyStatusMessage} />;
 }
 
 export default function BookLibraryStatus({ bookId, userId }: { bookId: number; userId: number }) {
@@ -72,31 +66,10 @@ export default function BookLibraryStatus({ bookId, userId }: { bookId: number; 
     : entry.error === 'save' ? '저장 결과를 확인하지 못했어요. 다시 저장하거나 상태를 확인해주세요.'
     : entry.error === 'remove' ? '서재에서 책을 뺐는지 다시 확인해주세요.'
     : entry.saved ? `‘${label}’ 상태로 서재에 저장했어요.`
-    : label ? `서재에 ‘${label}’ 상태로 담겨 있어요.` : '읽기 상태를 선택해 서재에 담아보세요.';
+    : label ? `서재에 ‘${label}’ 상태로 담겨 있어요.` : emptyStatusMessage;
   return (
-    <View style={styles.section} testID="book-library-status">
-      <View style={styles.header}>
-        <Text style={styles.heading}>내 서재</Text>
-        {entry.loaded && entry.status && !entry.error && !busy ? (
-          <AppButton title="서재 보기" compact variant="ghost" onPress={() => router.dismissTo('/my-library')} />
-        ) : null}
-      </View>
-      <View style={styles.options} role="radiogroup" accessibilityLabel="읽기 상태" aria-busy={busy}>
-        {Object.values(ReadingStatus).map((status, index) => (
-          <View key={status} style={[styles.option, index > 0 && styles.divider]}>
-            <AppButton title={`${entry.status === status ? '✓ ' : ''}${readingStatusLabels[status]}`}
-              accessibilityLabel={readingStatusLabels[status]} accessibilityRole="radio"
-              accessibilityState={{ checked: entry.status === status }}
-              variant={entry.status === status ? 'primary' : 'ghost'} style={styles.button}
-              disabled={busy || !!entry.error} onPress={() => save(status)} />
-          </View>
-        ))}
-      </View>
-      <View style={styles.feedback}>
-        {busy ? <ActivityIndicator size="small" color={Colors[scheme].inkSoft} /> : null}
-        <Text role={entry.error ? 'alert' : 'status'} accessibilityLiveRegion="polite"
-          style={[styles.message, entry.error && styles.error]} testID="library-status-feedback">{message}</Text>
-      </View>
+    <LibraryStatusControl status={entry.status} busy={busy} error={!!entry.error}
+      disableOptions={!!entry.error} message={message} onSave={save}>
       {entry.error && entry.status ? <Text style={styles.lastConfirmed}>마지막으로 확인한 상태: {label}</Text> : null}
       {entry.error ? (
         <View style={styles.recovery}>
@@ -106,6 +79,46 @@ export default function BookLibraryStatus({ bookId, userId }: { bookId: number; 
           <AppButton title="상태 다시 확인" compact variant="secondary" onPress={reload} />
         </View>
       ) : null}
+    </LibraryStatusControl>
+  );
+}
+
+function LibraryStatusControl({ status: selected, busy, error, disableOptions = false, message, onSave, children }: {
+  status: ReadingStatus | null;
+  busy: boolean;
+  error: boolean;
+  disableOptions?: boolean;
+  message: string;
+  onSave: (status: ReadingStatus) => void;
+  children?: ReactNode;
+}) {
+  const scheme = useColorScheme() ?? 'light';
+  const styles = getBookLibraryStatusStyles(scheme);
+  return (
+    <View style={styles.section} testID="book-library-status">
+      <View style={styles.header}>
+        <Text style={styles.heading}>내 서재</Text>
+        {selected && !error && !busy ? (
+          <AppButton title="서재 보기" compact variant="ghost" onPress={() => router.dismissTo('/my-library')} />
+        ) : null}
+      </View>
+      <View style={styles.options} role="radiogroup" accessibilityLabel="읽기 상태" aria-busy={busy}>
+        {Object.values(ReadingStatus).map((status, index) => (
+          <View key={status} style={[styles.option, index > 0 && styles.divider]}>
+            <AppButton title={`${selected === status ? '✓ ' : ''}${readingStatusLabels[status]}`}
+              accessibilityLabel={readingStatusLabels[status]} accessibilityRole="radio"
+              accessibilityState={{ checked: selected === status }}
+              variant={selected === status ? 'primary' : 'ghost'} style={styles.button}
+              disabled={busy || disableOptions} onPress={() => onSave(status)} />
+          </View>
+        ))}
+      </View>
+      <View style={styles.feedback}>
+        {busy ? <ActivityIndicator size="small" color={Colors[scheme].inkSoft} /> : null}
+        <Text role={error ? 'alert' : 'status'} accessibilityLiveRegion="polite"
+          style={[styles.message, error && styles.error]} testID="library-status-feedback">{message}</Text>
+      </View>
+      {children}
     </View>
   );
 }

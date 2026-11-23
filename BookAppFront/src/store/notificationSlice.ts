@@ -4,8 +4,8 @@ import { Notification } from '../types/notification';
 
 interface NotificationState {
   items: Notification[];
-  loading: boolean;
-  error: any | null;
+  listStatus: 'idle' | 'loading' | 'ready' | 'failed';
+  requestId?: string;
   unreadCount: number;
   aiSearchStreamReady: boolean;
   completedAiSearchIds: string[];
@@ -13,8 +13,7 @@ interface NotificationState {
 
 const initialState: NotificationState = {
   items: [],
-  loading: false,
-  error: null,
+  listStatus: 'idle',
   unreadCount: 0,
   aiSearchStreamReady: false,
   completedAiSearchIds: [],
@@ -24,7 +23,7 @@ export const fetchNotifications = createAsyncThunk(
   'notifications/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await notificationApi.getNotifications();
+      const response = await notificationApi.getNotifications({ handleErrorLocally: true });
       return response.data.data as Notification[];
     } catch (error: any) {
       return rejectWithValue(error.response?.data ?? '알림 조회 실패');
@@ -81,18 +80,21 @@ const notificationSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchNotifications.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+      .addCase(fetchNotifications.pending, (state, action) => {
+        state.listStatus = 'loading';
+        state.requestId = action.meta.requestId;
       })
       .addCase(fetchNotifications.fulfilled, (state, action) => {
-        state.loading = false;
+        if (state.requestId !== action.meta.requestId) return;
+        state.requestId = undefined;
+        state.listStatus = 'ready';
         state.items = action.payload;
         state.unreadCount = action.payload.filter((notification) => !notification.read).length;
       })
       .addCase(fetchNotifications.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
+        if (state.requestId !== action.meta.requestId) return;
+        state.requestId = undefined;
+        state.listStatus = 'failed';
       })
       .addCase(markNotificationAsRead.fulfilled, (state, action) => {
         state.items = state.items.map((notification) =>
@@ -103,7 +105,8 @@ const notificationSlice = createSlice({
       .addCase(markAllNotificationsAsRead.fulfilled, (state) => {
         state.items = state.items.map((notification) => ({ ...notification, read: true }));
         state.unreadCount = 0;
-      });
+      })
+      .addCase('auth/logout', () => initialState);
   },
 });
 
