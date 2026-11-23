@@ -14,9 +14,12 @@ QUESTIONS = Path(__file__).resolve().parents[1] / "evaluation/reviewed/questions
 BURNOUT = "번아웃 올 때 읽을 만한 책"
 
 
-async def run(output):
-    questions = json.loads(QUESTIONS.read_text())
-    questions.append({"query": BURNOUT, "rubric": "추천 이유와 상세 소개가 선택에 도움이 되는지 별도 검토"})
+async def run(output, *, reader_scenarios=False):
+    if reader_scenarios:
+        questions = json.loads(QUESTIONS.with_name("reader-scenarios.json").read_text())
+    else:
+        questions = json.loads(QUESTIONS.read_text())
+        questions.append({"query": BURNOUT, "rubric": "추천 이유와 상세 소개가 선택에 도움이 되는지 별도 검토"})
     database.init_db()
     try:
         async with database.async_session() as db:
@@ -41,4 +44,6 @@ async def run(output):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
-    asyncio.run(run(parser.parse_args().output))
+    parser.add_argument("--reader-scenarios", action="store_true", help="Evaluate the diverse reader questions")
+    args = parser.parse_args()
+    asyncio.run(run(args.output, reader_scenarios=args.reader_scenarios))
