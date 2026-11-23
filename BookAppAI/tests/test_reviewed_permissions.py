@@ -84,3 +84,50 @@ async def test_field_permissions_versions_and_failover(monkeypatch):
             await db.rollback()
     finally:
         await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_reading_keywords_follow_current_policy_and_tag_version():
+    from app.services.embedding_backend import GEMINI_EMBEDDING_MODEL
+    from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL
+    from app.services.reading_keyword_picks import library_keywords
+    from app.services.reviewed_release import _release_snapshot
+
+    url = os.getenv("REVIEWED_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Requires a migrated disposable PostgreSQL database")
+    isbn = "9780306406157"
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            await db.execute(text("""
+                INSERT INTO corpus_use_policy VALUES ('KEYWORD_TEST','test','fixture',current_date,:uses,true)
+            """), {"uses": sorted(EMBEDDING_USES)})
+            async def field(name, value):
+                await record_field(db, isbn, name, value, "KEYWORD_TEST", "test", "fixture", date.today())
+
+            for name, value in [("title", "은하"), ("authors", "저자"), ("contents", "우주 여행")]:
+                await field(name, value)
+
+            async def tags(_):
+                return {"tags": ["우주"]}
+
+            async def embedding(_):
+                return [1]
+
+            await derived(db, isbn, MODEL_USES, "tags", GEMINI_DEFAULT_MODEL, tags)
+            await derived(db, isbn, EMBEDDING_USES, "embedding", GEMINI_EMBEDDING_MODEL, embedding)
+
+            async def analyzed():
+                _, books = await _release_snapshot(db)
+                return library_keywords(books, [isbn], 10)["analyzed"]
+
+            assert await analyzed() == 1
+            await db.execute(text("UPDATE corpus_use_policy SET active=false WHERE provider='KEYWORD_TEST'"))
+            assert await analyzed() == 0
+            await db.execute(text("UPDATE corpus_use_policy SET active=true WHERE provider='KEYWORD_TEST'"))
+            await field("contents", "새 판본 소개")
+            assert await analyzed() == 0
+            await db.rollback()
+    finally:
+        await engine.dispose()

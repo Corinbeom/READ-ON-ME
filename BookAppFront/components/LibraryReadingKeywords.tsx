@@ -125,7 +125,7 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
   const close = () => setPanel(null);
   const words = data.keywords.slice(0, 12);
 
-  if (!data.keywords.length && !data.analyzed) return null;
+  const eligible = new Set([...library.readingBooks, ...library.completedBooks].map(book => book.isbn13)).size;
   return (
     <View style={styles.section} testID="library-reading-keywords">
       <View style={styles.header}>
@@ -134,7 +134,9 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
           <AppButton title="키워드 공유" compact variant="ghost" onPress={() => setPanel({ type: 'share' })} />
         ) : null}
       </View>
-      <Text style={styles.caption}>{words.length ? '키워드를 누르면 어떤 책에서 나왔는지 볼 수 있어요.' : '책에 독서 키워드가 쌓이면 여기에서 볼 수 있어요.'}</Text>
+      <Text style={styles.caption}>{eligible
+        ? `읽는 중·완독한 책 ${eligible}권 중 ${data.analyzed}권에서 키워드를 찾았어요.`
+        : '읽는 중이거나 완독한 책이 생기면 여기에서 독서 키워드를 볼 수 있어요.'}</Text>
       {words.length ? <ReadingKeywordCloud key={JSON.stringify(words.map(item => [item.tag, item.count]))}
         keywords={words} onSelect={tag => setPanel({ type: 'evidence', tag })} /> : null}
       <Modal transparent animationType="slide" visible={!!title} onRequestClose={close}>

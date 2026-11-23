@@ -49,3 +49,18 @@ python -m tools.grade_reviewed run-2.jsonl judgments-2.json --record
 ```
 
 두 실행에서 첫 결과 13/18, 한 권 이상 15/18, 대조 2/2를 충족한 같은 데이터·모델 조합만 재개할 수 있다. 운영에 준비한 검증 DB에서 나온 release 값을 Spring과 AI의 GALPI_REVIEWED_RELEASE에 동시에 설정한다. 이 값이 비어 있거나 DB의 평가 기록·입력 버전·모델과 다르면 갈피가 점검 상태를 반환한다. 공개 후 app.metrics의 corpus_request_blocked 및 reviewed_search, 공급자 오류 로그, 정상 빈 결과 비율을 확인한다. 점검으로 복귀할 때는 이 값만 비우고 두 서비스를 재기동한다.
+
+## 한국어판 후보 발굴과 서재 키워드 검증
+
+하버드 도서관의 Alma 서지 레코드에서 한국어 종이책을 찾는다. 출처, 단일 판본 ISBN, 한국어 제목, 저자 역할, 미 의회도서관 주제명(LCSH)이 확인된 레코드의 필드만 후보 파일에 담는다. 소개 후보에는 카탈로그의 주제명만 들어간다. 출판사 책 소개와 표지 이미지는 수집하지 않는다. 데이터 제공처는 Harvard Library, OCLC, Library of Congress다. [서지 메타데이터 공개 조건](https://library.harvard.edu/services-tools/harvard-library-datasets)
+
+아래 명령은 BookAppAI에서 실행한다. 먼저 파일의 판본과 주제 근거를 검토한다. 사용하기로 한 ISBN의 자료만 별도 검증 DB에 가져와 색인한다. `--new-only`는 기존 ISBN의 편집본을 보존한다. 추가한 도서는 위의 두 차례 품질 평가를 거쳐 공개한다.
+
+```sh
+python -m tools.discover_harvard --subject 'Bookstores' --subject 'Science fiction' --pages 1 --output candidates.json
+python -m tools.reviewed_corpus import approved-fields.json --new-only
+```
+
+이번에 한국어 소개까지 편집한 8권은 `python -m tools.seed_reviewed --discovery`로 검증 DB에 넣을 수 있다. 이후 `evaluation/reviewed/discovery.json`에 있는 ISBN을 색인한다.
+
+서재의 ‘읽는 중’과 ‘완독’ ISBN 목록은 공개 판정된 버전의 태그와 대조한다. 태그가 있는 책만 분석 권수에 포함하며 키워드별 근거 ISBN을 반환한다. 공유 링크의 추천 목록도 같은 버전의 제목·저자·태그에서 가져온다.

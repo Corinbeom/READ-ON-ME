@@ -13,16 +13,17 @@ from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL
 from app.services.reranker import GROQ_RERANK_MODEL, RERANK_MODEL
 
 
-async def fingerprint(db):
+async def _release_snapshot(db):
     rows = (await db.execute(text("""
-        SELECT e.isbn, e.input_version, md5(e.result::text), md5(t.result::text)
+        SELECT e.isbn, e.input_version, md5(e.result::text), md5(t.result::text), t.result
         FROM corpus_derived_artifacts e LEFT JOIN corpus_derived_artifacts t
           ON e.isbn=t.isbn AND e.input_version=t.input_version AND t.kind='tags' AND t.model_version=:tag
         WHERE e.kind='embedding' AND e.model_version=:embed
         ORDER BY e.isbn,e.input_version
     """), {"embed": GEMINI_EMBEDDING_MODEL, "tag": GEMINI_DEFAULT_MODEL})).all()
     entries = []
-    for isbn, version, vector_digest, tags_digest in rows:
+    books = {}
+    for isbn, version, vector_digest, tags_digest, classification in rows:
         try:
             fields, current = await read_inputs(db, isbn, EMBEDDING_USES)
         except CorpusPermissionError:
@@ -31,6 +32,7 @@ async def fingerprint(db):
             if tags_digest is None:
                 raise CorpusPermissionError("AI_SEARCH_MAINTENANCE")
             entries.append([isbn, version, fields, vector_digest, tags_digest])
+            books[isbn] = (fields, classification)
     version = hashlib.sha256()
     root = Path(__file__).resolve().parents[1]
     for path in ("corpus_policy.py", "services/reviewed_corpus.py", "services/reranker.py",
@@ -38,7 +40,12 @@ async def fingerprint(db):
         version.update((root / path).read_bytes())
     version.update(json.dumps([GEMINI_EMBEDDING_MODEL, GEMINI_DEFAULT_MODEL, RERANK_MODEL,
                                GROQ_RERANK_MODEL, entries], sort_keys=True).encode())
-    return version.hexdigest(), len(entries)
+    return version.hexdigest(), books
+
+
+async def fingerprint(db):
+    release, books = await _release_snapshot(db)
+    return release, len(books)
 
 
 def configured_release():
@@ -57,6 +64,7 @@ async def require_release(db, release):
     """), {"release": release})).scalar_one()
     if runs < 2:
         raise CorpusPermissionError("AI_SEARCH_MAINTENANCE")
-    current, count = await fingerprint(db)
-    if count < 30 or current != release:
+    current, books = await _release_snapshot(db)
+    if len(books) < 30 or current != release:
         raise CorpusPermissionError("AI_SEARCH_MAINTENANCE")
+    return books

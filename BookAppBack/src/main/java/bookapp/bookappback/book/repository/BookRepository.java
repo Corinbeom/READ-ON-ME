@@ -1,6 +1,5 @@
 package bookapp.bookappback.book.repository;
 
-import bookapp.bookappback.ai.dto.ReadingKeywordPickDto;
 import bookapp.bookappback.book.entity.Book;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -26,13 +25,6 @@ public interface BookRepository extends JpaRepository<Book, Long> {
 
     // ISBN13 조회
     Optional<Book> findByIsbn13(String isbn13);
-
-    @Query("""
-            SELECT new bookapp.bookappback.ai.dto.ReadingKeywordPickDto(
-                b.isbn13, b.title, coalesce(b.authors, ''), coalesce(b.thumbnail, ''))
-            FROM Book b WHERE b.isbn13 IN :isbns
-            """)
-    List<ReadingKeywordPickDto> findReadingKeywordPicks(@Param("isbns") List<String> isbns);
 
     List<Book> findByGroupTitle(String groupTitle);
 

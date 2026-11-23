@@ -1,28 +1,21 @@
-from types import SimpleNamespace
-from unittest.mock import AsyncMock
-
 import pytest
 from pydantic import ValidationError
 
 from app.schemas import ReadingKeywordPicksRequest
-from app.services.reading_keyword_picks import find_reading_keyword_isbns
+from app.services.reading_keyword_picks import library_keywords, public_picks
 
 
-@pytest.mark.asyncio
-async def test_public_picks_drop_legacy_workbooks_and_return_distinct_normalized_isbns():
-    rows = [
-        {"isbn": "9788936434120", "title": "수능문학 기출문제집"},
-        {"isbn": "9788998441012", "title": "모순"},
-        {"isbn": "8998441012", "title": "모순"},
-        {"isbn": "9788932917245", "title": "어린 왕자"},
-    ]
-    db = AsyncMock()
-    db.execute.return_value = SimpleNamespace(mappings=lambda: rows)
-
-    assert await find_reading_keyword_isbns(db, [" 소설  ", "USER_ADDED", "Fiction", "fiction"]) == [
-        "9788998441012", "9788932917245",
-    ]
-    assert db.execute.await_args.args[1] == {"keywords": ["fiction", "소설"]}
+def test_library_uses_only_selected_editions_and_deduplicates_evidence():
+    books = {
+        "a": ({"title": "봄", "authors": "작가"}, {"tags": [" 성장 ", "성장", "user_added"]}),
+        "b": ({"title": "별", "authors": "작가"}, {"tags": ["성장", "우주"]}),
+        "c": ({"title": "숲", "authors": "작가"}, {"tags": ["자연"]}),
+    }
+    assert library_keywords(books, ["a", "a", "b", "unknown"], 1) == {
+        "analyzed": 2, "keywords": [{"tag": "성장", "count": 2, "book_isbns": ["a", "b"]}]}
+    picks = public_picks(books, ["성장", "우주"])
+    assert [r["isbn13"] for r in picks] == ["b", "a"]
+    assert picks[0] == {"isbn13": "b", "title": "별", "authors": "작가", "thumbnail": None}
 
 
 @pytest.mark.parametrize("tags", [[], ["a", "b", "c", "d"], [" "], ["가족\x00"]])
