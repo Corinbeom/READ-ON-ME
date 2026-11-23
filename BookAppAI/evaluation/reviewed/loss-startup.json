@@ -1,0 +1,79 @@
+[
+  {
+    "isbn": "9791167372864",
+    "title": "구의 증명",
+    "authors": "최진영",
+    "genre": "한국소설",
+    "contents": "구가 죽은 뒤 연인 담은 그를 기억하는 일에 매달린다. 남겨진 사람이 죽은 이와의 관계를 어디까지 이어갈 수 있는지 묻는 한국소설이다. 애도가 낯설고 격렬한 모습으로 나타나는 이야기를 읽을 수 있다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99161851278803941/catalog",
+    "editorial_evidence": "https://library.kaist.ac.kr/search/ctlgSearch/posesn/view.do?bibctrlno=1048626&ty=B",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791160409932",
+    "title": "별일은 없고요?",
+    "authors": "이주란",
+    "genre": "한국소설",
+    "contents": "이주란의 한국 단편소설집이다. 수록작 「파주에 있는」에서는 남편을 잃은 현경이 옛 연인을 다시 만난다. 한 사람이 애도하는 시간을 한 번의 외출과 두 사람의 대화로 들여다볼 수 있다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99157044998503941/catalog",
+    "editorial_evidence": "https://magazine.changbi.com/MCQuarterly/Item/6121",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9788936431570",
+    "title": "이별 박물관",
+    "authors": "전성현",
+    "genre": "한국소설",
+    "contents": "엄마의 문자를 받고 찾아간 박물관에서 주인공은 자신의 이별을 전시한 방들을 지난다. 물건 하나를 바라보는 일이 떠난 사람을 기억하는 일로 바뀌는 과정을 그린 한국소설이다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99161859984503941/catalog",
+    "editorial_evidence": "https://www.changbi.com/BookDetail?bookid=4549",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791160949483",
+    "title": "골목의 조",
+    "authors": "송섬",
+    "genre": "한국소설",
+    "contents": "아버지를 잃고 어머니가 곁에 없는 청년이 애도 속에서 자기 삶의 방향을 찾는 한국 장편소설이다. 부모의 빈자리가 남은 사람의 성장과 어떻게 맞물리는지 따라 읽을 수 있다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99156685837303941/catalog",
+    "editorial_evidence": "https://id.lib.harvard.edu/alma/99156685837303941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791191211863",
+    "title": "유난한 도전",
+    "authors": "정경화",
+    "genre": "경영",
+    "contents": "간편송금 서비스를 시작한 토스의 초기 팀에는 함께 도전한 동료도, 회사를 떠난 동료도 있었다. 정경화가 구성원들을 취재해 작은 스타트업이 실패를 겪고 일하는 방식을 만들어 온 과정을 기록했다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99156743792703941/catalog",
+    "editorial_evidence": "https://toss.im/tossfeed/article/epilogue",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791175230088",
+    "title": "실패를 통과하는 일",
+    "authors": "박소령",
+    "genre": "경영",
+    "contents": "콘텐츠 스타트업 퍼블리를 창업한 박소령이 동업자를 두는 결정에서 매각에 이르기까지 자신이 감당한 선택을 돌아본다. 초기 창업팀 안에서 관계가 흔들릴 때 창업자가 사람과 돈을 놓고 무엇을 고민했는지 당사자의 시선으로 읽을 수 있다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99160522605903941/catalog",
+    "editorial_evidence": "https://bemyb.kr/contents/?bmode=view&idx=167792896&q=YToxOntzOjEyOiJrZXl3b3JkX3R5cGUiO3M6MzoiYWxsIjt9&t=board",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9780691149134",
+    "title": "The Founder’s Dilemmas",
+    "authors": "Noam Wasserman",
+    "genre": "창업",
+    "contents": "친구와 공동창업을 할지, 초기 팀에서 누가 무엇을 결정하고 지분을 어떻게 나눌지 다루는 영어 원서다. 동료를 모으는 단계부터 첫 직원을 채용할 때까지 창업자가 비교할 선택지를 정리한다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/990131510380203941/catalog",
+    "editorial_evidence": "https://press.princeton.edu/books/ebook/9781400841936/the-founders-dilemmas",
+    "checked_on": "2026-11-23"
+  }
+]
