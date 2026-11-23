@@ -1,0 +1,66 @@
+[
+  {
+    "isbn": "9791190846141",
+    "title": "오늘부터 달리기를 합니다 : 걷기부터 시작하는 4주 완성 달리기 수업",
+    "topic": "러닝",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000257256",
+    "fact_check": "https://m.hanbit.co.kr/books/B1790423150?code=B1790423150"
+  },
+  {
+    "isbn": "9791187033820",
+    "title": "I Hate Running 나는 달리기가 싫어 : 달리고 싶지만 달리기 싫은 사람을 위한 애증의 러닝 가이드",
+    "topic": "러닝",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000297416",
+    "fact_check": "https://www.yes24.com/product/goods/108422610"
+  },
+  {
+    "isbn": "9791170461487",
+    "title": "누구나 알기 쉽게 배우는 스마트폰 책 : 시니어 실버들을 위한 가장 쉬운 스마트폰 활용 교육",
+    "topic": "스마트폰 기초",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000322761",
+    "fact_check": "https://kobic.net/book/bookInfo/view.do?isbn=9791170461487"
+  },
+  {
+    "isbn": "9788972219651",
+    "title": "(엄마와 아이사이)아들러식 대화법",
+    "topic": "가족 대화",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000036322",
+    "fact_check": "https://kobic.net/book/bookInfo/view.do?isbn=9788972219651"
+  },
+  {
+    "isbn": "9791187743002",
+    "title": "내 아이 고집 이기는 대화법",
+    "topic": "가족 대화",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000022171",
+    "fact_check": "https://mpllc.sen.go.kr/mpllc/intro/search/detail.do?isbn=9791187743002&menu_idx=5&vCtrl=5326456652&vLoca=111014"
+  },
+  {
+    "isbn": "9791155361382",
+    "title": "1일 5분 정리 수납 정돈법 : 실천 가능하고 지속 가능한",
+    "topic": "수납",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#DNL000096525",
+    "fact_check": "https://kobic.net/book/bookInfo/view.do?isbn=9791155361382"
+  },
+  {
+    "isbn": "9788960306189",
+    "title": "전세금을 지켜라 : 아파트, 빌라, 원룸, 오피스텔 전세 사기로부터",
+    "topic": "주택 임대차",
+    "from_original_sample": true,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000336128",
+    "fact_check": "https://kobic.net/book/bookInfo/view.do?isbn=9788960306189"
+  },
+  {
+    "isbn": "9788961570640",
+    "title": "내 이름은 욤비",
+    "topic": "이주 경험",
+    "from_original_sample": false,
+    "bibliography": "https://www.data.go.kr/data/15119625/fileData.do#CNL000040589",
+    "fact_check": "https://library.kaist.ac.kr/search/ctlgSearch/posesn/view.do?bibctrlno=677752&ty=B"
+  }
+]

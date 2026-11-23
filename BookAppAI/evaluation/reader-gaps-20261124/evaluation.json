@@ -1,0 +1,415 @@
+{
+  "summary": {
+    "before": {
+      "count": 113,
+      "release": "e9e96b4e0218e67f8411e9dbfa2f8a7c92c27ca081e1f0877e21893df6446641",
+      "first": 0,
+      "any": 0,
+      "empty": 6,
+      "outcomes": {
+        "NO_MATCH": 6
+      }
+    },
+    "before2": {
+      "count": 113,
+      "release": "e9e96b4e0218e67f8411e9dbfa2f8a7c92c27ca081e1f0877e21893df6446641",
+      "first": 0,
+      "any": 0,
+      "empty": 6,
+      "outcomes": {
+        "NO_MATCH": 6
+      }
+    },
+    "after": {
+      "count": 121,
+      "release": "f3df7655f75778ca02c7a6cd562f39120a38b8099717f55a810fa868b8aca3bc",
+      "first": 5,
+      "any": 5,
+      "empty": 0,
+      "outcomes": {
+        "MODEL": 4,
+        "FALLBACK": 2
+      }
+    },
+    "after2": {
+      "count": 121,
+      "release": "f3df7655f75778ca02c7a6cd562f39120a38b8099717f55a810fa868b8aca3bc",
+      "first": 5,
+      "any": 5,
+      "empty": 1,
+      "outcomes": {
+        "MODEL": 5,
+        "NO_MATCH": 1
+      }
+    }
+  },
+  "questions": [
+    {
+      "query": "달리기를 처음 시작하는데 천천히 습관을 붙일 수 있는 러닝 입문서 있을까요?",
+      "reader": "주말에 달리기를 시작한 독자",
+      "rubric": "초보자에게 운동 과정을 안내하는 달리기 책",
+      "topic": "러닝",
+      "accepted_isbns": [
+        "9791190846141",
+        "9791187033820"
+      ],
+      "before": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "before2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "after": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "GROQ_AFTER_HTTP_503"
+        },
+        "books": [
+          {
+            "isbn": "9791190846141",
+            "title": "오늘부터 달리기를 합니다 : 걷기부터 시작하는 4주 완성 달리기 수업"
+          },
+          {
+            "isbn": "9791187033820",
+            "title": "I Hate Running 나는 달리기가 싫어 : 달리고 싶지만 달리기 싫은 사람을 위한 애증의 러닝 가이드"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      },
+      "after2": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "GROQ_AFTER_HTTP_503"
+        },
+        "books": [
+          {
+            "isbn": "9791190846141",
+            "title": "오늘부터 달리기를 합니다 : 걷기부터 시작하는 4주 완성 달리기 수업"
+          },
+          {
+            "isbn": "9791187033820",
+            "title": "I Hate Running 나는 달리기가 싫어 : 달리고 싶지만 달리기 싫은 사람을 위한 애증의 러닝 가이드"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      }
+    },
+    {
+      "query": "아이가 화가 나서 울 때 서로 말이 안 통해요. 실제 부모와 아이의 대화 예시가 많은 책 있을까요?",
+      "reader": "처음 아이를 키우는 독자",
+      "rubric": "부모와 자녀의 갈등을 다룬 대화 사례와 방법",
+      "topic": "가족 대화",
+      "accepted_isbns": [
+        "9788972219651",
+        "9791187743002"
+      ],
+      "before": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "before2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "after": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "GROQ_AFTER_HTTP_503"
+        },
+        "books": [
+          {
+            "isbn": "9788958079712",
+            "title": "무영이가 사라졌다"
+          }
+        ],
+        "first_match": false,
+        "any_match": false
+      },
+      "after2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      }
+    },
+    {
+      "query": "스마트폰을 처음 써요. 사진 찍고 가족에게 보내는 걸 큰 글씨로 설명한 책이 있을까요?",
+      "reader": "디지털 기기가 낯선 어르신",
+      "rubric": "스마트폰 기초 사용법과 큰 글씨 판형",
+      "topic": "스마트폰 기초",
+      "accepted_isbns": [
+        "9791170461487"
+      ],
+      "before": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "before2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "after": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "GROQ_AFTER_COOLDOWN"
+        },
+        "books": [
+          {
+            "isbn": "9791170461487",
+            "title": "누구나 알기 쉽게 배우는 스마트폰 책 : 시니어 실버들을 위한 가장 쉬운 스마트폰 활용 교육"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      },
+      "after2": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "NONE"
+        },
+        "books": [
+          {
+            "isbn": "9791170461487",
+            "title": "누구나 알기 쉽게 배우는 스마트폰 책 : 시니어 실버들을 위한 가장 쉬운 스마트폰 활용 교육"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      }
+    },
+    {
+      "query": "작은 집에서 수납 공간을 만들고 싶어요. 사진이나 도면으로 보여 주는 인테리어 책을 찾습니다.",
+      "reader": "신혼집을 꾸미는 독자",
+      "rubric": "좁은 공간 수납과 시각적인 사례",
+      "topic": "수납",
+      "accepted_isbns": [
+        "9791155361382"
+      ],
+      "before": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "before2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "after": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "GROQ_AFTER_COOLDOWN"
+        },
+        "books": [
+          {
+            "isbn": "9791155361382",
+            "title": "1일 5분 정리 수납 정돈법 : 실천 가능하고 지속 가능한"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      },
+      "after2": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "NONE"
+        },
+        "books": [
+          {
+            "isbn": "9791155361382",
+            "title": "1일 5분 정리 수납 정돈법 : 실천 가능하고 지속 가능한"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      }
+    },
+    {
+      "query": "처음 전셋집을 구해요. 계약 전에 무엇을 확인하는지 설명한 입문서를 찾고 있어요.",
+      "reader": "생애 첫 이사를 앞둔 세입자",
+      "rubric": "한국 주택 임대차 계약 전 점검을 다루는 책",
+      "topic": "주택 임대차",
+      "accepted_isbns": [
+        "9788960306189"
+      ],
+      "before": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "before2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "after": {
+        "outcome": {
+          "status": "FALLBACK",
+          "reason_code": "COOLDOWN"
+        },
+        "books": [
+          {
+            "isbn": "9788960306189",
+            "title": "전세금을 지켜라 : 아파트, 빌라, 원룸, 오피스텔 전세 사기로부터"
+          },
+          {
+            "isbn": "9788927811862",
+            "title": "데칼코마니 미술관"
+          },
+          {
+            "isbn": "9791155361382",
+            "title": "1일 5분 정리 수납 정돈법 : 실천 가능하고 지속 가능한"
+          },
+          {
+            "isbn": "9791128801471",
+            "title": "팩트체킹 저널리즘"
+          },
+          {
+            "isbn": "9780735211292",
+            "title": "Atomic Habits"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      },
+      "after2": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "NONE"
+        },
+        "books": [
+          {
+            "isbn": "9788960306189",
+            "title": "전세금을 지켜라 : 아파트, 빌라, 원룸, 오피스텔 전세 사기로부터"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      }
+    },
+    {
+      "query": "한국에서 이주민으로 산 경험을 당사자 목소리로 읽고 싶어요. 그런 에세이가 있을까요?",
+      "reader": "새로 만난 이웃이 궁금한 독자",
+      "rubric": "한국 거주 이주 당사자가 쓴 일상 경험",
+      "topic": "이주 경험",
+      "accepted_isbns": [
+        "9788961570640"
+      ],
+      "before": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "before2": {
+        "outcome": {
+          "status": "NO_MATCH",
+          "reason_code": "MODEL_NO_MATCH"
+        },
+        "books": [],
+        "first_match": false,
+        "any_match": false
+      },
+      "after": {
+        "outcome": {
+          "status": "FALLBACK",
+          "reason_code": "COOLDOWN"
+        },
+        "books": [
+          {
+            "isbn": "9788961570640",
+            "title": "내 이름은 욤비"
+          },
+          {
+            "isbn": "9791169090742",
+            "title": "밑바닥에서"
+          },
+          {
+            "isbn": "9788936434120",
+            "title": "소년이 온다"
+          },
+          {
+            "isbn": "9791160943733",
+            "title": "실격당한 자들을 위한 변론"
+          },
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      },
+      "after2": {
+        "outcome": {
+          "status": "MODEL",
+          "reason_code": "GROQ_AFTER_HTTP_503"
+        },
+        "books": [
+          {
+            "isbn": "9788961570640",
+            "title": "내 이름은 욤비"
+          }
+        ],
+        "first_match": true,
+        "any_match": true
+      }
+    }
+  ]
+}
