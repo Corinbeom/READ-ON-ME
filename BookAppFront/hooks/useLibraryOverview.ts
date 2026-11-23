@@ -39,6 +39,20 @@ export function useLibraryOverview(isAuthenticated: boolean, userId?: number) {
     const update = (patch: Partial<Overview>) => {
       if (!controller.signal.aborted) setState((previous) => previous.ownerId === userId ? { ...previous, ...patch } : previous);
     };
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const getKeywords = async () => {
+      const response = await userApi.getReadingKeywords(options);
+      return parseReadingKeywords(response.data?.data ?? response.data);
+    };
+    const receiveKeywords = (data: ReadingKeywords) => {
+      if (controller.signal.aborted) return;
+      update({ keywords: data, keywordsError: '' });
+      if (data.pending) {
+        timer = setTimeout(() => {
+          void getKeywords().then(receiveKeywords).catch(() => update({ keywordsError: '독서 키워드를 불러오지 못했어요.' }));
+        }, 15000);
+      }
+    };
     void loadLibraryOverview({
       library: async () => {
         const { data } = await bookApi.getUserLibrary(options);
@@ -50,16 +64,13 @@ export function useLibraryOverview(isAuthenticated: boolean, userId?: number) {
         if (!Array.isArray(data?.data)) throw new Error('Invalid reviews response');
         return data.data as Review[];
       },
-      keywords: async () => {
-        const response = await userApi.getReadingKeywords(options);
-        return parseReadingKeywords(response.data?.data ?? response.data);
-      },
+      keywords: getKeywords,
     }, {
       library: ({ data, error }) => update(data ? { library: data, libraryError: '' } : { libraryError: error }),
       reviews: ({ data, error }) => update(data ? { reviews: data, reviewsError: '' } : { reviewsError: error }),
-      keywords: ({ data, error }) => update(data ? { keywords: data, keywordsError: '' } : { keywordsError: error }),
+      keywords: ({ data, error }) => data ? receiveKeywords(data) : update({ keywordsError: error }),
     }, controller.signal).then(() => update({ refreshing: false }));
-    return () => controller.abort();
+    return () => { controller.abort(); clearTimeout(timer); };
   }, [attempt, isAuthenticated, userId, revision]));
   const current = isAuthenticated && state.ownerId === userId ? state : empty;
   return { ...current, reload: () => setAttempt((value) => value + 1) };

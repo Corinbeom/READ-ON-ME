@@ -63,4 +63,8 @@ python -m tools.reviewed_corpus import approved-fields.json --new-only
 
 이번에 한국어 소개까지 편집한 8권은 `python -m tools.seed_reviewed --discovery`로 검증 DB에 넣을 수 있다. 이후 `evaluation/reviewed/discovery.json`에 있는 ISBN을 색인한다.
 
-서재의 ‘읽는 중’과 ‘완독’ ISBN 목록은 공개 판정된 버전의 태그와 대조한다. 태그가 있는 책만 분석 권수에 포함하며 키워드별 근거 ISBN을 반환한다. 공유 링크의 추천 목록도 같은 버전의 제목·저자·태그에서 가져온다.
+## 서재 키워드
+
+서재 키워드는 ‘읽는 중’과 ‘완독’ 도서의 ISBN으로 조회한다. 성남시 중앙·판교도서관의 2026년 1월 7일 장서 목록에서 분류기호와 주제어를 추려 로컬 색인에 담았다. 새 책과 기존 책 모두 같은 색인을 조회한다. 원본 파일과 색인 재생성 명령은 `BookAppAI/tools/build_shelf_catalog.py`에 있다. `corpus_use_policy`의 `SEONGNAM_HOLDINGS / 20260107`이 해당 용도를 허용할 때만 이 색인을 사용한다. [성남시 도서관 도서목록과 이용조건](https://www.data.go.kr/data/3071094/fileData.do)
+
+외부 AI 전송이 허용된 제목·저자·소개가 있는 책은 현재 입력 버전의 Gemini 태그도 사용한다. 태그가 없으면 서재 조회 시 ISBN·입력 버전·모델별로 한 번 등록하고 백그라운드에서 처리한다. 처리 직전에 이용조건과 입력 버전을 다시 확인한다. 키워드를 한글로 통일한 뒤 책 한 권당 한 번씩 세고, 각 키워드의 근거 ISBN을 반환한다. 갈피 점검 중에도 서재 키워드를 조회할 수 있다. 공유 링크에서 추천하는 책은 갈피 공개 판정을 통과한 목록에서 고른다.

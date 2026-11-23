@@ -4,7 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.corpus_policy import require_verified_corpus
 from app import database
 from app.database import get_db
-from app.services.reading_keyword_picks import library_keywords, public_picks
+from app.services.reading_keyword_picks import public_picks
+from app.services.shelf_keywords import shelf_keywords
 from app.services import corpus_ingestion
 from app.services.reviewed_corpus import search_reviewed, read_inputs
 from app.services.reviewed_release import configured_release, require_release
@@ -117,8 +118,9 @@ async def keyword_books(x_reviewed_release: str | None = Header(default=None)):
 
 
 @router.post("/api/user/reading-tags", dependencies=[Depends(require_internal_token)])
-async def get_reading_tags(request: ReadingTagsRequest, books=Depends(keyword_books)):
-    return library_keywords(books, request.isbns, request.limit)
+async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depends(get_db)):
+    async with db.begin():
+        return await shelf_keywords(db, request.isbns, request.limit)
 
 
 @router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])

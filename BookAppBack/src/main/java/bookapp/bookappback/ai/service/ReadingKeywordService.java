@@ -61,7 +61,6 @@ public class ReadingKeywordService {
      * @return 키워드별 책 수와 근거 ISBN 목록, 분석한 책 수
      */
     public Map<String, Object> getReadingKeywords(Long userId) {
-        if (availability.release().isBlank()) return Map.of("keywords", List.of(), "analyzed", 0);
         List<UserBookIsbnDto> userBooks = userBookStatusService.getUserBooksWithIsbn(userId);
 
         List<String> isbns = userBooks.stream()
@@ -94,6 +93,7 @@ public class ReadingKeywordService {
         if (availability.release().isBlank()) return Mono.just(List.of());
         return webClient.post()
                 .uri("/api/books/reading-keyword-picks")
+                .header("X-Reviewed-Release", availability.release())
                 .headers(this::setInternalToken)
                 .bodyValue(Map.of("keywords", keywords))
                 .retrieve()
@@ -102,7 +102,6 @@ public class ReadingKeywordService {
     }
 
     private void setInternalToken(HttpHeaders headers) {
-        headers.set("X-Reviewed-Release", availability.release());
         if (internalToken != null && !internalToken.isBlank()) {
             headers.set("X-Internal-Token", internalToken);
         }

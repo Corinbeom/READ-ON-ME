@@ -126,6 +126,7 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
   const words = data.keywords.slice(0, 12);
 
   const eligible = new Set([...library.readingBooks, ...library.completedBooks].map(book => book.isbn13)).size;
+  const missing = Math.max(0, eligible - data.analyzed - (data.pending ?? 0) - (data.failed ?? 0));
   return (
     <View style={styles.section} testID="library-reading-keywords">
       <View style={styles.header}>
@@ -137,6 +138,9 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
       <Text style={styles.caption}>{eligible
         ? `읽는 중·완독한 책 ${eligible}권 중 ${data.analyzed}권에서 키워드를 찾았어요.`
         : '읽는 중이거나 완독한 책이 생기면 여기에서 독서 키워드를 볼 수 있어요.'}</Text>
+      {!!data.pending && <Text style={styles.caption}>{data.pending}권의 키워드를 분석하고 있어요.</Text>}
+      {!!data.failed && <Text style={styles.caption}>{data.failed}권은 키워드 분석을 마치지 못했어요.</Text>}
+      {missing > 0 && <Text style={styles.caption}>{missing}권은 아직 연결할 수 있는 주제 자료가 없어요.</Text>}
       {words.length ? <ReadingKeywordCloud key={JSON.stringify(words.map(item => [item.tag, item.count]))}
         keywords={words} onSelect={tag => setPanel({ type: 'evidence', tag })} /> : null}
       <Modal transparent animationType="slide" visible={!!title} onRequestClose={close}>
@@ -152,6 +156,9 @@ export default function LibraryReadingKeywords({ data, library }: { data: Readin
                   <Text style={styles.caption}>{evidence.length
                     ? `읽는 중이거나 완독한 책 ${evidence.length}권에서 이 키워드가 나왔어요.`
                     : '이 키워드가 나온 책 목록을 불러올 수 없어요.'}</Text>
+                  {!!keyword.catalog_count && <Text style={styles.caption}>
+                    {keyword.catalog_count}권은 성남시 도서관 장서의 분류·주제어에서 확인했어요.
+                  </Text>}
                   {evidence.length > 0 ? <View style={styles.books}>
                     {evidence.map(book => <LibraryBookCard key={book.isbn13} book={book} onPress={close} />)}
                   </View> : null}
