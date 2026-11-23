@@ -131,3 +131,17 @@ async def test_reading_keywords_follow_current_policy_and_tag_version():
             await db.rollback()
     finally:
         await engine.dispose()
+
+
+@pytest.mark.parametrize(("query", "winners"), [
+    ("한국 소설 중 문학상을 받은 작품을 골라줘", {"9788936433598"}),
+    ("맨부커 인터내셔널상 수상작", {"9788936433598"}),
+    ("달빛운하유리문학상 수상작", set()),
+    ("노벨문학상을 받은 작품", set()),
+    ("상실을 받아들이는 소설", None),
+    ("일상을 받아들이는 이야기", None),
+])
+def test_only_verified_works_qualify_for_award_queries(query, winners):
+    from app.services.reviewed_corpus import award_candidates
+
+    assert award_candidates(query) == winners

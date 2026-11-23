@@ -11,6 +11,27 @@ from app.corpus_policy import CorpusPermissionError, HOLD_REASON, MODEL_FIELDS, 
 from app.services.corpus_quality import normalize_isbn
 
 
+# Work-level evidence for editions in the reviewed corpus. The English translation
+# of The Vegetarian won in 2016. https://thebookerprizes.com/the-booker-library/books/the-vegetarian
+_VERIFIED_AWARDS = {"9788936433598": ("맨부커 인터내셔널상", "부커 인터내셔널상", "인터내셔널 부커상")}
+_GENERIC_PRIZES = {"상", "문학상", "작품상", "도서상", "소설상"}
+
+
+def award_candidates(query: str) -> set[str] | None:
+    """None means an ordinary search; an empty set means an unverified prize."""
+    names = re.findall(r"([가-힣A-Za-z·]*(?:문학상|작품상|도서상|소설상|부커상|인터내셔널상|노벨상))", query)
+    names += re.findall(r"\b([가-힣A-Za-z·]+상)(?:을|를)?\s*(?=수상작)", query)
+    if not names and "수상작" not in query and not re.search(r"\b상(?:을)?\s*(?:받|탄)", query):
+        return None
+    specific = set(names) - _GENERIC_PRIZES
+    winners = set()
+    for isbn, aliases in _VERIFIED_AWARDS.items():
+        matched = {alias.split()[-1] for alias in aliases if alias in query}
+        if specific <= matched:
+            winners.add(isbn)
+    return winners
+
+
 def digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
@@ -156,13 +177,14 @@ async def search_reviewed(db, query, outcome=None):
     """), {"model": embedding_backend.GEMINI_EMBEDDING_MODEL})).scalars().all()
     from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL
     intent = await IntentAnalyzer().analyze(query)
-    named_award = re.search(r"([가-힣A-Za-z·]{2,}(?:문학상|도서상|작품상|소설상))", query)
-    award_request = named_award or re.search(r"(문학상|도서상|작품상|소설상)(?:을|를)?\s*(받|수상)|수상작", query)
+    winners = award_candidates(query)
     practical = intent.requested_form == "PRACTICAL" or (
         intent.requested_form != "STORY" and (intent.domain in {"비즈니스", "금융", "심리", "자기계발"} or "저축" in query)
     )
     vectors = []
     for isbn in isbns:
+        if winners is not None and isbn not in winners:
+            continue
         try:
             fields, version = await read_inputs(db, isbn, EMBEDDING_USES)
         except CorpusPermissionError:
@@ -175,10 +197,6 @@ async def search_reviewed(db, query, outcome=None):
         """), {"isbn": isbn, "version": version, "model": embedding_backend.GEMINI_EMBEDDING_MODEL,
                "tag": GEMINI_DEFAULT_MODEL})).mappings().one_or_none()
         if artifacts is None:
-            continue
-        if award_request and not re.search(r"(상.{0,25}(받|수상)|수상작)", fields["contents"]):
-            continue
-        if named_award and named_award.group(1) not in fields["contents"]:
             continue
         if practical and artifacts["tags"].get("book_type") not in {"NONFICTION", "PRACTICAL", "EDUCATIONAL"}:
             continue
