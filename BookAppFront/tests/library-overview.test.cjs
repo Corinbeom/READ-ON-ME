@@ -114,3 +114,13 @@ test('shelf DTOs and existing search records resolve valid detail links with ISB
   assert.equal(getIsbn13({ isbn13: '9780306406150' }), '');
   assert.equal(getIsbn13({ isbn13: '' }), '');
 });
+
+test('library preserves pending, failed, and catalog evidence counts from the shelf endpoint', () => {
+  const result = parseReadingKeywords({
+    analyzed: 1, pending: 2, failed: 1,
+    keywords: [{ tag: '경영', count: 1, catalog_count: 1, book_isbns: ['9788960323704'] }],
+  });
+  assert.equal(result.pending, 2);
+  assert.equal(result.failed, 1);
+  assert.equal(result.keywords[0].catalog_count, 1);
+});

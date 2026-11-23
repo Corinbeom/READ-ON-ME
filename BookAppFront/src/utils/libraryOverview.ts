@@ -11,11 +11,14 @@ export interface ReadingKeyword {
   tag: string;
   count: number;
   book_isbns?: string[];
+  catalog_count?: number;
 }
 
 export interface ReadingKeywords {
   keywords: ReadingKeyword[];
   analyzed: number;
+  pending?: number;
+  failed?: number;
 }
 
 export function parseReadingKeywords(value: unknown): ReadingKeywords {
@@ -26,6 +29,8 @@ export function parseReadingKeywords(value: unknown): ReadingKeywords {
   const seen = new Set<string>();
   return {
     analyzed: data.analyzed,
+    ...(Number.isInteger(data.pending) && data.pending! > 0 ? { pending: data.pending } : {}),
+    ...(Number.isInteger(data.failed) && data.failed! > 0 ? { failed: data.failed } : {}),
     keywords: data.keywords.flatMap((item): ReadingKeyword[] => {
       const tag = typeof item?.tag === 'string' ? item.tag.trim() : '';
       if (!tag || tag.toLowerCase() === 'user_added' || seen.has(tag) || !Number.isInteger(item.count) || item.count < 1) return [];
@@ -33,7 +38,8 @@ export function parseReadingKeywords(value: unknown): ReadingKeywords {
       const book_isbns = Array.isArray(item.book_isbns)
         ? [...new Set(item.book_isbns.filter(isbn => typeof isbn === 'string' && /^\d{13}$/.test(isbn)))]
         : undefined;
-      return [{ tag, count: item.count, ...(book_isbns ? { book_isbns } : {}) }];
+      return [{ tag, count: item.count, ...(book_isbns ? { book_isbns } : {}),
+        ...(Number.isInteger(item.catalog_count) && item.catalog_count! > 0 ? { catalog_count: item.catalog_count } : {}) }];
     }),
   };
 }

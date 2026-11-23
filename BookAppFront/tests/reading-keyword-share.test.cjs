@@ -14,7 +14,7 @@ vm.runInNewContext(outputText, context);
 const { storyKeywordUrl, parseStoryKeywords } = context.exports;
 
 test('a story URL keeps punctuation and Unicode in the selected keywords after router decoding', () => {
-  const keywords = ['가족, 세대', '100%25', 'C++'];
+  const keywords = ['가족, 세대', '한글 100%25', '과학+기술'];
   const url = new URL(storyKeywordUrl('https://example.test/library', keywords));
 
   assert.equal(url.pathname, '/reading-keywords');
@@ -27,4 +27,8 @@ test('tampered story links cannot submit internal labels, extra tags, or control
     '["가족","번역","현실주의","성장"]', JSON.stringify(['가족\x00']), JSON.stringify(['책'.repeat(101)])]) {
     assert.deepEqual([...parseStoryKeywords(value)], []);
   }
+});
+
+test('older story links merge English and Korean labels and omit unmapped tags', () => {
+  assert.deepEqual([...parseStoryKeywords(JSON.stringify(['SF소설', '과학소설', 'unmapped']))], ['과학소설']);
 });

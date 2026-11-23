@@ -6,7 +6,7 @@ import logging
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from alembic import command
 from alembic.config import Config
@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse
 from app.corpus_policy import CorpusPermissionError, hold_pending_jobs
 
 from app.routers import data_builder, recommendation
+from app.services.shelf_keywords import run_worker as run_shelf_keyword_worker
 from app.security import require_internal_token
 import app.database as _db
 from app.config import validate_prod_config
@@ -31,7 +32,13 @@ async def lifespan(app: FastAPI):
     try:
         async with _db.async_session() as db, db.begin():
             await hold_pending_jobs(db)
-        yield
+        worker = asyncio.create_task(run_shelf_keyword_worker())
+        try:
+            yield
+        finally:
+            worker.cancel()
+            with suppress(asyncio.CancelledError):
+                await worker
     finally:
         await _db.engine.dispose()
 

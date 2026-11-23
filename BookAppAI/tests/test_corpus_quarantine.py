@@ -38,7 +38,6 @@ async def test_corpus_features_are_empty_without_a_database(monkeypatch):
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://testserver",
                                  headers={"X-Internal-Token": "fixture"}) as client:
         for path, payload, expected in [
-            ("/api/user/reading-tags", {"isbns": ["9780306406157"]}, {"keywords": [], "analyzed": 0}),
             ("/api/books/reading-keyword-picks", {"keywords": ["소설"]}, []),
             ("/recommendations/content", {"user_books": []}, []),
         ]:

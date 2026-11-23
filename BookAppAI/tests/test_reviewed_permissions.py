@@ -120,7 +120,7 @@ async def test_reading_keywords_follow_current_policy_and_tag_version():
 
             async def analyzed():
                 _, books = await _release_snapshot(db)
-                return library_keywords(books, [isbn], 10)["analyzed"]
+                return library_keywords({isbn: entry[1]["tags"] for isbn, entry in books.items()}, [isbn], 10)["analyzed"]
 
             assert await analyzed() == 1
             await db.execute(text("UPDATE corpus_use_policy SET active=false WHERE provider='KEYWORD_TEST'"))
