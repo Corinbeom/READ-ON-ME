@@ -44,6 +44,7 @@ async def main():
     batch.add_argument("--supplement", action="store_const", const="supplement.json", dest="batch")
     batch.add_argument("--discovery", action="store_const", const="discovery.json", dest="batch")
     batch.add_argument("--loss-startup", action="store_const", const="loss-startup.json", dest="batch")
+    batch.add_argument("--reader-expansion", action="store_const", const="reader-expansion.json", dest="batch")
     args = parser.parse_args()
     database.init_db()
     try:
