@@ -5,6 +5,7 @@ import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.common.exception.ReviewExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
+import bookapp.bookappback.notification.repository.NotificationRepository;
 import bookapp.bookappback.notification.service.NotificationService;
 import bookapp.bookappback.review.dto.ReviewRequest;
 import bookapp.bookappback.review.entity.BookReview;
@@ -32,6 +33,7 @@ class BookReviewServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private BookRepository bookRepository;
     @Mock private ReviewLikeRepository reviewLikeRepository;
+    @Mock private NotificationRepository notificationRepository;
     @Mock private NotificationService notificationService;
 
     @InjectMocks
@@ -138,10 +140,11 @@ class BookReviewServiceTest {
         review.setId(10L);
         review.setUser(user);
 
-        when(bookReviewRepository.findById(10L)).thenReturn(Optional.of(review));
+        when(bookReviewRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(review));
 
         assertDoesNotThrow(() -> bookReviewService.deleteReview(10L, 1L));
-        verify(bookReviewRepository, times(1)).delete(review);
+        verify(notificationRepository).detachReview(10L);
+        verify(bookReviewRepository).delete(review);
     }
 
     @Test
@@ -156,10 +159,11 @@ class BookReviewServiceTest {
         review.setId(10L);
         review.setUser(owner);
 
-        when(bookReviewRepository.findById(10L)).thenReturn(Optional.of(review));
+        when(bookReviewRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(review));
 
         assertThrows(ReviewExceptions.ReviewAccessDeniedException.class, () ->
                 bookReviewService.deleteReview(10L, 2L));
+        verifyNoInteractions(notificationRepository);
     }
 
     @Test
@@ -176,7 +180,7 @@ class BookReviewServiceTest {
         review.setLikes(new HashSet<>());
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(liker));
-        when(bookReviewRepository.findById(99L)).thenReturn(Optional.of(review));
+        when(bookReviewRepository.findByIdForUpdate(99L)).thenReturn(Optional.of(review));
         when(reviewLikeRepository.findByUserAndReview(liker, review)).thenReturn(Optional.empty());
 
         bookReviewService.toggleReviewLike(99L, 1L);
@@ -203,7 +207,7 @@ class BookReviewServiceTest {
         review.getLikes().add(like);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(liker));
-        when(bookReviewRepository.findById(99L)).thenReturn(Optional.of(review));
+        when(bookReviewRepository.findByIdForUpdate(99L)).thenReturn(Optional.of(review));
         when(reviewLikeRepository.findByUserAndReview(liker, review)).thenReturn(Optional.of(like));
 
         bookReviewService.toggleReviewLike(99L, 1L);

@@ -6,6 +6,7 @@ import bookapp.bookappback.book.repository.BookRepository;
 import bookapp.bookappback.common.exception.BookExceptions;
 import bookapp.bookappback.common.exception.ReviewExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
+import bookapp.bookappback.notification.repository.NotificationRepository;
 import bookapp.bookappback.notification.service.NotificationService;
 import bookapp.bookappback.review.dto.ReviewRequest;
 import bookapp.bookappback.review.dto.ReviewResponse;
@@ -39,6 +40,7 @@ public class BookReviewService {
     private final BookService bookService;
     private final ReviewLikeRepository reviewLikeRepository;
     private final NotificationService notificationService;
+    private final NotificationRepository notificationRepository;
 
     // ✅ 리뷰 작성
     @Transactional
@@ -135,13 +137,14 @@ public class BookReviewService {
 
     // ✅ 리뷰 삭제
     public void deleteReview(Long reviewId, Long userId) {
-        BookReview review = bookReviewRepository.findById(reviewId)
+        BookReview review = bookReviewRepository.findByIdForUpdate(reviewId)
                 .orElseThrow(() -> new ReviewExceptions.ReviewNotFoundException(reviewId));
 
         if (!review.getUser().getId().equals(userId)) {
             throw new ReviewExceptions.ReviewAccessDeniedException();
         }
 
+        notificationRepository.detachReview(reviewId);
         bookReviewRepository.delete(review);
     }
 
@@ -149,7 +152,7 @@ public class BookReviewService {
     public void toggleReviewLike(Long reviewId, Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserExceptions.UserNotFoundException(userId));
-        BookReview review = bookReviewRepository.findById(reviewId)
+        BookReview review = bookReviewRepository.findByIdForUpdate(reviewId)
                 .orElseThrow(() -> new ReviewExceptions.ReviewNotFoundException(reviewId));
 
         Optional<ReviewLike> existingLike = reviewLikeRepository.findByUserAndReview(user, review);

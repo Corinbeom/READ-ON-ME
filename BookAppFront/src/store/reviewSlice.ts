@@ -1,16 +1,17 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { reviewApi } from '../services/api';
 import { Review } from '../types/review';
 
 interface ReviewState {
   reviews: Review[];
-  loading: boolean;
+  submitting: boolean;
+  list?: { bookId: number; sort: string; requestId: string; status: 'loading' | 'ready' | 'failed' };
   error: any | null;
 }
 
 const initialState: ReviewState = {
   reviews: [],
-  loading: false,
+  submitting: false,
   error: null,
 };
 
@@ -19,7 +20,7 @@ export const fetchReviewsForBook = createAsyncThunk(
   'reviews/fetchForBook',
   async ({ bookId, sort }: { bookId: number; sort: string }, { rejectWithValue }) => {
     try {
-      const response = await reviewApi.getReviewsByBook(bookId, sort);
+      const response = await reviewApi.getReviewsByBook(bookId, sort, { handleErrorLocally: true });
       return response.data.data.content; // ApiResponse<Slice<ReviewResponse>> -> content
     } catch (error: any) {
       return rejectWithValue(error.response?.data);
@@ -63,28 +64,30 @@ const reviewSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Fetch reviews
-      .addCase(fetchReviewsForBook.pending, (state) => {
-        state.loading = true;
+      .addCase(fetchReviewsForBook.pending, (state, action) => {
+        state.list = { ...action.meta.arg, requestId: action.meta.requestId, status: 'loading' };
         state.error = null;
       })
-      .addCase(fetchReviewsForBook.fulfilled, (state, action: PayloadAction<Review[]>) => {
-        state.loading = false;
+      .addCase(fetchReviewsForBook.fulfilled, (state, action) => {
+        if (state.list?.requestId !== action.meta.requestId) return;
+        state.list.status = 'ready';
         state.reviews = action.payload;
       })
       .addCase(fetchReviewsForBook.rejected, (state, action) => {
-        state.loading = false;
+        if (state.list?.requestId !== action.meta.requestId) return;
+        state.list.status = 'failed';
         state.error = action.payload;
       })
       // Add review
       .addCase(addReviewForBook.pending, (state) => {
-        state.loading = true;
+        state.submitting = true;
       })
       .addCase(addReviewForBook.fulfilled, (state) => {
-        state.loading = false;
+        state.submitting = false;
         // 성공 시 리뷰 목록을 다시 가져오는 것을 고려할 수 있음
       })
       .addCase(addReviewForBook.rejected, (state, action) => {
-        state.loading = false;
+        state.submitting = false;
         state.error = action.payload;
       })
       // Toggle like

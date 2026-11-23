@@ -16,7 +16,7 @@ import { Colors } from '@/constants/Colors';
 
 const NotificationsScreen = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { items, loading, unreadCount } = useSelector((state: RootState) => state.notifications);
+  const { items, listStatus, unreadCount } = useSelector((state: RootState) => state.notifications);
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   const colorScheme = useColorScheme() ?? 'light';
   const styles = getStyles(colorScheme);
@@ -49,10 +49,11 @@ const NotificationsScreen = () => {
         }}
       />
       {!isAuthenticated ? <ScreenState title="로그인 후 알림을 확인해보세요" action="로그인하기" onAction={() => router.push('/auth/login')} />
-        : loading ? <ScreenState loading title="알림을 불러오고 있어요" /> : null}
+        : listStatus === 'failed' ? <ScreenState title="알림을 불러오지 못했어요" action="다시 시도" onAction={() => dispatch(fetchNotifications())} />
+        : listStatus === 'loading' ? <ScreenState loading title="알림을 불러오고 있어요" /> : null}
       <FlatList
         data={isAuthenticated ? items : []}
-        ListEmptyComponent={isAuthenticated && !loading ? <ScreenState title="아직 받은 알림이 없어요" description="새 알림이 도착하면 이곳에서 확인할 수 있어요." /> : null}
+        ListEmptyComponent={isAuthenticated && listStatus === 'ready' ? <ScreenState title="아직 받은 알림이 없어요" description="새 알림이 도착하면 이곳에서 확인할 수 있어요." /> : null}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (

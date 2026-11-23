@@ -49,7 +49,7 @@ export default function BookDetailScreen() {
   const styles = getBookDetailScreenStyles(colorScheme);
 
   const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
-  const { reviews: loadedReviews, loading: reviewsLoading } = useSelector((state: RootState) => state.reviews);
+  const { reviews: loadedReviews, submitting, list: reviewList } = useSelector((state: RootState) => state.reviews);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -87,11 +87,11 @@ export default function BookDetailScreen() {
     return () => requests.cancel();
   }, [normalizedIsbn]);
 
-  useEffect(() => {
-    if (book?.id) {
-      dispatch(fetchReviewsForBook({ bookId: book.id, sort }));
-    }
-  }, [book, dispatch, sort]);
+  const bookId = book?.id;
+  const reloadReviews = useCallback(() => {
+    if (bookId) void dispatch(fetchReviewsForBook({ bookId, sort }));
+  }, [bookId, dispatch, sort]);
+  useFocusEffect(reloadReviews);
 
   const fetchBookDetails = async (currentIsbn: string) => {
     const request = detailRequests.current.begin();
@@ -212,6 +212,9 @@ export default function BookDetailScreen() {
   };
 
   const isEditingReview = editingReviewId !== null;
+  const reviewStatus = book?.id
+    ? reviewList?.bookId === book.id && reviewList.sort === sort ? reviewList.status : 'loading'
+    : 'ready';
   const canWriteReview = isAuthenticated && (!userHasReviewed || isEditingReview);
   const submitButtonLabel = isEditingReview ? '수정 완료' : '등록';
 
@@ -302,7 +305,11 @@ export default function BookDetailScreen() {
 
             <View style={styles.reviewDividerTop} />
 
-            {!reviewsLoading && reviews.length === 0 && (
+            {reviewStatus === 'failed' && book?.id ? (
+              <ScreenState title="리뷰를 불러오지 못했어요" action="다시 시도"
+                onAction={reloadReviews} />
+            ) : null}
+            {reviewStatus === 'ready' && reviews.length === 0 && (
               <Text style={styles.noReviews}>
                 아직 작성된 리뷰가 없어요.{'\n'}첫 번째 리뷰를 남겨보세요.
               </Text>
@@ -359,7 +366,7 @@ export default function BookDetailScreen() {
                   {newReviewComment.length}/{REVIEW_MAX_LENGTH}
                 </Text>
                 {renderStar(setNewReviewRating, newReviewRating)}
-                <AppButton title={submitButtonLabel} onPress={handleReviewSubmit} loading={reviewsLoading} />
+                <AppButton title={submitButtonLabel} onPress={handleReviewSubmit} loading={submitting || reviewStatus === 'loading'} />
               </>
             ) : !isAuthenticated ? (
               <Text style={styles.loginPrompt}>리뷰를 작성하려면 로그인이 필요합니다.</Text>

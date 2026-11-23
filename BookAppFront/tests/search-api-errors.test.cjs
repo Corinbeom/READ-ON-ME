@@ -91,3 +91,13 @@ test('home list requests handle errors inline without changing their default con
   await assert.rejects(bookApi.getBooksByIds([1]));
   assert.equal(alerts.length, 3);
 });
+
+test('notification, review, and first ISBN save failures can be retried inline', async () => {
+  const { api, notificationApi, reviewApi, bookApi, alerts } = loadApi();
+  failRequests(api);
+  const options = { handleErrorLocally: true };
+  await assert.rejects(notificationApi.getNotifications(options));
+  await assert.rejects(reviewApi.getReviewsByBook(12, 'latest', options));
+  await assert.rejects(bookApi.updateBookStatusByIsbn('9788925588735', 'READING', options));
+  assert.equal(alerts.length, 0);
+});
