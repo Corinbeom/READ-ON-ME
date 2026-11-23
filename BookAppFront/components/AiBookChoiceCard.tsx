@@ -1,3 +1,5 @@
+import BookSourceLink from '@/components/BookSourceLink';
+import { readBookAttribution } from '@/src/utils/bookAttribution';
 import AppButton from '@/components/ui/AppButton';
 import { Spacing, Typography, UI } from '@/src/styles/designTokens';
 import { useEffect, useState } from 'react';
@@ -35,6 +37,7 @@ export default function AiBookChoiceCard({
   const thumbnail = secureImageUri(book.thumbnail);
   const title = book.title?.trim() || '제목 정보 없음';
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors?.trim();
+  const { source } = readBookAttribution(book.contents);
   const reason = (book.ranking_status === 'GEMINI' || book.ranking_status === 'GROQ') && book.reason?.trim() && book.reason_evidence?.trim()
     ? book.reason.trim()
     : null;
@@ -70,6 +73,7 @@ export default function AiBookChoiceCard({
         <Text style={styles.reasonLabel}>책 소개에서 확인한 근거</Text>
         <Text style={styles.evidence}>{book.reason_evidence}</Text>
       </View> : null}
+      {source && <BookSourceLink source={source} />}
       {showDetailsAction || onChoose ? <View style={styles.actions}>
         {showDetailsAction ? <AppButton title="책 상세 보기" variant="secondary" style={styles.action} onPress={onDetails} /> : null}
         {onChoose ? <AppButton title="이 책으로 결정" style={styles.action} onPress={onChoose} accessibilityLabel={`${title} 선택하기`} /> : null}

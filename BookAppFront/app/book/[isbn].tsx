@@ -1,3 +1,5 @@
+import BookSourceLink from '@/components/BookSourceLink';
+import { readBookAttribution } from '@/src/utils/bookAttribution';
 import AppButton from '@/components/ui/AppButton';
 import BookLibraryStatus, { GuestBookLibraryStatus, NewBookLibraryStatus } from '@/components/BookLibraryStatus';
 import AppTextInput from '@/components/ui/AppTextInput';
@@ -54,6 +56,7 @@ export default function BookDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [book, setBook] = useState<(Omit<BookDto, 'id'> & { id: number | null }) | null>(null);
+  const { description, source } = readBookAttribution(book?.contents);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
   const [sort, setSort] = useState('latest');
@@ -286,9 +289,10 @@ export default function BookDetailScreen() {
                 numberOfLines={isDescriptionExpanded ? undefined : 6}
                 ellipsizeMode="tail"
               >
-                {book?.contents || '소개 정보가 없습니다.'}
+                {description || '소개 정보가 없습니다.'}
               </Text>
-              {book?.contents && book.contents.length > 200 && (
+              {source && <BookSourceLink source={source} />}
+              {description.length > 200 && (
                 <AppButton compact variant="ghost" title={isDescriptionExpanded ? '접기' : '더보기'}
                   style={{ alignSelf: 'flex-start' }} onPress={() => setIsDescriptionExpanded((prev) => !prev)} />
               )}

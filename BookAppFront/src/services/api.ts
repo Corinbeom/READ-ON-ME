@@ -103,6 +103,7 @@ const silentPaths = [
 ];
 
 export interface AiSearchBook {
+  contents?: string | null;
   isbn: string;
   title: string;
   authors?: string | string[] | null;
