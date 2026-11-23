@@ -2,7 +2,9 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.corpus_policy import require_verified_corpus
+from app import database
 from app.database import get_db
+from app.services.reading_keyword_picks import library_keywords, public_picks
 from app.services import corpus_ingestion
 from app.services.reviewed_corpus import search_reviewed, read_inputs
 from app.services.reviewed_release import configured_release, require_release
@@ -103,11 +105,22 @@ async def ai_search(
     return results
 
 
+async def keyword_books(x_reviewed_release: str | None = Header(default=None)):
+    if not x_reviewed_release:
+        return {}
+    if x_reviewed_release != configured_release():
+        raise HTTPException(status_code=503, detail="AI_SEARCH_MAINTENANCE")
+    async with database.async_session() as db, db.begin():
+        from sqlalchemy import text
+        await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+        return await require_release(db, x_reviewed_release)
+
+
 @router.post("/api/user/reading-tags", dependencies=[Depends(require_internal_token)])
-async def get_reading_tags(request: ReadingTagsRequest):
-    return {"keywords": [], "analyzed": 0}
+async def get_reading_tags(request: ReadingTagsRequest, books=Depends(keyword_books)):
+    return library_keywords(books, request.isbns, request.limit)
 
 
 @router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])
-async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest):
-    return []
+async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest, books=Depends(keyword_books)):
+    return public_picks(books, request.keywords)

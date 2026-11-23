@@ -1,0 +1,82 @@
+[
+  {
+    "isbn": "9791162203620",
+    "title": "파과",
+    "authors": "구병모",
+    "genre": "범죄소설",
+    "contents": "청부 살인을 직업으로 삼은 여성에게 연민은 어떤 의미일까. 살인 청부업자와 연민을 함께 다루는 구병모의 소설이다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99153735318903941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791189178376",
+    "title": "서점 탐정 유동인",
+    "authors": "김재희",
+    "genre": "추리소설",
+    "contents": "서점 직원과 사립 탐정을 한 이야기에서 만날 수 있는 한국 추리소설이다. 책방이라는 일터와 탐정의 일을 함께 읽고 싶은 독자가 살펴볼 만하다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99156722699603941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791130610320",
+    "title": "씁니다, 우주일지",
+    "authors": "신동욱",
+    "genre": "SF",
+    "contents": "우주 비행을 소재로 한 한국 SF 소설이다. 우주선을 타고 지구 밖으로 나가는 상상이 궁금한 독자를 위한 작품이다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/990149797390203941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791191183276",
+    "title": "외로움의 습격",
+    "authors": "김만권",
+    "genre": "사회",
+    "contents": "한국 사회에서 사람들이 왜 홀로 남겨지는지를 묻는 책이다. 기술 변화와 평등, 능력주의라는 사회적 조건 속에서 외로움을 살펴본다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99158358628003941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791191193176",
+    "title": "머드",
+    "authors": "이종산",
+    "genre": "소설",
+    "contents": "이종산의 장편소설로, 외로움을 주제로 다룬다. 고독을 인물의 이야기로 읽고 싶을 때 찾아볼 만하다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99155842860003941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9791195866793",
+    "title": "여행자의 동네서점",
+    "authors": "구선아",
+    "genre": "여행",
+    "contents": "서울의 독립서점을 목적지 삼아 떠나는 책방 여행이다. 동네 책방과 그곳에서 책을 파는 일을 따라 서울을 둘러본다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/990152615630203941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9788932039251",
+    "title": "상아의 문으로",
+    "authors": "구병모",
+    "genre": "소설",
+    "contents": "꿈과 정체성을 함께 다루는 구병모의 소설이다. 꿈속에서 나는 누구인가 하는 질문에 관심 있는 독자에게 어울린다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99156043063303941/catalog",
+    "checked_on": "2026-11-23"
+  },
+  {
+    "isbn": "9788954697392",
+    "title": "내 정체는 국가 기밀, 모쪼록 비밀",
+    "authors": "문이소",
+    "genre": "청소년 SF",
+    "contents": "인공지능을 소재로 한 한국 청소년 SF 소설이다. 인공지능을 다룬 이야기를 찾는 어린 독자나 청소년이 살펴볼 만하다.",
+    "provider": "HARVARD_LIBRARY",
+    "source_ref": "https://id.lib.harvard.edu/alma/99158251837303941/catalog",
+    "checked_on": "2026-11-23"
+  }
+]

@@ -142,7 +142,7 @@ export default function MyLibraryScreen() {
                 <LibraryDiscovery compact />
               </>
             ) : <LibraryDiscovery />}
-            {readingKeywords ? <LibraryReadingKeywords key={user?.id} data={readingKeywords} library={userLibrary} /> : null}
+            {readingKeywords && overview.library ? <LibraryReadingKeywords key={user?.id} data={readingKeywords} library={userLibrary} /> : null}
 
             {overview.keywordsError ? retryNotice(overview.keywordsError) : null}
             {myReviews.length > 0 ? (

@@ -30,21 +30,24 @@ async def seed(db, path=SEED):
         """), {"provider": provider, "version": VERSION, "ref": ref, "day": CHECKED, "uses": sorted(EMBEDDING_USES)})
     catalog = json.loads(path.read_text())
     for book in catalog:
+        checked = date.fromisoformat(book["checked_on"]) if "checked_on" in book else CHECKED
         for field in ("title", "authors", "contents"):
             provider = "READ_ON_ME_EDITORIAL" if field == "contents" else book.get("provider", "WIKIDATA")
             ref = f"repo:BookAppAI/evaluation/reviewed/{path.name}#{book['isbn']}" if field == "contents" else book["source_ref"]
-            await record_field(db, book["isbn"], field, book[field], provider, VERSION, ref, CHECKED)
+            await record_field(db, book["isbn"], field, book[field], provider, VERSION, ref, checked)
 
 
 async def main():
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--supplement", action="store_true")
+    batch = parser.add_mutually_exclusive_group()
+    batch.add_argument("--supplement", action="store_const", const="supplement.json", dest="batch")
+    batch.add_argument("--discovery", action="store_const", const="discovery.json", dest="batch")
     args = parser.parse_args()
     database.init_db()
     try:
         async with database.async_session() as db, db.begin():
-            await seed(db, SEED.with_name("supplement.json") if args.supplement else SEED)
+            await seed(db, SEED.with_name(args.batch or SEED.name))
     finally:
         await database.engine.dispose()
 
