@@ -8,6 +8,17 @@ from app.services.prompt_templates import PromptTemplateBuilder
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(("query", "form"), [
+    ("아이가 화가 나서 울 때 서로 말이 안 통해요. 실제 부모와 아이의 대화 예시가 많은 책 있을까요?", "PRACTICAL"),
+    ("직장에서 쓸 수 있는 대화의 사례를 담은 책을 찾습니다.", "PRACTICAL"),
+    ("부모와 아이의 대화 장면이 많은 책", "ANY"),
+    ("가족의 대화 예시를 독서 모임에서 나눌 수 있는 소설", "STORY"),
+])
+async def test_conversation_examples_and_narrative_requests(query, form):
+    assert (await IntentAnalyzer().analyze(query)).requested_form == form
+
+
+@pytest.mark.asyncio
 async def test_intent_analyzer_detects_domain_and_purpose():
     analyzer = IntentAnalyzer()
     intent = await analyzer.analyze("창업 관련 입문 책 추천해줘")

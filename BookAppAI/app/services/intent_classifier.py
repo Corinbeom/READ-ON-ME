@@ -108,6 +108,7 @@ QUERY_TYPE_KEYWORDS = {
 
 PRACTICAL_FORM_TERMS = ("방법", "가이드", "실전", "입문", "기초", "배우", "공부", "대화법", "비법", "노하우")
 STORY_FORM_TERMS = ("이야기", "스토리", "서사", "동화", "소설", "회고록", "실화")
+CONVERSATION_EXAMPLES = re.compile(r"(?<![가-힣])대화(?:의)?\s*(?:예시|사례)")
 
 CONSTRAINT_KEYWORDS = ["최근", "신간", "짧은", "두꺼운", "한국", "번역", "입문", "심화"]
 
@@ -173,6 +174,8 @@ class IntentAnalyzer:
             and any(term in lower for term in QUERY_TYPE_KEYWORDS["mood"])
         ):
             requested_form = "STORY"
+        elif CONVERSATION_EXAMPLES.search(lower):
+            requested_form = "PRACTICAL"
         else:
             requested_form = "ANY"
 
