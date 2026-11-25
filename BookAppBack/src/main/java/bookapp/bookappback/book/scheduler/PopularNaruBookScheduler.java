@@ -4,7 +4,6 @@ import bookapp.bookappback.book.dto.LibraryBookDto;
 import bookapp.bookappback.book.entity.PopularNaruBook;
 import bookapp.bookappback.book.repository.PopularNaruBookRepository;
 import bookapp.bookappback.book.service.LibraryApiService;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,7 +23,7 @@ public class PopularNaruBookScheduler {
     private final PopularNaruBookRepository popularNaruBookRepository;
     private final LibraryApiService libraryApiService;
 
-    @PostConstruct
+    @Scheduled(initialDelay = 0, scheduler = "popularBookScheduler")
     public void initIfEmpty() {
         if (popularNaruBookRepository.count() == 0) {
             log.info("===== [PopularNaruBookScheduler] DB 비어있음 → 즉시 전체 나이대 데이터 수집 시작 =====");
@@ -35,7 +34,7 @@ public class PopularNaruBookScheduler {
     }
 
     // Reload display-only URLs after a restart without delaying a visitor's ranking request.
-    @Scheduled(initialDelay = 1000, fixedDelay = 120000)
+    @Scheduled(initialDelay = 1000, fixedDelay = 120000, scheduler = "popularBookScheduler")
     public void warmRankingCovers() {
         for (var snapshot : popularNaruBookRepository.findActiveSnapshots()) {
             libraryApiService.refreshCoversIfNeeded(snapshot.getAgeGroup(), snapshot.getFetchedAt().toLocalDate());
@@ -43,7 +42,7 @@ public class PopularNaruBookScheduler {
     }
 
     /** 매주 월요일 새벽 3시 갱신 */
-    @Scheduled(cron = "0 0 3 * * MON")
+    @Scheduled(cron = "0 0 3 * * MON", scheduler = "popularBookScheduler")
     public void weeklyRefresh() {
         log.info("===== [PopularNaruBookScheduler] 주간 배치 갱신 시작 =====");
         fetchAndStoreAll();

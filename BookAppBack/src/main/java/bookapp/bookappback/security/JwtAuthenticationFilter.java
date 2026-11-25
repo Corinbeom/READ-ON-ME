@@ -1,6 +1,7 @@
 package bookapp.bookappback.security;
 
 import bookapp.bookappback.common.util.JwtUtil;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -23,6 +24,8 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    public static final String EXPIRED_SESSION = JwtAuthenticationFilter.class.getName() + ".expired";
+
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
 
@@ -41,6 +44,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             jwt = authorizationHeader.substring(7);
             try {
                 username = jwtUtil.extractUsername(jwt);
+            } catch (ExpiredJwtException e) {
+                request.setAttribute(EXPIRED_SESSION, true);
             } catch (JwtException e) {
                 log.warn("Invalid JWT token: {}", e.getMessage());
             } catch (IllegalArgumentException e) {
@@ -57,6 +62,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
+            } catch (ExpiredJwtException e) {
+                request.setAttribute(EXPIRED_SESSION, true);
             } catch (JwtException e) {
                 log.warn("JWT validation failed: {}", e.getMessage());
             } catch (Exception e) {

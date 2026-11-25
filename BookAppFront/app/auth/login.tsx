@@ -11,8 +11,8 @@ import { FormField } from '@/components/ui/AppTextInput';
 import { authReturnHref, authReturnParams } from '@/src/utils/aiSearchEntry';
 
 export default function LoginScreen() {
-  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[]; isbn?: string }>();
-  const returnParams = authReturnParams(params.returnTo, params.prompt, params.isbn);
+  const params = useLocalSearchParams<{ returnTo?: string; prompt?: string | string[]; isbn?: string; tags?: string }>();
+  const returnParams = authReturnParams(params.returnTo, params.prompt, params.isbn, params.tags);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const result = await dispatch(signIn({ email, password }));
+      const result = await dispatch(signIn({ email: email.trim(), password }));
       
       if (signIn.fulfilled.match(result)) {
         customAlert('성공', '로그인되었습니다.', [
@@ -38,7 +38,7 @@ export default function LoginScreen() {
           } }
         ]);
       } else {
-        customAlert('로그인 실패', '이메일 또는 비밀번호를 확인해주세요.');
+        customAlert('로그인 실패', result.payload ?? '로그인을 완료하지 못했어요. 다시 시도해주세요.');
       }
     } catch {
       customAlert('오류', '로그인에 실패했습니다.');

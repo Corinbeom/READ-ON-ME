@@ -40,3 +40,21 @@ export const handleApiError = (error: unknown): string => {
 function isAxiosError<T>(error: unknown): error is AxiosError<T> {
   return !!(error && typeof error === 'object' && 'isAxiosError' in error);
 }
+
+export function signInErrorMessage(error: unknown): string {
+  if (isAxiosError<ErrorResponseData>(error)) {
+    const { response, code } = error;
+    if (response?.status === 401 && response.data?.code === 'INVALID_LOGIN') {
+      return '이메일 또는 비밀번호를 확인해주세요.';
+    }
+    if (response?.status === 400 && response.data?.code === 'INVALID_INPUT') {
+      return response.data.message || '입력한 이메일 형식을 확인해주세요.';
+    }
+    if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
+      return '로그인 응답이 늦어지고 있어요. 잠시 후 다시 시도해주세요.';
+    }
+    if (!response) return '서버에 연결할 수 없어요. 네트워크 연결을 확인한 뒤 다시 시도해주세요.';
+    if (response.status >= 500) return '로그인 서버가 일시적으로 응답하지 않아요. 잠시 후 다시 시도해주세요.';
+  }
+  return '로그인을 완료하지 못했어요. 잠시 후 다시 시도해주세요.';
+}

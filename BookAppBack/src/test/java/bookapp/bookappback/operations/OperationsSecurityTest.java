@@ -1,5 +1,7 @@
 package bookapp.bookappback.operations;
 
+import bookapp.bookappback.common.util.JwtUtil;
+import bookapp.bookappback.config.JwtConfig;
 import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,9 +34,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class OperationsSecurityTest {
+    @Autowired JwtConfig jwtConfig;
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper mapper;
     @Autowired JdbcClient jdbc;
+
+    @Test
+    void expiredSessionPromptsReauthenticationOnProtectedRoutesOnly() throws Exception {
+        var expired = new JwtUtil(
+                new JwtConfig(jwtConfig.getSecret(), -1000L));
+        var bearer = "Bearer " + expired.generateToken(123L, "reader@example.test");
+        mvc.perform(get("/api/users/profile").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("SESSION_EXPIRED"));
+        mvc.perform(get("/api/books/popular/naru").header(HttpHeaders.AUTHORIZATION, bearer))
+                .andExpect(status().isOk());
+    }
 
     @Test
     void anonymousAndRegularUsersCannotReadOrUpdateFeedback() throws Exception {

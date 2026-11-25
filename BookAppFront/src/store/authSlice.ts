@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../services/api';
+import { signInErrorMessage } from '../utils/apiErrorHandler';
 import type { KakaoExchange } from '../utils/kakaoLogin';
 
 export interface User {
@@ -36,21 +37,18 @@ async function persistSignIn(result: { success?: boolean; data?: { access_token?
   return { token, user };
 }
 
-export const signIn = createAsyncThunk(
+export const signIn = createAsyncThunk<Awaited<ReturnType<typeof persistSignIn>>, { email: string; password: string }, { rejectValue: string }>(
   'auth/signIn',
   async (
-    credentials: { email: string; password: string },
+    credentials,
     { rejectWithValue }
   ) => {
     try {
       const response = await authApi.signIn(credentials);
 
       return await persistSignIn(response.data);
-    } catch (error: any) {
-      console.error('로그인 실패:', error.response?.data);
-      return rejectWithValue(
-        error.response?.data || { message: '로그인 중 오류가 발생했습니다.' }
-      );
+    } catch (error) {
+      return rejectWithValue(signInErrorMessage(error));
     }
   }
 );
@@ -89,8 +87,7 @@ export const getProfile = createAsyncThunk(
         return rejectWithValue(response.data);
       }
     } catch (error: any) {
-      console.error('프로필 조회 실패:', error.response?.data);
-      return rejectWithValue(error.response?.data);
+      return rejectWithValue(error.response?.status ?? null);
     }
   }
 );

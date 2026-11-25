@@ -12,8 +12,10 @@ export function aiSearchHref(prompt?: unknown) {
     : { pathname: '/ai-books' as const };
 }
 
-export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unknown) {
+export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unknown, tags?: unknown) {
   if (returnTo === 'my-library') return { returnTo: 'my-library' as const };
+  if (returnTo === 'search' || returnTo === 'notifications' || returnTo === 'feedback') return { returnTo: returnTo as 'search' | 'notifications' | 'feedback' };
+  if (returnTo === 'reading-keywords') return { returnTo: 'reading-keywords' as const, tags: typeof tags === 'string' ? tags.slice(0, 500) : '' };
   if (returnTo === 'operations') return { returnTo: 'operations' as const };
   if (returnTo === 'book-detail' && typeof isbn === 'string' && isbn && getIsbn13({ isbn13: isbn }) === isbn) {
     return { returnTo: 'book-detail' as const, isbn };
@@ -25,6 +27,10 @@ export function authReturnParams(returnTo: unknown, prompt: unknown, isbn?: unkn
 
 export function authReturnHref(params: ReturnType<typeof authReturnParams>) {
   if (params.returnTo === 'my-library') return '/my-library' as const;
+  if (params.returnTo === 'search') return '/search' as const;
+  if (params.returnTo === 'notifications') return '/notifications' as const;
+  if (params.returnTo === 'feedback') return '/feedback' as const;
+  if (params.returnTo === 'reading-keywords') return { pathname: '/reading-keywords' as const, params: { tags: params.tags } };
   if (params.returnTo === 'operations') return '/operations' as const;
   if (params.returnTo === 'ai-books') return aiSearchHref(params.prompt);
   if (params.returnTo === 'book-detail') {
