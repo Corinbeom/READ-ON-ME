@@ -109,23 +109,38 @@ const sampleBooks = ['9791161571188', '9791198363503', '9791165341909', '9780306
 
 test('recent books preserve edition identity, revisit order and the six-book limit across restart', async () => {
   const storage = memoryStorage();
-  const history = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
+  const history = createRecentBooks(storage);
   for (const book of sampleBooks) await history.add(book);
   await history.add(sampleBooks[2]);
   assert.equal(JSON.stringify(JSON.parse(storage.read())).includes('저자'), false);
-  const restored = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
+  const restored = createRecentBooks(storage);
   await restored.load();
   assert.equal(restored.getSnapshot().items.length, MAX_RECENT_BOOKS);
   assert.deepEqual(plain(restored.getSnapshot().items).map(book => book.isbn13),
     [2, 6, 5, 4, 3, 1].map(index => sampleBooks[index].isbn13));
 });
 
-test('legacy book history hydrates valid editions and ignores archived metadata', async () => {
+test('legacy book history restores only valid, distinct ISBNs and ignores archived metadata', async () => {
   const valid = { ...sampleBooks[0], thumbnail: 'file:///tmp/cover.png', userId: 17, contents: 'private metadata' };
   const storage = memoryStorage(JSON.stringify([null, { ...sampleBooks[1], isbn13: '9791198363504' }, valid, valid]));
-  const history = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
+  const history = createRecentBooks(storage);
   await history.load();
-  assert.deepEqual(plain(history.getSnapshot().items), [sampleBooks[0]]);
+  assert.deepEqual(plain(history.getSnapshot().items), [{ isbn13: valid.isbn13, title: '', authors: '', thumbnail: '' }]);
+});
+
+test('the home history uses details from this session and clears an ISBN-only placeholder title', async () => {
+  const book = sampleBooks[0];
+  const storage = memoryStorage(JSON.stringify([book.isbn13]));
+  const history = createRecentBooks(storage);
+  await history.add({ ...book, title: book.isbn13, thumbnail: '' });
+  assert.equal(history.getSnapshot().items[0].title, '');
+  await history.add(book);
+  assert.deepEqual(plain(history.getSnapshot().items), [book]);
+  assert.deepEqual(JSON.parse(storage.read()), [book.isbn13]);
+  await history.add({ ...book, title: book.isbn13, thumbnail: '' });
+  assert.deepEqual(plain(history.getSnapshot().items), [book]);
+  await history.add({ ...book, title: '1984' });
+  assert.equal(history.getSnapshot().items[0].title, '1984');
 });
 
 test('deleting viewed books after a pending write also clears storage and keeps search terms', async () => {
@@ -135,7 +150,7 @@ test('deleting viewed books after a pending write also clears storage and keeps 
     setItem: async (key, value) => { stored.set(key, value); },
     removeItem: async key => { stored.delete(key); },
   };
-  const history = createRecentBooks(storage, async isbn => sampleBooks.find(book => book.isbn13 === isbn));
+  const history = createRecentBooks(storage);
   await Promise.all([history.add(sampleBooks[0]), history.clear()]);
   assert.equal(history.getSnapshot().items.length, 0);
   assert.equal(stored.has(RECENT_BOOKS_KEY), false);
@@ -153,4 +168,40 @@ test('a superseded autocomplete or search request is aborted and cannot publish 
   assert.equal(search.signal.aborted, true);
   assert.equal(search.isCurrent(), false);
   assert.equal(requests.begin().isCurrent(), true);
+});
+
+test('recent cards recover an ISBN-only or unavailable detail using the same catalog edition', async () => {
+  const [book, other] = sampleBooks;
+  let detail = { ...book, title: book.isbn13 };
+  let searches = 0;
+  const signal = new AbortController().signal;
+  const api = {
+    getBookDetail: async () => {
+      if (!detail) throw new Error('temporary outage');
+      return { data: detail };
+    },
+    searchBooks: async (params, opts) => {
+      searches++;
+      assert.equal(params.target, 'isbn');
+      assert.equal(params.query, book.isbn13);
+      assert.equal(opts.signal, signal);
+      assert.ok(opts.handleErrorLocally);
+      return { data: { documents: [
+        { isbn: other.isbn13, title: '다른 판본', thumbnail: other.thumbnail },
+        { isbn: book.isbn13, title: book.title, authors: [book.authors], thumbnail: book.thumbnail },
+      ] } };
+    },
+  };
+  const { restoreRecentEdition } = loadUtility('../services/catalogEdition', name => {
+    if (name === './api') return { bookApi: api };
+    if (name === '../utils/bookUtils') return loadUtility('bookUtils');
+    assert.equal(name, '../utils/recentBooks');
+    return loadUtility('recentBooks', dep => dep === './deviceHistory' ? deviceHistory : loadUtility('bookUtils'));
+  });
+  assert.deepEqual(plain(await restoreRecentEdition(book.isbn13, signal)), book);
+  detail = null;
+  assert.deepEqual(plain(await restoreRecentEdition(book.isbn13, signal)), book);
+  detail = book;
+  assert.deepEqual(plain(await restoreRecentEdition(book.isbn13, signal)), book);
+  assert.equal(searches, 2);
 });

@@ -1,6 +1,6 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, FlatList, Image, ScrollView, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ScrollView, Modal } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { router } from 'expo-router';
 import TabScreen, { TabHeader } from '@/components/TabScreen';
@@ -15,7 +15,7 @@ import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import { useLibraryOverview } from '@/hooks/useLibraryOverview';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getMyLibraryScreenStyles } from '@/src/styles/MyLibraryScreen.styles';
-import { secureImageUri } from '@/src/utils/imageUri';
+import BookCover from '@/components/BookCover';
 import { libraryBookCount, type UserLibrary } from '@/src/utils/libraryOverview';
 import customAlert from '@/src/utils/alert';
 import type { AppDispatch, RootState } from '@/src/store';
@@ -76,7 +76,7 @@ export default function MyLibraryScreen() {
   const renderReviewItem = ({ item }: { item: Review }) => (
     <TouchableOpacity style={styles.reviewItemContainer} accessibilityRole="button"
       onPress={() => { setList(null); router.push(`/book/${item.book.isbn13}`); }}>
-      <Image source={{ uri: secureImageUri(item.book.thumbnail) }} style={styles.reviewBookThumbnail} resizeMode="cover" />
+      <BookCover uri={item.book.thumbnail} style={styles.reviewBookThumbnail} resizeMode="cover" />
       <View style={styles.reviewInfoContainer}>
         <Text style={styles.reviewItemTitle}>{item.book.title}</Text>
         <Text style={styles.reviewItemRating}>{'★'.repeat(item.rating)}</Text>

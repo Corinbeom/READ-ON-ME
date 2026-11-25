@@ -15,8 +15,6 @@ export function getHomeBookCollectionStyles(theme: 'light' | 'dark') {
     coverFrame: { width: '100%', maxWidth: 132, alignSelf: 'center', borderWidth: 2, borderColor: 'transparent', padding: 3 },
     selectedCover: { borderColor: c.text },
     cover: { width: '100%', aspectRatio: 110 / 158, backgroundColor: c.surface2 },
-    placeholder: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xs },
-    placeholderText: { ...Typography.caption, color: c.inkSoft, textAlign: 'center' },
     selectionLabel: { ...Typography.caption, color: c.inkSoft, height: Typography.caption.lineHeight, marginTop: Spacing.xxs },
     angle: { ...Typography.compactLabel, color: c.text, marginTop: Spacing.xxs },
     bookTitle: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xxs },

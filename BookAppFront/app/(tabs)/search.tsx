@@ -1,6 +1,6 @@
 import GalpiAvailability from '@/components/GalpiAvailability';
 import { useRef } from 'react';
-import { ActivityIndicator, FlatList, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Clock3, X } from 'lucide-react-native';
 import BookmarkMascot from '@/components/BookmarkMascot';
@@ -18,7 +18,7 @@ import { getSearchScreenStyles } from '@/src/styles/SearchScreen.styles';
 import type { KakaoBook } from '@/src/types/kakaoBook';
 import { aiSearchHref } from '@/src/utils/aiSearchEntry';
 import { getIsbn13 } from '@/src/utils/bookUtils';
-import { secureImageUri } from '@/src/utils/imageUri';
+import BookCover from '@/components/BookCover';
 import { MAX_SEARCH_LENGTH } from '@/src/utils/recentSearches';
 
 export default function SearchScreen() {
@@ -35,7 +35,7 @@ export default function SearchScreen() {
     const isbn13 = getIsbn13(item);
     const content = (
       <TouchableOpacity style={styles.bookItem} activeOpacity={0.8} disabled={!isbn13}>
-        <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.thumbnail} resizeMode="cover" />
+        <BookCover uri={item.thumbnail} style={styles.thumbnail} resizeMode="cover" />
         <View style={styles.bookInfo}>
           <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
           <Text style={styles.authors} numberOfLines={1}>{item.authors.join(', ')}</Text>
@@ -49,7 +49,7 @@ export default function SearchScreen() {
   const renderSuggestion = ({ item }: { item: KakaoBook }) => (
     <TouchableOpacity style={styles.suggestionItem} accessibilityRole="button"
       accessibilityLabel={`${item.title} 검색`} onPress={() => { void search.search(item.title); }} activeOpacity={0.7}>
-      <Image source={{ uri: secureImageUri(item.thumbnail) }} style={styles.suggestionThumbnail} resizeMode="cover" />
+      <BookCover uri={item.thumbnail} style={styles.suggestionThumbnail} resizeMode="cover" />
       <View style={{ flex: 1 }}>
         <Text style={styles.suggestionTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.suggestionAuthor} numberOfLines={1}>{item.authors.join(', ')}</Text>

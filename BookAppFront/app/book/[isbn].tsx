@@ -7,14 +7,13 @@ import ScreenState from '@/components/ui/ScreenState';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Spacing } from '@/src/styles/designTokens';
-import { secureImageUri } from '@/src/utils/imageUri';
+import BookCover from '@/components/BookCover';
 import { getIsbn13 } from '@/src/utils/bookUtils';
 
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Stack, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import {
-  Image,
   View,
   Text,
   TouchableOpacity,
@@ -262,11 +261,7 @@ export default function BookDetailScreen() {
           <>
             {/* ── Cover ── */}
             <View style={styles.coverSection}>
-              {book?.thumbnail ? (
-                <Image source={{ uri: secureImageUri(book.thumbnail) }} style={styles.cover} resizeMode="cover" />
-              ) : (
-                <View style={[styles.cover, styles.coverPlaceholder]} />
-              )}
+              <BookCover uri={book?.thumbnail} lookupIsbn={bookIsbn} style={styles.cover} />
             </View>
 
             {/* ── Title / Meta ── */}
