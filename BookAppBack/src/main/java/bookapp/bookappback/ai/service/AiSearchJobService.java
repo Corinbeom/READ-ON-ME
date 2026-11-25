@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Service
@@ -140,29 +141,41 @@ public class AiSearchJobService {
                 return;
             }
             UUID jobId = job.getId();
+            var timing = new FinishTiming();
             if (!java.util.Objects.equals(availability.release(), job.getCorpusRelease())) {
-                finish(jobId, null, new IllegalStateException(GalpiAvailability.MAINTENANCE));
+                finish(jobId, null, new IllegalStateException(GalpiAvailability.MAINTENANCE), timing);
                 continue;
             }
             try {
                 searchService.searchWithOutcome(job.getQuery(), jobId.toString())
+                        .doOnNext(result -> timing.upstreamEndedAt = System.nanoTime())
+                        .doOnError(error -> timing.upstreamEndedAt = System.nanoTime())
                         .publishOn(Schedulers.boundedElastic())
                         .subscribe(
-                                results -> finish(jobId, results, null),
-                                error -> finish(jobId, null, error)
+                                results -> finish(jobId, results, null, timing),
+                                error -> finish(jobId, null, error, timing)
                         );
             } catch (Exception ex) {
-                finish(jobId, null, ex);
+                finish(jobId, null, ex, timing);
             }
         }
     }
 
-    private void finish(UUID id, AiSearchOutcome result, Throwable error) {
+    // Confined to one job. Reactor publishes the upstream timestamp to the completion worker.
+    private static final class FinishTiming {
+        Long upstreamEndedAt;
+        long serializeNanos;
+    }
+
+    private void finish(UUID id, AiSearchOutcome result, Throwable error, FinishTiming timing) {
+        long workerAt = System.nanoTime();
+        boolean committed = false;
         Long userId;
         try {
             userId = transactions.execute(tx -> {
                 var job = repository.findById(id).orElseThrow();
                 if (error == null) {
+                    long serializeStart = System.nanoTime();
                     try {
                         job.setResultJson(objectMapper.writeValueAsString(result.books()));
                         job.setResultOutcome(result.status());
@@ -172,6 +185,8 @@ public class AiSearchJobService {
                     } catch (Exception ex) {
                         job.setStatus("FAILED");
                         job.setErrorCode("RESULT_ERROR");
+                    } finally {
+                        timing.serializeNanos = System.nanoTime() - serializeStart;
                     }
                 } else {
                     job.setStatus("FAILED");
@@ -181,13 +196,19 @@ public class AiSearchJobService {
                 repository.save(job);
                 return job.getUserId();
             });
-            if (error != null) log.warn("AI 검색 작업 실패 [{}]: {}", id, error.toString());
+            committed = true;
         } catch (Exception ex) {
             log.error("AI 검색 결과 저장 실패 [{}]", id, ex);
             return;
         } finally {
+            long transactionNanos = System.nanoTime() - workerAt;
             capacity.release();
+            log.info("reviewed_finish request_id={} handoff_ms={} serialize_ms={} store_ms={} committed={}",
+                    id, timing.upstreamEndedAt == null ? null : TimeUnit.NANOSECONDS.toMillis(workerAt - timing.upstreamEndedAt),
+                    TimeUnit.NANOSECONDS.toMillis(timing.serializeNanos),
+                    TimeUnit.NANOSECONDS.toMillis(transactionNanos - timing.serializeNanos), committed);
         }
+        if (error != null) log.warn("AI 검색 작업 실패 [{}]: {}", id, error.toString());
         try {
             notificationService.notifyAiSearchFinished(userId, id);
         } catch (RuntimeException ex) {
