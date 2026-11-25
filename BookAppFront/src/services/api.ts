@@ -287,7 +287,8 @@ export const bookApi = {
     target?: 'title' | 'isbn' | 'publisher' | 'person';
   }, options?: LocalRequestOptions) => api.get('/api/books/search', { params, ...options }),
 
-  getBookDetail: (isbn: string, signal?: AbortSignal) => api.get(`/api/books/detail/${isbn}`, { signal }),
+  getBookDetail: (isbn: string, signal?: AbortSignal, options?: Pick<LocalRequestOptions, 'handleErrorLocally'>) =>
+    api.get(`/api/books/detail/${isbn}`, { signal, ...options }),
   getPopularBooks: () => api.get('/api/books/popular'),
   test: () => api.get('/api/books/test'),
 

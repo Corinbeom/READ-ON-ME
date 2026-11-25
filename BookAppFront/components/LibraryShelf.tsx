@@ -11,11 +11,13 @@ import { getIsbn13 } from '@/src/utils/bookUtils';
 import BookCover from '@/components/BookCover';
 import { getLibraryShelfStyles } from './styles/LibraryShelf.styles';
 
-export function LibraryBookCard({ book, onPress, onManage, compact = false }: {
+export function LibraryBookCard({ book, onPress, onManage, compact = false, showIsbn = false, lookupCover = true }: {
   book: Pick<BookDto, 'title' | 'isbn13' | 'authors' | 'thumbnail'>;
   onPress?: () => void;
   onManage?: () => void;
   compact?: boolean;
+  showIsbn?: boolean;
+  lookupCover?: boolean;
 }) {
   const theme = useColorScheme() ?? 'light';
   const styles = getLibraryShelfStyles(theme);
@@ -25,10 +27,11 @@ export function LibraryBookCard({ book, onPress, onManage, compact = false }: {
   const content = (
     <TouchableOpacity style={compact ? styles.compactBook : styles.book} onPress={onPress} onLongPress={onManage}
       disabled={!isbn && !onManage} activeOpacity={0.75}
-      accessibilityLabel={`${book.title}${authors ? ` · ${authors}` : ''} · ${isbn ? '책 상세 보기' : '상세 보기 불가'}`}>
-      <BookCover uri={book.thumbnail} lookupIsbn={isbn} style={cover} />
+      accessibilityLabel={`${book.title}${authors ? ` · ${authors}` : ''}${showIsbn && isbn ? ` · ISBN ${isbn}` : ''} · ${isbn ? '책 상세 보기' : '상세 보기 불가'}`}>
+      <BookCover uri={book.thumbnail} lookupIsbn={lookupCover ? isbn : undefined} style={cover} />
       <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
       <Text style={styles.author} numberOfLines={1}>{isbn ? authors || '저자 정보 없음' : '상세 보기 불가'}</Text>
+      {showIsbn && isbn ? <Text style={styles.isbn}>ISBN {isbn}</Text> : null}
     </TouchableOpacity>
   );
   const card = isbn ? <Link href={`/book/${isbn}`} asChild>{content}</Link> : content;

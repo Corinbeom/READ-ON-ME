@@ -2,9 +2,23 @@ import { ScrollView, Text, View } from 'react-native';
 import { LibraryBookCard } from '@/components/LibraryShelf';
 import AppButton from '@/components/ui/AppButton';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useRecentBookDetails } from '@/hooks/useRecentBookDetails';
+import type { RecentBook } from '@/src/utils/recentBooks';
 import { useRecentBooks } from '@/hooks/useRecentBooks';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
 import { getLibraryShelfStyles } from './styles/LibraryShelf.styles';
+
+function RecentBookCard({ book }: { book: RecentBook }) {
+  const { visible, failed, retry } = useRecentBookDetails(book);
+  return (
+    <View>
+      <LibraryBookCard showIsbn lookupCover={!!visible}
+        book={visible ?? { ...book, title: failed ? '책 정보 확인 필요' : '책 정보 불러오는 중' }} />
+      {failed ? <AppButton compact variant="ghost" title="다시 시도" onPress={retry}
+        accessibilityLabel={`ISBN ${book.isbn13} 책 정보 다시 시도`} /> : null}
+    </View>
+  );
+}
 
 export default function HomeRecentBooks() {
   const theme = useColorScheme() ?? 'light';
@@ -25,7 +39,7 @@ export default function HomeRecentBooks() {
       </View>
       {history.items.length > 0 ? (
         <ScrollView horizontal contentContainerStyle={shelf.books} showsHorizontalScrollIndicator={false}>
-          {history.items.map(book => <LibraryBookCard key={book.isbn13} book={book} />)}
+          {history.items.map(book => <RecentBookCard key={book.isbn13} book={book} />)}
         </ScrollView>
       ) : null}
       {history.error ? <Text role="alert" style={styles.recentError}>{history.error}</Text> : null}

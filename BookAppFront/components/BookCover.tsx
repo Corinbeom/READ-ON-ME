@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Image, type ImageProps } from 'react-native';
-import { bookApi } from '@/src/services/api';
-import type { KakaoBook } from '@/src/types/kakaoBook';
+import { findCatalogEdition } from '@/src/services/catalogEdition';
 import { getIsbn13 } from '@/src/utils/bookUtils';
 import { secureImageUri } from '@/src/utils/imageUri';
 
@@ -27,11 +26,8 @@ function EditionCover({ uri, lookupIsbn, resizeMode = 'cover', style }: CoverPro
   useEffect(() => {
     if (original || !lookupIsbn) return;
     const controller = new AbortController();
-    bookApi.searchBooks({ query: lookupIsbn, target: 'isbn', size: 5 }, {
-      signal: controller.signal, handleErrorLocally: true,
-    }).then(({ data }) => {
-      if (controller.signal.aborted || !Array.isArray(data?.documents)) return;
-      const match = data.documents.find((book: KakaoBook) => book?.thumbnail && getIsbn13(book) === lookupIsbn);
+    findCatalogEdition(lookupIsbn, controller.signal).then(match => {
+      if (controller.signal.aborted) return;
       const cover = secureImageUri(match?.thumbnail);
       if (cover && cover !== uri) setCatalogCover(cover);
     }).catch(() => { /* Keep the bundled cover when the catalog is unavailable. */ });

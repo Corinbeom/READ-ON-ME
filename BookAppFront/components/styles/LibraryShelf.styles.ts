@@ -22,6 +22,7 @@ export function getLibraryShelfStyles(theme: 'light' | 'dark') {
       borderBottomLeftRadius: UI.controlRadius, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center' },
     bookTitle: { ...Typography.label, fontFamily: 'NotoSerifKR-Regular', color: c.text, marginTop: Spacing.xs, minHeight: 40 },
     author: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xxs },
+    isbn: { ...Typography.caption, color: c.inkSoft },
     discovery: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: Spacing.xl, alignItems: 'center', gap: Spacing.md },
     discoveryTitle: { ...Typography.title, color: c.text, textAlign: 'center' },
     description: { ...Typography.body, color: c.inkSoft, textAlign: 'center' },
