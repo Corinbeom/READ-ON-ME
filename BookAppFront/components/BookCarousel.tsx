@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FlatList, TouchableOpacity, Image, View, Text } from 'react-native';
+import React from 'react';
+import { FlatList, TouchableOpacity, View, Text } from 'react-native';
 import { Link } from 'expo-router';
 import { Book } from '../src/types/book';
 import { getIsbn13 } from '../src/utils/bookUtils';
@@ -8,7 +8,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import BookListSkeleton from '@/components/ui/BookListSkeleton';
 import ScreenState from '@/components/ui/ScreenState';
 import AppButton from '@/components/ui/AppButton';
-import { secureImageUri } from '@/src/utils/imageUri';
+import BookCover from '@/components/BookCover';
 
 interface BookCarouselProps {
   title: React.ReactNode;
@@ -18,15 +18,6 @@ interface BookCarouselProps {
   error?: string;
   onRetry?: () => void;
   loadingLabel?: string;
-}
-
-const defaultCover = require('../assets/mascot/bookmark_searching_books_light.png');
-
-function CarouselCover({ uri, style }: { uri?: string; style: React.ComponentProps<typeof Image>['style'] }) {
-  const [failed, setFailed] = useState(false);
-  const showRemote = Boolean(uri) && !failed;
-  return <Image source={showRemote ? { uri } : defaultCover} style={style} resizeMode="cover"
-    onError={showRemote ? () => setFailed(true) : undefined} accessible={false} />;
 }
 
 const BookCarousel: React.FC<BookCarouselProps> = ({ 
@@ -43,7 +34,7 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
 
     const bookContent = (
       <>
-        <CarouselCover key={item.thumbnail} uri={secureImageUri(item.thumbnail)} style={styles.bookThumbnail} />
+        <BookCover uri={item.thumbnail} style={styles.bookThumbnail} />
         {item.loanRanking && <Text style={styles.bookAuthor}>{item.loanRanking.rank}위 · {item.loanRanking.count}회 대출</Text>}
         <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.bookAuthor} numberOfLines={1}>

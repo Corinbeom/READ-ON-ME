@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import BookCover from '@/components/BookCover';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import AppButton from '@/components/ui/AppButton';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -11,15 +12,13 @@ function CollectionBook({ book, selected, onSelect }: {
   book: HomeCollectionBook; selected: boolean; onSelect: () => void;
 }) {
   const styles = getHomeBookCollectionStyles(useColorScheme() ?? 'light');
-  const [imageFailed, setImageFailed] = useState(false);
   return (
     <TouchableOpacity style={styles.book} onPress={onSelect} activeOpacity={0.8}
       accessibilityRole="button" accessibilityState={{ selected }} aria-pressed={selected}
       accessibilityLabel={`${book.title} · ${book.author} · ${book.angle}`}
       accessibilityHint="선택하면 아래에 책 소개와 상세 보기 버튼이 표시됩니다.">
       <View style={[styles.coverFrame, selected && styles.selectedCover]}>
-        {imageFailed ? <View style={[styles.cover, styles.placeholder]}><Text style={styles.placeholderText}>표지 없음</Text></View>
-          : <Image source={{ uri: book.thumbnail }} style={styles.cover} resizeMode="cover" accessible={false} onError={() => setImageFailed(true)} />}
+        <BookCover uri={book.thumbnail} style={styles.cover} />
       </View>
       <Text style={styles.selectionLabel} aria-hidden>{selected ? '✓ 선택한 이야기' : ' '}</Text>
       <Text style={styles.angle}>{book.angle}</Text>

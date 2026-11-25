@@ -12,7 +12,6 @@ export const getBookDetailScreenStyles = (colorScheme: 'light' | 'dark') => {
     centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.background, padding: SCREEN_LAYOUT.gutter },
     coverSection: { backgroundColor: c.background, paddingTop: 32, paddingBottom: 28, alignItems: 'center', borderBottomWidth: 1, borderBottomColor: c.line },
     cover: { width: 130, height: 186, borderRadius: 0 },
-    coverPlaceholder: { backgroundColor: c.surface2 },
     titleSection: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingTop: 24, paddingBottom: Spacing.lg, borderBottomWidth: 1, borderBottomColor: c.line, backgroundColor: c.background },
     title: { ...Typography.display, color: c.text, fontStyle: Platform.OS === 'android' ? 'normal' : 'italic', letterSpacing: -0.5, marginBottom: 10 },
     meta: { ...Typography.caption, color: c.inkSoft, letterSpacing: 0.15, textTransform: 'uppercase' },

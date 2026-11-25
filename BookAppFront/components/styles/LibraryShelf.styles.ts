@@ -20,8 +20,6 @@ export function getLibraryShelfStyles(theme: 'light' | 'dark') {
     compactCover: { ...cover, width: 78, height: 111 },
     manage: { position: 'absolute', top: 0, right: 0, width: UI.iconButtonSize, height: UI.iconButtonSize,
       borderBottomLeftRadius: UI.controlRadius, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center' },
-    placeholder: { alignItems: 'center', justifyContent: 'center' },
-    coverLabel: { ...Typography.caption, color: c.inkSoft },
     bookTitle: { ...Typography.label, fontFamily: 'NotoSerifKR-Regular', color: c.text, marginTop: Spacing.xs, minHeight: 40 },
     author: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xxs },
     discovery: { paddingHorizontal: SCREEN_LAYOUT.gutter, paddingVertical: Spacing.xl, alignItems: 'center', gap: Spacing.md },

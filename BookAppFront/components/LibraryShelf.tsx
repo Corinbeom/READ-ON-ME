@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react';
-import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { Link, router } from 'expo-router';
 import { Ellipsis } from 'lucide-react-native';
 import BookmarkMascot from '@/components/BookmarkMascot';
@@ -9,7 +8,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import type { BookDto } from '@/src/types/BookDto';
 import { aiSearchHref } from '@/src/utils/aiSearchEntry';
 import { getIsbn13 } from '@/src/utils/bookUtils';
-import { secureImageUri } from '@/src/utils/imageUri';
+import BookCover from '@/components/BookCover';
 import { getLibraryShelfStyles } from './styles/LibraryShelf.styles';
 
 export function LibraryBookCard({ book, onPress, onManage, compact = false }: {
@@ -20,18 +19,14 @@ export function LibraryBookCard({ book, onPress, onManage, compact = false }: {
 }) {
   const theme = useColorScheme() ?? 'light';
   const styles = getLibraryShelfStyles(theme);
-  const uri = secureImageUri(book.thumbnail);
   const isbn = getIsbn13(book);
-  const [imageFailed, setImageFailed] = useState(false);
-  useEffect(() => setImageFailed(false), [uri]);
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors;
   const cover = compact ? styles.compactCover : styles.cover;
   const content = (
     <TouchableOpacity style={compact ? styles.compactBook : styles.book} onPress={onPress} onLongPress={onManage}
       disabled={!isbn && !onManage} activeOpacity={0.75}
       accessibilityLabel={`${book.title}${authors ? ` · ${authors}` : ''} · ${isbn ? '책 상세 보기' : '상세 보기 불가'}`}>
-      {uri && !imageFailed ? <Image source={{ uri }} style={cover} resizeMode="cover" onError={() => setImageFailed(true)} />
-        : <View style={[cover, styles.placeholder]}><Text style={styles.coverLabel}>표지 없음</Text></View>}
+      <BookCover uri={book.thumbnail} lookupIsbn={isbn} style={cover} />
       <Text style={styles.bookTitle} numberOfLines={2}>{book.title}</Text>
       <Text style={styles.author} numberOfLines={1}>{isbn ? authors || '저자 정보 없음' : '상세 보기 불가'}</Text>
     </TouchableOpacity>

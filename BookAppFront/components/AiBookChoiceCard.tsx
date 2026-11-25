@@ -2,13 +2,12 @@ import BookSourceLink from '@/components/BookSourceLink';
 import { readBookAttribution } from '@/src/utils/bookAttribution';
 import AppButton from '@/components/ui/AppButton';
 import { Spacing, Typography, UI } from '@/src/styles/designTokens';
-import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import type { AiSearchBook } from '@/src/services/api';
-import { secureImageUri } from '@/src/utils/imageUri';
+import BookCover from '@/components/BookCover';
 
 export default function AiBookChoiceCard({
   book,
@@ -33,16 +32,12 @@ export default function AiBookChoiceCard({
 }) {
   const theme = useColorScheme() ?? 'dark';
   const styles = getStyles(theme);
-  const [imageFailed, setImageFailed] = useState(false);
-  const thumbnail = secureImageUri(book.thumbnail);
   const title = book.title?.trim() || '제목 정보 없음';
   const authors = Array.isArray(book.authors) ? book.authors.join(', ') : book.authors?.trim();
   const { source } = readBookAttribution(book.contents);
   const reason = (book.ranking_status === 'GEMINI' || book.ranking_status === 'GROQ') && book.reason?.trim() && book.reason_evidence?.trim()
     ? book.reason.trim()
     : null;
-
-  useEffect(() => setImageFailed(false), [thumbnail]);
 
   return (
     <View style={[styles.card, selected && styles.selectedCard]}>
@@ -54,10 +49,7 @@ export default function AiBookChoiceCard({
           accessibilityLabel={`${title} 비교 후보 ${selected ? '선택됨' : '선택하기'}`} /> : null}
       </View>
       <View style={styles.mainRow}>
-        <View style={styles.coverFrame}>
-          {thumbnail && !imageFailed ? <Image source={{ uri: thumbnail }} style={styles.cover} resizeMode="contain" onError={() => setImageFailed(true)} />
-            : <Text style={styles.coverPlaceholder}>표지 없음</Text>}
-        </View>
+        <BookCover uri={book.thumbnail} lookupIsbn={book.isbn} style={styles.cover} resizeMode="contain" />
         <View style={styles.bookInfo}>
           <Text style={styles.title} numberOfLines={3}>{title}</Text>
           {authors ? <Text style={styles.authors}>{authors}</Text> : null}
@@ -90,9 +82,7 @@ const getStyles = (theme: 'light' | 'dark') => {
     topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.md },
     index: { ...Typography.caption, color: c.inkSoft, flexShrink: 1 },
     mainRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.md },
-    coverFrame: { width: 76, height: 112, backgroundColor: c.surface2, alignItems: 'center', justifyContent: 'center' },
-    cover: { width: 76, height: 112 },
-    coverPlaceholder: { ...Typography.caption, color: c.inkSoft },
+    cover: { width: 76, height: 112, backgroundColor: c.surface2 },
     bookInfo: { flex: 1, minWidth: 0 },
     title: { ...Typography.bookTitle, color: c.text },
     authors: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xs },
