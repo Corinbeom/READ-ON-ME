@@ -1,6 +1,7 @@
 package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.ai.dto.AiSearchJobResponse;
+import bookapp.bookappback.ai.dto.AiSearchClientTiming;
 import bookapp.bookappback.ai.dto.AiSearchOutcome;
 import bookapp.bookappback.ai.entity.AiSearchJob;
 import bookapp.bookappback.ai.repository.AiSearchJobRepository;
@@ -75,6 +76,10 @@ public class AiSearchJobService {
         } finally {
             admissionLock.unlock();
         }
+    }
+
+    public void recordClientTiming(Long userId, UUID id, AiSearchClientTiming timing) {
+        repository.recordClientTiming(id, userId, LocalDateTime.now(), timing);
     }
 
     public AiSearchJobResponse get(Long userId, UUID id) {

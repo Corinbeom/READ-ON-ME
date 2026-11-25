@@ -65,7 +65,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
                 (path.equals("/api/ai/search") || path.equals("/api/ai/jobs"))) {
             // Authorization rejects anonymous AI requests; do not spend Redis/API quota on them.
             var auth = SecurityContextHolder.getContext().getAuthentication();
-            if (!availability.underMaintenance() && auth != null && auth.getPrincipal() instanceof UserDetailsImpl &&
+            if (auth != null && auth.getPrincipal() instanceof UserDetailsImpl &&
+                    availability.checkSubmission(request) == GalpiAvailability.State.AVAILABLE &&
                     !consumeOrRespond(request, response, "ai-search", AI_SEARCH_LIMIT)) {
                 return;
             }

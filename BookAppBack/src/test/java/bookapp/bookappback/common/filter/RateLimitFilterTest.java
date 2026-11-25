@@ -4,6 +4,11 @@ import bookapp.bookappback.ai.service.GalpiAvailability;
 import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
 import jakarta.servlet.FilterChain;
+import bookapp.bookappback.ai.service.AiSearchService;
+import bookapp.bookappback.common.exception.AppException;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +28,8 @@ class RateLimitFilterTest {
     StringRedisTemplate redis;
     ValueOperations<String, String> values;
     RateLimitFilter filter;
+    AiSearchService ai;
+    GalpiAvailability availability;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -31,7 +38,10 @@ class RateLimitFilterTest {
         values = mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(values);
         when(values.increment(anyString())).thenReturn(1L);
-        filter = new RateLimitFilter(redis, mock(GalpiAvailability.class));
+        ai = mock(AiSearchService.class);
+        when(ai.releaseState("release")).thenReturn(GalpiAvailability.State.AVAILABLE);
+        availability = new GalpiAvailability(ai, "release");
+        filter = new RateLimitFilter(redis, availability);
     }
 
     @AfterEach
@@ -53,6 +63,31 @@ class RateLimitFilterTest {
         }
         filter.doFilter(new MockHttpServletRequest("GET", "/api/ai/jobs/recent"), new MockHttpServletResponse(), mock(FilterChain.class));
         verify(values, times(2)).increment("rate:ai-search:user:7");
+    }
+
+    @Test
+    void shareOneAdmissionCheckOnlyWithinEachAuthenticatedSubmission() throws Exception {
+        authenticate(7L);
+        when(ai.releaseState("release")).thenReturn(GalpiAvailability.State.AVAILABLE,
+                GalpiAvailability.State.UNCONFIRMED, GalpiAvailability.State.MAINTENANCE);
+        for (String expected : new String[]{"ok", "AI_STATUS_UNAVAILABLE", "AI_SEARCH_MAINTENANCE"}) {
+            var request = new MockHttpServletRequest("POST", "/api/ai/jobs");
+            var attributes = new ServletRequestAttributes(request);
+            RequestContextHolder.setRequestAttributes(attributes);
+            try {
+                filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {
+                    if ("ok".equals(expected)) availability.requireAvailable();
+                    else assertEquals(expected, assertThrows(
+                            AppException.class, availability::requireAvailable).getCode());
+                });
+            } finally {
+                RequestContextHolder.resetRequestAttributes();
+            }
+        }
+        verify(ai, times(3)).releaseState("release");
+        verify(values).increment("rate:ai-search:user:7");
+        availability.state(); // dispatch and result reads must check again
+        verify(ai, times(4)).releaseState("release");
     }
 
     @Test
