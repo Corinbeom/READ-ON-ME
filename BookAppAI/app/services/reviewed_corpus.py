@@ -4,6 +4,8 @@ import hashlib
 import json
 import re
 from datetime import date
+from itertools import groupby
+from time import perf_counter
 
 from sqlalchemy import text
 
@@ -69,14 +71,31 @@ async def record_field(db, isbn, field, value, provider, policy_version, source_
     """), params)).scalar_one()
 
 
-async def read_inputs(db, isbn, required):
+async def read_input_batch(db, isbns, required):
     rows = (await db.execute(text("""
-        SELECT f.id, f.field, f.value, f.digest, f.provider, p.active, p.uses
+        SELECT f.isbn, f.id, f.field, f.value, f.digest, f.provider, p.active, p.uses
         FROM corpus_field_versions f JOIN corpus_use_policy p
           ON p.provider = f.provider AND p.version = f.policy_version
-        WHERE f.isbn = :isbn AND f.current AND f.field IN ('title','authors','contents')
-        ORDER BY f.field FOR SHARE OF f, p
-    """), {"isbn": isbn})).mappings().all()
+        WHERE f.isbn = ANY(:isbns) AND f.current AND f.field IN ('title','authors','contents')
+        ORDER BY f.isbn, f.field FOR SHARE OF f, p
+    """), {"isbns": isbns})).mappings()
+    allowed = {}
+    for isbn, group in groupby(rows, key=lambda row: row["isbn"]):
+        try:
+            allowed[isbn] = _checked_fields(group, required)
+        except CorpusPermissionError:
+            continue
+    return allowed
+
+
+async def read_inputs(db, isbn, required):
+    allowed = await read_input_batch(db, [isbn], required)
+    if isbn not in allowed:
+        raise CorpusPermissionError(HOLD_REASON)
+    return allowed[isbn]
+
+
+def _checked_fields(rows, required):
     fields = {}
     versions = []
     for row in rows:
@@ -133,7 +152,7 @@ async def index_reviewed(db, isbn):
     await derived(db, isbn, EMBEDDING_USES, "embedding", embedding_backend.GEMINI_EMBEDDING_MODEL, embed)
 
 
-async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY", checked_form=False):
+async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY", checked_form=False, timings=None):
     """All model inputs are reconstructed inside this transaction, including fallback candidates."""
     from app.corpus_policy import MODEL_USES
     from app.services import reranker
@@ -145,8 +164,13 @@ async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY", ch
         fields[isbn], versions[isbn] = await read_inputs(db, isbn, MODEL_USES)
     refs = {f"B{i}": isbn for i, isbn in enumerate(dict.fromkeys(isbns), 1)}
     candidates = [{"isbn": ref, **fields[isbn]} for ref, isbn in refs.items()]
-    results = await reranker._rank_candidates(query, candidates, requested_form=requested_form, outcome=outcome,
-                                               verified_fallback=candidates if checked_form else None)
+    model_start = perf_counter()
+    try:
+        results = await reranker._rank_candidates(query, candidates, requested_form=requested_form, outcome=outcome,
+                                                  verified_fallback=candidates if checked_form else None)
+    finally:
+        if timings is not None:
+            timings["rerank_ms"] = (perf_counter() - model_start) * 1000
     context = digest(json.dumps([query, list(refs.values()), versions], sort_keys=True))
     books = []
     for row in results:
@@ -162,47 +186,32 @@ async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY", ch
     return books
 
 
-async def search_reviewed(db, query, outcome=None):
+async def search_reviewed(db, query, outcome=None, *, index=None, timings=None):
     """Pilot retrieval in the reviewed embedding space, limited to current, permitted inputs."""
-    from app.corpus_policy import EMBEDDING_USES
+    from app.services.reviewed_release import load_index
     from app.services import embedding_backend
     from app.services.intent_classifier import IntentAnalyzer
     from app.services.reference_search import exclude_comparison_work
 
     if outcome is not None:
         outcome.update(status="NO_MATCH", reason_code="NO_VERIFIED_CANDIDATES")
-    isbns = (await db.execute(text("""
-        SELECT DISTINCT isbn FROM corpus_derived_artifacts WHERE kind='embedding' AND model_version=:model
-        ORDER BY isbn
-    """), {"model": embedding_backend.GEMINI_EMBEDDING_MODEL})).scalars().all()
-    from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL
+    if index is None:
+        index = await load_index(db, with_vectors=True)
     intent = await IntentAnalyzer().analyze(query)
     winners = award_candidates(query)
     practical = intent.requested_form == "PRACTICAL" or (
         intent.requested_form != "STORY" and (intent.domain in {"비즈니스", "금융", "심리", "자기계발"} or "저축" in query)
     )
     vectors = []
-    for isbn in isbns:
-        if winners is not None and isbn not in winners:
+    for isbn, edition in index.items():
+        if (winners is not None and isbn not in winners) or edition.tags is None:
             continue
-        try:
-            fields, version = await read_inputs(db, isbn, EMBEDDING_USES)
-        except CorpusPermissionError:
+        book_type = edition.tags.get("book_type")
+        if practical and book_type not in {"NONFICTION", "PRACTICAL", "EDUCATIONAL"}:
             continue
-        artifacts = (await db.execute(text("""
-            SELECT e.result AS vector, t.result AS tags FROM corpus_derived_artifacts e
-            JOIN corpus_derived_artifacts t USING(isbn,input_version)
-            WHERE e.isbn=:isbn AND e.input_version=:version AND e.kind='embedding'
-              AND e.model_version=:model AND t.kind='tags' AND t.model_version=:tag
-        """), {"isbn": isbn, "version": version, "model": embedding_backend.GEMINI_EMBEDDING_MODEL,
-               "tag": GEMINI_DEFAULT_MODEL})).mappings().one_or_none()
-        if artifacts is None:
+        if intent.requested_form == "STORY" and book_type != "STORY":
             continue
-        if practical and artifacts["tags"].get("book_type") not in {"NONFICTION", "PRACTICAL", "EDUCATIONAL"}:
-            continue
-        if intent.requested_form == "STORY" and artifacts["tags"].get("book_type") != "STORY":
-            continue
-        vectors.append((isbn, fields, artifacts["vector"]))
+        vectors.append((isbn, edition.fields, edition.vector))
     if intent.reference_author:
         anchors = [v for _, f, v in vectors if intent.reference_author == f["authors"]]
         if not anchors:
@@ -220,9 +229,14 @@ async def search_reviewed(db, query, outcome=None):
             vectors = [item for item in vectors if item[1]["authors"] == author]
         if not vectors:
             return []
-        qv = await embedding_backend._embed(query, "RETRIEVAL_QUERY")
+        embed_start = perf_counter()
+        try:
+            qv = await embedding_backend._embed(query, "RETRIEVAL_QUERY")
+        finally:
+            if timings is not None:
+                timings["embed_ms"] = (perf_counter() - embed_start) * 1000
     vectors.sort(key=lambda item: sum(a*b for a,b in zip(qv, item[2])), reverse=True)
     candidates = [{"isbn": isbn, **fields} for isbn, fields, _ in vectors]
     selected = exclude_comparison_work(query, candidates)[:10]
     return await rank_reviewed(db, query, [book["isbn"] for book in selected], outcome,
-                               "PRACTICAL" if practical else intent.requested_form, checked_form=True)
+                               "PRACTICAL" if practical else intent.requested_form, checked_form=True, timings=timings)

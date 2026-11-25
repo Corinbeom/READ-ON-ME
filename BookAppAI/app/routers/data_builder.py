@@ -1,4 +1,6 @@
 import logging
+from time import perf_counter
+from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.corpus_policy import require_verified_corpus
@@ -8,7 +10,7 @@ from app.services.reading_keyword_picks import public_picks
 from app.services.shelf_keywords import shelf_keywords
 from app.services import corpus_ingestion
 from app.services.reviewed_corpus import search_reviewed, read_inputs
-from app.services.reviewed_release import configured_release, require_release
+from app.services.reviewed_release import configured_release, require_index, require_release
 from app.security import require_internal_token
 from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
 
@@ -84,6 +86,7 @@ async def reviewed_detail(isbn: str, x_reviewed_release: str = Header(), release
 async def ai_search(
     request: AiSearchRequest, response: Response, release: str = Depends(configured_release), db: AsyncSession = Depends(get_db),
     x_reviewed_release: str | None = Header(default=None),
+    x_request_id: Annotated[str | None, Header()] = None,
 ):
     """
     Performs a natural language search for books using vector similarity.
@@ -94,12 +97,33 @@ async def ai_search(
         raise HTTPException(status_code=400, detail="Search query cannot be empty.")
 
     outcome: dict = {}
-    async with db.begin():
-        from sqlalchemy import text
-        await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
-        await require_release(db, release)
-        results = await search_reviewed(db, request.query, outcome)
-    logging.getLogger("app.metrics").info("reviewed_search outcome=%s books=%d", outcome.get("status"), len(results))
+    started = perf_counter()
+    timings = {"embed_ms": 0.0, "rerank_ms": 0.0}
+    index_ready = None
+    status = "ERROR"
+    results = []
+    try:
+        async with db.begin():
+            from sqlalchemy import text
+            await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+            index = await require_index(db, release, with_vectors=True)
+            index_ready = perf_counter()
+            results = await search_reviewed(db, request.query, outcome, index=index, timings=timings)
+        status = outcome.get("status", "NO_MATCH")
+    finally:
+        ended = perf_counter()
+        index_ms = ((index_ready or ended) - started) * 1000
+        total_ms = (ended - started) * 1000
+        other_ms = total_ms - index_ms - timings["embed_ms"] - timings["rerank_ms"]
+        # Uvicorn configures this logger at INFO in the production image.
+        trace_id = x_request_id if x_request_id and len(x_request_id) == 36 and all(
+            c in "0123456789abcdefABCDEF-" for c in x_request_id
+        ) else "-"
+        logging.getLogger("uvicorn.error").info(
+            "reviewed_search request_id=%s outcome=%s books=%d index_ms=%.1f embed_ms=%.1f rerank_ms=%.1f "
+            "other_ms=%.1f total_ms=%.1f", trace_id, status, len(results), index_ms, timings["embed_ms"],
+            timings["rerank_ms"], other_ms, total_ms,
+        )
     response.headers["X-Search-Outcome"] = outcome.get("status", "NO_MATCH")
     response.headers["X-Search-Reason"] = outcome.get("reason_code", "NONE")
     response.headers["X-Search-Basis"] = outcome.get("basis", "NONE")
