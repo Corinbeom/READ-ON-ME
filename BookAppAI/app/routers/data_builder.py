@@ -8,6 +8,7 @@ from app import database
 from app.database import get_db
 from app.services.reading_keyword_picks import public_picks
 from app.services.shelf_keywords import shelf_keywords
+from app.services.search_timing import measure_search_db
 from app.services import corpus_ingestion
 from app.services.reviewed_corpus import search_reviewed, read_inputs
 from app.services.reviewed_release import configured_release, require_index, require_release
@@ -98,31 +99,43 @@ async def ai_search(
 
     outcome: dict = {}
     started = perf_counter()
-    timings = {"embed_ms": 0.0, "rerank_ms": 0.0}
+    timings = {"candidate_ms": 0.0, "input_db_ms": 0.0, "evidence_db_ms": 0.0, "evidence_insert_ms": 0.0}
+    transaction_exit = None
     index_ready = None
     status = "ERROR"
     results = []
     try:
         async with db.begin():
-            from sqlalchemy import text
-            await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
-            index = await require_index(db, release, with_vectors=True)
-            index_ready = perf_counter()
-            results = await search_reviewed(db, request.query, outcome, index=index, timings=timings)
+            try:
+                from sqlalchemy import text
+                await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+                index = await require_index(db, release, with_vectors=True)
+                index_ready = perf_counter()
+                with measure_search_db(db, timings):
+                    results = await search_reviewed(db, request.query, outcome, index=index, timings=timings)
+            finally:
+                transaction_exit = perf_counter()
         status = outcome.get("status", "NO_MATCH")
     finally:
         ended = perf_counter()
-        index_ms = ((index_ready or ended) - started) * 1000
+        index_ms = ((index_ready or transaction_exit or ended) - started) * 1000
         total_ms = (ended - started) * 1000
-        other_ms = total_ms - index_ms - timings["embed_ms"] - timings["rerank_ms"]
+        embed_ms = timings.get("embed_ms", 0.0)
+        rerank_ms = timings.get("rerank_ms", 0.0)
+        other_ms = total_ms - index_ms - embed_ms - rerank_ms
+        tx_exit_ms = (ended - transaction_exit) * 1000 if transaction_exit is not None else 0.0
+        provider = results[0].get("ranking_status") if results else None
         # Uvicorn configures this logger at INFO in the production image.
         trace_id = x_request_id if x_request_id and len(x_request_id) == 36 and all(
             c in "0123456789abcdefABCDEF-" for c in x_request_id
         ) else "-"
         logging.getLogger("uvicorn.error").info(
             "reviewed_search request_id=%s outcome=%s books=%d index_ms=%.1f embed_ms=%.1f rerank_ms=%.1f "
-            "other_ms=%.1f total_ms=%.1f", trace_id, status, len(results), index_ms, timings["embed_ms"],
-            timings["rerank_ms"], other_ms, total_ms,
+            "other_ms=%.1f total_ms=%.1f candidate_ms=%.1f input_db_ms=%.1f evidence_db_ms=%.1f "
+            "evidence_insert_ms=%.1f tx_exit_ms=%.1f ranker=%s", trace_id, status, len(results), index_ms, embed_ms,
+            rerank_ms, other_ms, total_ms, timings["candidate_ms"], timings["input_db_ms"],
+            timings["evidence_db_ms"], timings["evidence_insert_ms"], tx_exit_ms,
+            provider if provider in ("GEMINI", "GROQ", "FALLBACK") else "NONE",
         )
     response.headers["X-Search-Outcome"] = outcome.get("status", "NO_MATCH")
     response.headers["X-Search-Reason"] = outcome.get("reason_code", "NONE")

@@ -3,6 +3,7 @@ package bookapp.bookappback.ai.service;
 import bookapp.bookappback.ai.dto.AiSearchRequestDto;
 import bookapp.bookappback.ai.dto.AiSearchOutcome;
 import io.netty.channel.ChannelOption;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -13,8 +14,10 @@ import reactor.netty.http.client.HttpClient;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import reactor.core.publisher.Mono;
 
+@Slf4j
 @Service
 public class AiSearchService {
 
@@ -90,8 +93,14 @@ public class AiSearchService {
                         headers.set("X-Reviewed-Release", release);
                     })
                     .bodyValue(new AiSearchRequestDto(query))
-                    .retrieve()
-                    .toEntity(new ParameterizedTypeReference<List<?>>() {})
+                    .exchangeToMono(response -> {
+                        long headersAt = System.nanoTime();
+                        log.info("reviewed_http_headers request_id={} status={}", requestId, response.statusCode().value());
+                        if (response.statusCode().value() >= 400) return response.createError();
+                        return response.toEntity(new ParameterizedTypeReference<List<?>>() {})
+                                .doOnNext(entity -> log.info("reviewed_http_body request_id={} decode_ms={}", requestId,
+                                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - headersAt)));
+                    })
                     .map(response -> {
                         List<?> books = response.getBody();
                         if (books == null) throw new IllegalStateException("AI search returned no body");

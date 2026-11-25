@@ -36,6 +36,21 @@ FROM ai_search_jobs
 WHERE status = 'SUCCEEDED' AND completed_at >= :since_utc;
 ```
 
+## 서버 지연을 작업별로 찾기
+
+운영 DB의 `ai_search_jobs.id`를 AI와 Spring 로그의 `request_id`로 검색한다. 질문과 책 내용은 계측 로그에서 수집하지 않는다. 아래 시간은 밀리초다.
+
+| 로그 | 측정 구간 |
+|---|---|
+| AI `reviewed_search` | `index_ms`는 공개 판정과 색인 로드, `embed_ms`는 질문 임베딩, `rerank_ms`는 추천 순위 결정과 장애 대체 전체다. `ranker`는 결과에 실제 표시된 GEMINI·GROQ·FALLBACK이며 빈 결과는 NONE이다. |
+| 같은 AI 로그의 `other_ms` 세부 항목 | `candidate_ms`는 검색 진입부터 후보 권한 검사용 첫 SQL 실행 전까지에서 임베딩을 뺀 값이다. `input_db_ms`는 모델 호출 전 후보 잠금·권한 조회 SQL 실행 합계, `evidence_db_ms`는 호출 후 근거 조회·저장 SQL 실행 합계다. 그중 새 근거를 추가한 시간은 `evidence_insert_ms`다. `tx_exit_ms`는 트랜잭션 종료(커밋 또는 롤백) 시간이다. |
+| Spring `reviewed_http_headers`, `reviewed_http_body` | 첫 로그는 응답 헤더 수신과 HTTP 상태를, 두 번째는 성공 응답의 본문 수신·디코딩 완료를 표시한다. `decode_ms`에 두 시점 사이의 경과 시간이 담긴다. |
+| Spring `reviewed_finish` | `handoff_ms`는 완료 또는 오류 신호가 작업 처리 스레드로 넘어가는 대기 시간이다. `serialize_ms`는 결과 JSON 변환과 상태 필드 설정, `store_ms`는 이를 제외한 완료 트랜잭션 시간(행 조회·저장·커밋 포함)이다. `committed`는 트랜잭션 성공 여부이며, 검색 결과는 작업의 status로 확인한다. |
+
+`candidate_ms`, `input_db_ms`, `evidence_db_ms`, `tx_exit_ms`는 기존 `other_ms` 안에 포함된다. 이 네 값을 뺀 잔여 시간에는 파이썬 쪽 결과 조립과 검증 등이 있다. 실행되지 않은 단계는 0이 될 수 있고, 상류 호출 전에 작업이 막히면 `handoff_ms`는 null이다. AI 로그 종료와 Spring 헤더 수신의 시각 차이는 같은 호스트의 시계가 맞는 경우에만 비교한다.
+
+배포 전후에는 같은 질문과 계정에서 측정한다. AI·Spring 재기동 뒤 첫 검색을 따로 표시하고 같은 질문의 첫 검색끼리 비교한다. 후속 검색에서는 Gemini 직접 응답과 Groq 대체를 나눠 본다. 웹 화면 계측이 있는 표본에서만 10초 초과 비율을 계산하며, 표본 수와 실패·빈 결과 건수도 같이 기록한다.
+
 ## 문장 번호 형식의 저장 결과 비교
 
 같은 121권 릴리스의 보관된 평가 2회(회당 고정 질문 20개와 번아웃 질문 1개)를 재생했다. 당시 반환한 책과 추천 이유를 고정하고, 모델에 제공하는 소개 문구 범위에서 원문 인용을 문장 번호로 정확히 복원할 수 있는지 검사했다. 121개 반환 항목 중 이유·근거가 모두 남아 있는 61개가 비교 대상이었다.

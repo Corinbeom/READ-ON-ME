@@ -220,3 +220,35 @@ async def test_search_timing_records_blocked_release_without_query(monkeypatch, 
     assert "request_id=" + job in caplog.text
     assert "outcome=ERROR" in caplog.text and "rerank_ms=0.0" in caplog.text
     assert "private query" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_search_db_timing_distinguishes_input_and_receipt_and_detaches_on_error():
+    from app.services.search_timing import measure_search_db
+
+    url = os.getenv("REVIEWED_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Requires a disposable PostgreSQL database")
+    engine = create_async_engine(url)
+    timings = {"input_db_ms": 0.0, "evidence_db_ms": 0.0, "evidence_insert_ms": 0.0}
+    try:
+        async with AsyncSession(engine) as db:
+            await db.execute(text("CREATE TEMP TABLE timing_receipt (id integer) ON COMMIT DROP"))
+            with pytest.raises(RuntimeError, match="stop"):
+                with measure_search_db(db, timings):
+                    assert await db.scalar(text("SELECT 1")) == 1
+                    assert timings["input_db_ms"] > 0 and timings["evidence_db_ms"] == 0
+                    before_rank = timings["input_db_ms"]
+                    timings["rerank_ms"] = 0.0  # Even a zero-duration rank marks the receipt phase.
+                    assert await db.scalar(text("SELECT 2")) == 2
+                    assert timings["evidence_insert_ms"] == 0
+                    await db.execute(text("INSERT INTO timing_receipt VALUES (1)"))
+                    raise RuntimeError("stop")
+            assert timings["input_db_ms"] == before_rank
+            assert 0 < timings["evidence_insert_ms"] < timings["evidence_db_ms"]
+            assert timings["candidate_ms"] >= 0
+            snapshot = timings.copy()
+            await db.scalar(text("SELECT 3"))
+            assert timings == snapshot
+    finally:
+        await engine.dispose()

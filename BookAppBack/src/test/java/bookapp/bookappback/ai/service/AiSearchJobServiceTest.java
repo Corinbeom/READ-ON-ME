@@ -9,6 +9,9 @@ import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -240,18 +243,25 @@ class AiSearchJobServiceTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
-    void terminalJobSignalsReachOnlyTheOwnerStreams(boolean successful) throws Exception {
+    @ExtendWith(OutputCaptureExtension.class)
+    void terminalJobSignalsReachOnlyTheOwnerStreams(boolean successful, CapturedOutput output) throws Exception {
         var ownerStream = openNotificationStream(1L);
         var otherOwnerStream = openNotificationStream(1L);
         var strangerStream = openNotificationStream(2L);
         try {
             assertTrue(ownerStream.getResponse().getContentAsString().contains("\"aiSearchCompletion\":true"));
             var job = service.submit(1L, "추천을 완료할 책", "completion-signal");
-            assertTrue(capacity.tryAcquire());
-            var result = successful ? new AiSearchOutcome(List.of("book"), "MODEL", "NONE", "NONE") : null;
-            var error = successful ? null : new TimeoutException("slow");
-            ReflectionTestUtils.invokeMethod(service, "finish", job.id(), result, error);
+            when(searchService.searchWithOutcome(anyString(), anyString())).thenReturn(successful
+                    ? Mono.just(new AiSearchOutcome(List.of("book"), "MODEL", "NONE", "NONE"))
+                    : Mono.error(new TimeoutException("slow")));
+            ReflectionTestUtils.setField(service, "dispatchEnabled", true);
+            service.dispatch();
+            org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(5)).until(() ->
+                    otherOwnerStream.getResponse().getContentAsString().contains("data:" + job.id())
+                            && ownerStream.getResponse().getContentAsString().contains("data:" + job.id()));
 
+            assertTrue(output.getOut().lines().anyMatch(line -> line.contains("reviewed_finish request_id=" + job.id())
+                    && line.matches(".*handoff_ms=[0-9]+ serialize_ms=[0-9]+ store_ms=[0-9]+ committed=true")));
             var done = service.get(1L, job.id());
             assertEquals(successful ? "SUCCEEDED" : "FAILED", done.status());
             assertNotNull(done.completedAt());
@@ -262,6 +272,7 @@ class AiSearchJobServiceTest {
             }
             assertFalse(strangerStream.getResponse().getContentAsString().contains(job.id().toString()));
         } finally {
+            ReflectionTestUtils.setField(service, "dispatchEnabled", false);
             for (var stream : List.of(ownerStream, otherOwnerStream, strangerStream)) {
                 stream.getRequest().getAsyncContext().complete();
             }
