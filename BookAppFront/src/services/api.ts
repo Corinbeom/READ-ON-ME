@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
 import type { BookDto } from '../types/BookDto';
+import type { AiSearchTiming } from '../utils/aiSearchTiming';
 import type { KakaoExchange, KakaoStart } from '../utils/kakaoLogin';
 import type { FeedbackCategory, FeedbackStatus, RecommendationRating } from '../utils/feedback';
 import customAlert from '../utils/alert'; // 이미 있는 Alert 유틸
@@ -136,6 +137,8 @@ export const aiJobApi = {
   availability: (signal: AbortSignal) => api.get<AiJobResponse<boolean>>(galpiAvailabilityPath, { signal }),
   submit: (query: string, key: string) =>
     api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, { headers: { 'Idempotency-Key': key } }),
+  recordTiming: (id: string, timing: AiSearchTiming) =>
+    api.put<void>(`/api/ai/jobs/${id}/client-timing`, timing),
   recent: () => api.get<AiJobResponse<AiSearchJob[]>>('/api/ai/jobs/recent'),
   get: (id: string, signal?: AbortSignal) => api.get<AiJobResponse<AiSearchJob>>(`/api/ai/jobs/${id}`, { signal }),
   feedback: (id: string, signal: AbortSignal) =>

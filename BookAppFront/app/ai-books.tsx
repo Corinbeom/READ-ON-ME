@@ -32,6 +32,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { aiJobApi, type AiSearchJob } from '@/src/services/api';
 import type { RootState } from '@/src/store';
 import { AI_SEARCH_EXAMPLES } from '@/src/constants/aiSearchExamples';
+import { startSearchTiming } from '@/src/utils/aiSearchTiming';
 import { watchAiJob } from '@/src/utils/aiJobStatusWatcher';
 import { normalizeAiPrompt, resolveAiSearchEntry } from '@/src/utils/aiSearchEntry';
 
@@ -68,6 +69,7 @@ function BookSelection() {
   const feedbackOffset = useRef(0);
   const revealFeedbackAfterLayout = useRef(false);
   const pendingSubmission = useRef<{ query: string; key: string } | null>(null);
+  const timing = useRef<ReturnType<typeof startSearchTiming> | null>(null);
   const resetInProgress = useRef(false);
   const submittedEntryKey = useRef<string | null>(null);
   const [query, setQuery] = useState(entryPrompt);
@@ -84,9 +86,18 @@ function BookSelection() {
   const [step, setStep] = useState<SelectionStep>('results');
   const pendingJobId = isAuthenticated && isPending(job) ? job?.id : undefined;
   const aiSearchStreamReady = useSelector((state: RootState) => state.notifications.aiSearchStreamReady);
-  const completionSignaled = useSelector((state: RootState) =>
-    !!pendingJobId && state.notifications.completedAiSearchIds.includes(pendingJobId),
+  const signalAt = useSelector((state: RootState) =>
+    state.notifications.aiSearchCompletions.find(event => event.id === job?.id)?.receivedAt,
   );
+  const completionSignaled = signalAt !== undefined;
+
+  // A resumed screen has a different viewing interval from the original click.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state !== 'active') timing.current = null;
+    });
+    return () => { timing.current = null; sub.remove(); };
+  }, [isFocused, storageKey]);
 
   useEffect(() => {
     if (submittedEntryKey.current && submittedEntryKey.current === storageKey && isAuthenticated && !entryPrompt) {
@@ -146,9 +157,11 @@ function BookSelection() {
       : STATUS_POLL_INTERVAL_MS;
     const watcher = watchAiJob(async (signal) => {
       try {
+        const requestedAt = performance.now();
         const response = await aiJobApi.get(pendingJobId, signal);
         if (signal.aborted) return false;
         const current = response.data.data;
+        if (!isPending(current)) timing.current?.terminal(current.id, requestedAt);
         setJob(current);
         setErrorText('');
         return isPending(current);
@@ -179,6 +192,24 @@ function BookSelection() {
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [step, job?.id, job?.status]);
 
+  useEffect(() => {
+    if (!isFocused || !isAuthenticated || restoring || restoreFailed || !job || isPending(job)) return;
+    const trace = timing.current;
+    if (!trace) return;
+    // Record after the terminal UI has committed and had a frame to paint.
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        if (timing.current !== trace) return;
+        const sample = trace.displayed(job.id, signalAt);
+        if (sample) {
+          timing.current = null;
+          void aiJobApi.recordTiming(job.id, sample).catch(() => {});
+        }
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [job, isAuthenticated, isFocused, restoring, restoreFailed, signalAt]);
+
   const startSearch = async (queryOverride?: string) => {
     if (!isAuthenticated || !storageKey || restoring || restoreFailed || isSubmitting || isPending(job)) return;
     const trimmed = (queryOverride ?? query).trim();
@@ -186,12 +217,16 @@ function BookSelection() {
     const submission = pendingSubmission.current?.query === trimmed
       ? pendingSubmission.current
       : { query: trimmed, key: `${Date.now()}-${Math.random().toString(36).slice(2)}` };
+    // An idempotent retry can refer to a job begun on a previous click.
+    const trace = pendingSubmission.current === submission ? null : startSearchTiming();
+    timing.current = trace;
     pendingSubmission.current = submission;
     Keyboard.dismiss();
     setIsSubmitting(true);
     setErrorText('');
     try {
       const response = await aiJobApi.submit(submission.query, submission.key);
+      trace?.accepted(response.data.data.id);
       setJob(response.data.data);
       setQuery(submission.query);
       setSelectedIsbns([]);
@@ -209,6 +244,7 @@ function BookSelection() {
         console.warn('AI 검색 복원 정보 저장 실패:', storageError);
       }
     } catch (error) {
+      if (timing.current === trace) timing.current = null;
       if (isAxiosError(error) && error.response?.data?.code === 'AI_STATUS_UNAVAILABLE') {
         setErrorText('갈피 연결을 잠시 확인할 수 없어요. 잠시 후 다시 시도해 주세요.');
       } else if (isAxiosError(error) && error.response?.data?.code === 'AI_SEARCH_MAINTENANCE') {

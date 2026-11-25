@@ -8,6 +8,7 @@ import {
 } from '@/src/store/notificationSlice';
 import { API_BASE_URL } from '@/src/services/api';
 import { Notification } from '@/src/types/notification';
+import { completionJobId } from '@/src/utils/aiJobStatusWatcher';
 import customAlert from '@/src/utils/alert';
 
 type NotificationEvent = 'notification' | 'INIT' | 'ai-search-finished';
@@ -87,9 +88,9 @@ const NotificationListener = () => {
         }
       });
       source.addEventListener('ai-search-finished', ({ data }) => {
-        if (eventSourceRef.current === source && data) {
-          dispatch(recordAiSearchCompletion(data));
-        }
+        if (eventSourceRef.current !== source) return;
+        const id = completionJobId(data);
+        if (id) dispatch(recordAiSearchCompletion({ id, receivedAt: performance.now() }));
       });
       source.addEventListener('error', (event) => {
         if (eventSourceRef.current !== source) return;

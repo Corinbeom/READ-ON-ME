@@ -8,7 +8,7 @@ interface NotificationState {
   requestId?: string;
   unreadCount: number;
   aiSearchStreamReady: boolean;
-  completedAiSearchIds: string[];
+  aiSearchCompletions: { id: string; receivedAt: number }[];
 }
 
 const initialState: NotificationState = {
@@ -16,7 +16,7 @@ const initialState: NotificationState = {
   listStatus: 'idle',
   unreadCount: 0,
   aiSearchStreamReady: false,
-  completedAiSearchIds: [],
+  aiSearchCompletions: [],
 };
 
 export const fetchNotifications = createAsyncThunk(
@@ -69,13 +69,13 @@ const notificationSlice = createSlice({
     setAiSearchStreamReady: (state, action: PayloadAction<boolean>) => {
       state.aiSearchStreamReady = action.payload;
     },
-    recordAiSearchCompletion: (state, action: PayloadAction<string>) => {
-      if (!state.completedAiSearchIds.includes(action.payload)) {
-        state.completedAiSearchIds = [action.payload, ...state.completedAiSearchIds].slice(0, 20);
+    recordAiSearchCompletion: (state, action: PayloadAction<{ id: string; receivedAt: number }>) => {
+      if (!state.aiSearchCompletions.some(event => event.id === action.payload.id)) {
+        state.aiSearchCompletions = [action.payload, ...state.aiSearchCompletions].slice(0, 20);
       }
     },
     clearAiSearchCompletions: (state) => {
-      state.completedAiSearchIds = [];
+      state.aiSearchCompletions = [];
     },
   },
   extraReducers: (builder) => {

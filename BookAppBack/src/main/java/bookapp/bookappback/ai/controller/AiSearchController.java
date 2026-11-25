@@ -7,6 +7,7 @@ import bookapp.bookappback.ai.service.AiSearchCapacity;
 import bookapp.bookappback.ai.service.GalpiAvailability;
 import bookapp.bookappback.ai.service.AiSearchCapacityException;
 import bookapp.bookappback.ai.dto.AiSearchRequestDto;
+import bookapp.bookappback.ai.dto.AiSearchClientTiming;
 import bookapp.bookappback.ai.dto.AiSearchJobResponse;
 import bookapp.bookappback.common.dto.ApiResponse;
 import bookapp.bookappback.security.UserDetailsImpl;
@@ -55,6 +56,13 @@ public class AiSearchController {
             @RequestBody @Valid AiSearchRequestDto requestDto) {
         var job = jobService.submit(principal.getUser().getId(), requestDto.getQuery().trim(), idempotencyKey);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(new ApiResponse<>(true, "검색 작업을 접수했습니다", job));
+    }
+
+    @PutMapping("/jobs/{id}/client-timing")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void recordClientTiming(@AuthenticationPrincipal UserDetailsImpl principal, @PathVariable UUID id,
+                                   @RequestBody @Valid AiSearchClientTiming timing) {
+        jobService.recordClientTiming(principal.getUser().getId(), id, timing);
     }
 
     @GetMapping("/jobs/recent")

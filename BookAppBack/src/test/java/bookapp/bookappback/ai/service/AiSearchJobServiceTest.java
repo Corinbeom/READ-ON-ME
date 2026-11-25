@@ -59,6 +59,7 @@ class AiSearchJobServiceTest {
     void reset() {
         var operations = (org.springframework.data.redis.core.ValueOperations<String, String>) org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
         when(availability.state()).thenReturn(GalpiAvailability.State.AVAILABLE);
+        when(availability.checkSubmission(org.mockito.ArgumentMatchers.any())).thenReturn(GalpiAvailability.State.AVAILABLE);
         when(availability.release()).thenReturn("reviewed-test-release");
         when(rateLimitRedis.opsForValue()).thenReturn(operations);
         when(operations.increment(anyString())).thenReturn(1L);
@@ -91,6 +92,29 @@ class AiSearchJobServiceTest {
                         .content("{\"query\":\"초과\"}"))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(header().string("Retry-After", "5"));
+    }
+
+    @Test
+    void timingIsAcceptedOnceForTheOwnerOfATerminalJob() throws Exception {
+        var job = service.submit(1L, "추천", "timing");
+        var path = "/api/ai/jobs/" + job.id() + "/client-timing";
+        String sample = "{\"submit_ms\":100,\"fetch_start_ms\":250,\"fetch_end_ms\":300,\"display_ms\":320}";
+        var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(path)
+                .with(user(principal(1L))).contentType(MediaType.APPLICATION_JSON).content(sample);
+        mvc.perform(request).andExpect(status().isNoContent());
+        var row = repository.findById(job.id()).orElseThrow();
+        assertNull(row.getClientDisplayMs());
+        row.setStatus("SUCCEEDED");
+        repository.saveAndFlush(row);
+        mvc.perform(request.with(user(principal(2L)))).andExpect(status().isNoContent());
+        assertNull(repository.findById(job.id()).orElseThrow().getClientDisplayMs());
+        mvc.perform(request.with(user(principal(1L))).content(sample.replace("320", "99")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(request.content(sample)).andExpect(status().isNoContent());
+        mvc.perform(request.content(sample.replace("320", "400"))).andExpect(status().isNoContent());
+        row = repository.findById(job.id()).orElseThrow();
+        assertEquals(320, row.getClientDisplayMs());
+        assertNull(row.getClientSignalMs());
     }
 
     @Test

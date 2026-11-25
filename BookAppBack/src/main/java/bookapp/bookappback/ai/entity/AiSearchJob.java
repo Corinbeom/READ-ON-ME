@@ -56,6 +56,21 @@ public class AiSearchJob {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Column(name = "client_submit_ms")
+    private Integer clientSubmitMs;
+
+    @Column(name = "client_signal_ms")
+    private Integer clientSignalMs;
+
+    @Column(name = "client_fetch_start_ms")
+    private Integer clientFetchStartMs;
+
+    @Column(name = "client_fetch_end_ms")
+    private Integer clientFetchEndMs;
+
+    @Column(name = "client_display_ms")
+    private Integer clientDisplayMs;
+
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
 }

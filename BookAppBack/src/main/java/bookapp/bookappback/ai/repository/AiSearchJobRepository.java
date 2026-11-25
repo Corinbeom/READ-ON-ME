@@ -5,6 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import bookapp.bookappback.ai.dto.AiSearchClientTiming;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -18,6 +20,18 @@ public interface AiSearchJobRepository extends JpaRepository<AiSearchJob, UUID> 
     List<AiSearchJob> findTop20ByUserIdAndExpiresAtAfterOrderByCreatedAtDesc(Long userId, LocalDateTime now);
     List<AiSearchJob> findByUserIdAndStatusInAndExpiresAtAfter(Long userId, Collection<String> statuses, LocalDateTime now);
     long countByStatusAndExpiresAtAfter(String status, LocalDateTime now);
+
+    @Transactional
+    @Modifying
+    @Query("""
+            UPDATE AiSearchJob j SET j.clientSubmitMs = :#{#timing.submitMs}, j.clientSignalMs = :#{#timing.signalMs},
+                j.clientFetchStartMs = :#{#timing.fetchStartMs}, j.clientFetchEndMs = :#{#timing.fetchEndMs},
+                j.clientDisplayMs = :#{#timing.displayMs}
+            WHERE j.id = :id AND j.userId = :owner AND j.expiresAt > :now
+              AND j.status IN ('SUCCEEDED', 'FAILED') AND j.clientDisplayMs IS NULL
+            """)
+    void recordClientTiming(@Param("id") UUID id, @Param("owner") Long owner, @Param("now") LocalDateTime now,
+                            @Param("timing") AiSearchClientTiming timing);
 
     @Query(value = "SELECT * FROM ai_search_jobs WHERE status = 'QUEUED' AND expires_at > :now ORDER BY created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED", nativeQuery = true)
     Optional<AiSearchJob> lockNextQueued(@Param("now") LocalDateTime now);

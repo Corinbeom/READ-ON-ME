@@ -77,3 +77,15 @@ test('does not overlap checks and aborts the current request on cleanup', async 
   await settle();
   assert.equal(timers.size, 0);
 });
+
+test('accepts the Spring SSE data line and a JSON-quoted UUID, and ignores malformed events', () => {
+  const context = { exports: {} };
+  vm.runInNewContext(outputText, context);
+  const { completionJobId } = context.exports;
+  const id = '7c7542bd-a97f-4440-85d1-eb71aba851c2';
+  assert.equal(completionJobId(id), id);
+  assert.equal(completionJobId(JSON.stringify(id)), id);
+  for (const invalid of [null, '{}', 'invalid', '"' + id, id + 'extra']) {
+    assert.equal(completionJobId(invalid), null);
+  }
+});

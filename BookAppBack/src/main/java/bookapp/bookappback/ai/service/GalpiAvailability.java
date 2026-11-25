@@ -1,11 +1,15 @@
 package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.common.exception.AppException;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.stereotype.Component;
 
 @Component
 public class GalpiAvailability {
+    private static final String SUBMISSION_STATE = GalpiAvailability.class.getName() + ".submission";
     public static final String MAINTENANCE = "AI_SEARCH_MAINTENANCE";
 
     public enum State {
@@ -39,8 +43,19 @@ public class GalpiAvailability {
         return state() != State.AVAILABLE;
     }
 
+    public State checkSubmission(HttpServletRequest request) {
+        State checked = state();
+        request.setAttribute(SUBMISSION_STATE, checked);
+        return checked;
+    }
+
     public void requireAvailable() {
-        if (!state().confirmedAvailable()) {
+        State checked = null;
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+            checked = (State) attributes.getRequest().getAttribute(SUBMISSION_STATE);
+        }
+        State current = checked == null ? state() : checked;
+        if (!current.confirmedAvailable()) {
             throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, MAINTENANCE, "갈피의 추천 도서를 정비하고 있어요");
         }
     }
