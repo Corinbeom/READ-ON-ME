@@ -145,3 +145,78 @@ def test_only_verified_works_qualify_for_award_queries(query, winners):
     from app.services.reviewed_corpus import award_candidates
 
     assert award_candidates(query) == winners
+
+
+@pytest.mark.asyncio
+async def test_batched_index_uses_only_current_verified_editions():
+    from app.services.embedding_backend import GEMINI_EMBEDDING_MODEL
+    from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL
+    from app.services.reviewed_release import fingerprint, load_index
+
+    url = os.getenv("REVIEWED_TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("Requires a migrated disposable PostgreSQL database")
+    good, blocked = "9780306406157", "9780451524935"
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            async def tags(_):
+                return {"book_type": "PRACTICAL"}
+
+            async def vector(_):
+                return [0.0, 1.0]
+
+            for isbn, provider in [(good, "BATCH_A"), (blocked, "BATCH_B")]:
+                await db.execute(text("""
+                    INSERT INTO corpus_use_policy VALUES (:p,'test','fixture',current_date,:uses,true)
+                """), {"p": provider, "uses": sorted(EMBEDDING_USES)})
+                for field in ("authors", "title", "contents"):
+                    await record_field(db, isbn, field, "fixture", provider, "test", "fixture", date.today())
+                await derived(db, isbn, MODEL_USES, "tags", GEMINI_DEFAULT_MODEL, tags)
+                await derived(db, isbn, EMBEDDING_USES, "embedding", GEMINI_EMBEDDING_MODEL, vector)
+
+            await db.execute(text("UPDATE corpus_use_policy SET active=false WHERE provider='BATCH_B'"))
+            index = await load_index(db, with_vectors=True)
+            assert index[good].vector == [0.0, 1.0]
+            assert blocked not in index
+            assert (await load_index(db, with_vectors=False))[good].vector is None
+
+            await db.execute(text("UPDATE corpus_use_policy SET active=true WHERE provider='BATCH_B'"))
+            await db.execute(text("UPDATE corpus_field_versions SET value='tampered' WHERE isbn=:i AND field='title'"),
+                             {"i": blocked})
+            assert blocked not in await load_index(db, with_vectors=True)
+
+            await db.execute(text("DELETE FROM corpus_derived_artifacts WHERE isbn=:i AND kind='tags'"), {"i": good})
+            with pytest.raises(CorpusPermissionError):
+                await fingerprint(db)
+            await db.rollback()
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_search_timing_records_blocked_release_without_query(monkeypatch, caplog):
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock
+    from fastapi import Response
+    from app.routers import data_builder
+    from app.schemas import AiSearchRequest
+
+    class Session:
+        @asynccontextmanager
+        async def begin(self):
+            yield
+
+        execute = AsyncMock()
+
+    denied = AsyncMock(side_effect=CorpusPermissionError("AI_SEARCH_MAINTENANCE"))
+    search = AsyncMock()
+    monkeypatch.setattr(data_builder, "require_index", denied)
+    monkeypatch.setattr(data_builder, "search_reviewed", search)
+    job = "6c92ebee-5776-47a2-9799-2ad274ce95e7"
+    with caplog.at_level("INFO", logger="uvicorn.error"), pytest.raises(CorpusPermissionError):
+        await data_builder.ai_search(AiSearchRequest(query="private query"), Response(), "rev", Session(), "rev", job)
+    search.assert_not_awaited()
+    assert "request_id=" + job in caplog.text
+    assert "outcome=ERROR" in caplog.text and "rerank_ms=0.0" in caplog.text
+    assert "private query" not in caplog.text
