@@ -81,7 +81,7 @@ api.interceptors.request.use(async (config) => {
     config.url?.includes(path)
   );
 
-  if (!shouldSkipAuth) {
+  if (!shouldSkipAuth && !config.headers.Authorization) {
     const token = await AsyncStorage.getItem('accessToken');
     if (token) config.headers.Authorization = `Bearer ${token}`;
   }
@@ -144,12 +144,27 @@ export const aiJobApi = {
     api.put<AiJobResponse<RecommendationFeedback>>(`/api/ai/jobs/${id}/feedback`, { rating, comment }, { signal }),
 };
 
+// The active session owner compares the bearer with the current token before signing out.
+let onExpiredSession: ((token: string) => void) | undefined;
+
+export function observeSessionExpiry(listener: (token: string) => void) {
+  onExpiredSession = listener;
+  return () => { if (onExpiredSession === listener) onExpiredSession = undefined; };
+}
+
 // ✅ 전역 인터셉터 — 모든 API 오류를 한 곳에서 처리
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (isCancel(error)) return Promise.reject(error);
     const url = error.config?.url ?? '';
+    const bearer = error.config?.headers?.Authorization;
+    const body = error.response?.data as { code?: string } | undefined;
+    if (error.response?.status === 401 && body?.code === 'SESSION_EXPIRED' &&
+        typeof bearer === 'string' && bearer.startsWith('Bearer ')) {
+      onExpiredSession?.(bearer.slice(7));
+      return Promise.reject(error);
+    }
     const handledLocally = error.config && 'handleErrorLocally' in error.config && error.config.handleErrorLocally === true;
     const isSilent = handledLocally || silentPaths.some((path) => url.includes(path));
     if (!isSilent) {

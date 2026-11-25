@@ -101,3 +101,24 @@ test('notification, review, and first ISBN save failures can be retried inline',
   await assert.rejects(bookApi.updateBookStatusByIsbn('9788925588735', 'READING', options));
   assert.equal(alerts.length, 0);
 });
+
+test('only an explicit expired-session response notifies the session owner with the rejected bearer', async () => {
+  const { api, observeSessionExpiry, alerts } = loadApi();
+  const rejected = [];
+  const stop = observeSessionExpiry(token => rejected.push(token));
+  for (const [status, code, bearer] of [
+    [401, 'SESSION_EXPIRED', 'previous-session'], [401, 'INVALID_LOGIN', null],
+    [403, 'FORBIDDEN', 'valid-session'], [503, 'UNAVAILABLE', 'valid-session'],
+  ]) {
+    api.defaults.adapter = async config => {
+      throw new axios.AxiosError('fixture', undefined, config, undefined,
+        { status, data: { code }, headers: {}, config });
+    };
+    await assert.rejects(api.get('/api/users/profile', {
+      headers: bearer ? { Authorization: 'Bearer ' + bearer } : {},
+    }));
+  }
+  stop();
+  assert.deepEqual(rejected, ['previous-session']);
+  assert.deepEqual(alerts, []);
+});

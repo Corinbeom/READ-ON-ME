@@ -64,8 +64,8 @@ export function consumeKakaoCallback(storage: Pick<Storage, 'getItem' | 'removeI
   storage.removeItem(flowStorageKey);
   if (!flowValue.test(flow.verifier) || !Number.isFinite(flow.expiresAt) || flow.expiresAt <= now) return null;
 
-  const { returnTo, prompt, isbn } = flow.returnParams ?? {};
-  const returnParams = authReturnParams(returnTo, prompt, isbn);
+  const { returnTo, prompt, isbn, tags } = flow.returnParams ?? {};
+  const returnParams = authReturnParams(returnTo, prompt, isbn, tags);
   const codes = query.getAll('code');
   if (query.has('error') || codes.length !== 1 || !codes[0] || codes[0].length > 2048) {
     return { returnParams, cancelled: query.get('error') === 'access_denied', exchange: null };

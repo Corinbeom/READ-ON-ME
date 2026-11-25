@@ -1,15 +1,15 @@
 import { FontDisplay, useFonts } from 'expo-font';
-import { router, Stack } from 'expo-router';
+import { router, Stack, useGlobalSearchParams, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { Platform, View } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import 'react-native-reanimated';
-import { Provider, useDispatch } from 'react-redux';
+import { Provider, useDispatch, useSelector } from 'react-redux';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { store, AppDispatch } from '../src/store';
+import { store, AppDispatch, RootState } from '../src/store';
 import { Colors } from '@/constants/Colors';
 import { ThemedView } from '@/components/ThemedView';
 import NotificationListener from '@/components/NotificationListener';
@@ -19,25 +19,79 @@ import { SCREEN_LAYOUT } from '@/src/styles/screenLayout';
 import { Typography } from '@/src/styles/designTokens';
 import { getProfile, setToken, logout } from '@/src/store/authSlice';
 
+import { observeSessionExpiry } from '@/src/services/api';
+import { authReturnParams } from '@/src/utils/aiSearchEntry';
+import { sessionExpiresAt } from '@/src/utils/sessionExpiry';
+import customAlert from '@/src/utils/alert';
+
 function HomeHeaderButton() {
   return <AppButton title="홈으로" variant="ghost" onPress={() => router.replace('/')} />;
 }
 
 function SessionRestorer() {
   const dispatch = useDispatch<AppDispatch>();
+  const { token, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const path = usePathname();
+  const { prompt, tags } = useGlobalSearchParams();
+  const route = useRef({ path, prompt, tags });
+  useEffect(() => { route.current = { path, prompt, tags }; }, [path, prompt, tags]);
+
+  const expire = useCallback((rejectedToken: string) => {
+    if (store.getState().auth.token !== rejectedToken) return;
+    const { path, prompt, tags } = route.current;
+    const book = path.match(/^\/book\/([^/]+)$/);
+    const params = authReturnParams(book ? 'book-detail' : path.slice(1), prompt, book?.[1], tags);
+    dispatch(logout());
+    if (path.startsWith('/auth/')) return;
+    customAlert('다시 로그인해주세요', '로그인 세션이 만료되었어요.', [
+      { text: '나중에', style: 'cancel' },
+      { text: '로그인하기', onPress: () => {
+        if (!store.getState().auth.token) router.push({ pathname: '/auth/login', params });
+      } },
+    ]);
+  }, [dispatch]);
+
+  useEffect(() => observeSessionExpiry(expire), [expire]);
   useEffect(() => {
-    const restoreSession = async () => {
-      const token = await AsyncStorage.getItem('accessToken');
-      if (!token || store.getState().auth.token) return;
-      dispatch(setToken(token));
-      const result = await dispatch(getProfile(token));
-      if (getProfile.rejected.match(result) && store.getState().auth.token === token) {
-        // Token is invalid/expired — clear everything silently
-        dispatch(logout());
+    let active = true;
+    void AsyncStorage.getItem('accessToken').then(saved => {
+      if (active && saved && !store.getState().auth.token) dispatch(setToken(saved));
+    });
+    return () => { active = false; };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!token) return;
+    const end = sessionExpiresAt(token);
+    if (end === null) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const check = () => {
+      clearTimeout(timer);
+      const remaining = end - Date.now();
+      if (remaining <= 0) {
+        if (AppState.currentState !== 'background' && AppState.currentState !== 'inactive') expire(token);
+      } else {
+        timer = setTimeout(check, Math.min(remaining, 2147483647));
       }
     };
-    restoreSession();
-  }, [dispatch]);
+    check();
+    const sub = AppState.addEventListener('change', state => { if (state === 'active') check(); });
+    return () => { clearTimeout(timer); sub.remove(); };
+  }, [token, expire]);
+
+  useEffect(() => {
+    if (!token || isAuthenticated || store.getState().auth.token !== token) return;
+    let active = true;
+    let timer: ReturnType<typeof setTimeout>;
+    const restore = async () => {
+      const result = await dispatch(getProfile(token));
+      if (!active || store.getState().auth.token !== token || !getProfile.rejected.match(result)) return;
+      if (result.payload === 401 || result.payload === 403) expire(token);
+      else timer = setTimeout(restore, 30000);
+    };
+    void restore();
+    return () => { active = false; clearTimeout(timer); };
+  }, [dispatch, token, isAuthenticated, expire]);
   return null;
 }
 
