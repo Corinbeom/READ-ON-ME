@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from time import perf_counter
 
 from sqlalchemy import event
+from sqlalchemy.sql.elements import TextClause
 
 
 @contextmanager
@@ -17,11 +18,19 @@ def measure_search_db(session, timings):
         before = perf_counter()
         if first_statement is None:
             first_statement = before
-        key = "evidence_db_ms" if "rerank_ms" in timings else "input_db_ms"
+        evidence = "rerank_ms" in timings
+        # Receipt cache misses use a textual INSERT; hits only read the existing receipt.
+        statement = state.statement
+        insert = evidence and (state.is_insert or (
+            isinstance(statement, TextClause) and statement.text.lstrip()[:7].upper() == "INSERT "
+        ))
         try:
             return state.invoke_statement()
         finally:
-            timings[key] += (perf_counter() - before) * 1000
+            elapsed = (perf_counter() - before) * 1000
+            timings["evidence_db_ms" if evidence else "input_db_ms"] += elapsed
+            if insert:
+                timings["evidence_insert_ms"] += elapsed
 
     event.listen(session.sync_session, "do_orm_execute", measure_statement, retval=True)
     try:

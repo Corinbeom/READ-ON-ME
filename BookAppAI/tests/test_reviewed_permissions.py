@@ -230,9 +230,10 @@ async def test_search_db_timing_distinguishes_input_and_receipt_and_detaches_on_
     if not url:
         pytest.skip("Requires a disposable PostgreSQL database")
     engine = create_async_engine(url)
-    timings = {"input_db_ms": 0.0, "evidence_db_ms": 0.0}
+    timings = {"input_db_ms": 0.0, "evidence_db_ms": 0.0, "evidence_insert_ms": 0.0}
     try:
         async with AsyncSession(engine) as db:
+            await db.execute(text("CREATE TEMP TABLE timing_receipt (id integer) ON COMMIT DROP"))
             with pytest.raises(RuntimeError, match="stop"):
                 with measure_search_db(db, timings):
                     assert await db.scalar(text("SELECT 1")) == 1
@@ -240,9 +241,12 @@ async def test_search_db_timing_distinguishes_input_and_receipt_and_detaches_on_
                     before_rank = timings["input_db_ms"]
                     timings["rerank_ms"] = 0.0  # Even a zero-duration rank marks the receipt phase.
                     assert await db.scalar(text("SELECT 2")) == 2
+                    assert timings["evidence_insert_ms"] == 0
+                    await db.execute(text("INSERT INTO timing_receipt VALUES (1)"))
                     raise RuntimeError("stop")
             assert timings["input_db_ms"] == before_rank
-            assert timings["evidence_db_ms"] > 0 and timings["candidate_ms"] >= 0
+            assert 0 < timings["evidence_insert_ms"] < timings["evidence_db_ms"]
+            assert timings["candidate_ms"] >= 0
             snapshot = timings.copy()
             await db.scalar(text("SELECT 3"))
             assert timings == snapshot

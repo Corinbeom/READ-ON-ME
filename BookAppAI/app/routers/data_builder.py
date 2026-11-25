@@ -99,7 +99,7 @@ async def ai_search(
 
     outcome: dict = {}
     started = perf_counter()
-    timings = {"candidate_ms": 0.0, "input_db_ms": 0.0, "evidence_db_ms": 0.0}
+    timings = {"candidate_ms": 0.0, "input_db_ms": 0.0, "evidence_db_ms": 0.0, "evidence_insert_ms": 0.0}
     transaction_exit = None
     index_ready = None
     status = "ERROR"
@@ -132,9 +132,10 @@ async def ai_search(
         logging.getLogger("uvicorn.error").info(
             "reviewed_search request_id=%s outcome=%s books=%d index_ms=%.1f embed_ms=%.1f rerank_ms=%.1f "
             "other_ms=%.1f total_ms=%.1f candidate_ms=%.1f input_db_ms=%.1f evidence_db_ms=%.1f "
-            "tx_exit_ms=%.1f ranker=%s", trace_id, status, len(results), index_ms, embed_ms,
+            "evidence_insert_ms=%.1f tx_exit_ms=%.1f ranker=%s", trace_id, status, len(results), index_ms, embed_ms,
             rerank_ms, other_ms, total_ms, timings["candidate_ms"], timings["input_db_ms"],
-            timings["evidence_db_ms"], tx_exit_ms, provider if provider in ("GEMINI", "GROQ", "FALLBACK") else "NONE",
+            timings["evidence_db_ms"], timings["evidence_insert_ms"], tx_exit_ms,
+            provider if provider in ("GEMINI", "GROQ", "FALLBACK") else "NONE",
         )
     response.headers["X-Search-Outcome"] = outcome.get("status", "NO_MATCH")
     response.headers["X-Search-Reason"] = outcome.get("reason_code", "NONE")
