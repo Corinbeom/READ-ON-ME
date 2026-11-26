@@ -1,0 +1,1372 @@
+{
+  "before": [
+    {
+      "query": "친구를 속상하게 한 아이와 어떻게 사과하면 좋을지 그림책으로 이야기하고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "무영이가 사라졌다"
+      ],
+      "isbns": [
+        "9788958079712"
+      ]
+    },
+    {
+      "query": "아이가 화분을 보다가 식물도 움직이냐고 물어요. 같이 읽을 만한 책이 있을까요?",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "나인"
+      ],
+      "isbns": [
+        "9788936438609"
+      ]
+    },
+    {
+      "query": "초등 2학년 아이와 갯벌에 가기 전에 거기 사는 생물을 알아보고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "아이가 글을 붙여 쓰는데 띄어쓰기를 웃으면서 배울 수 있는 책이 있을까요?",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "학교 신문 동아리에 들어간 초등학생이 주인공인 동화를 읽고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "초등학생과 산수화를 볼 때 산과 물을 어떻게 그렸는지 이야기하고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "중학생인데 수의사가 동물병원에서 실제로 어떤 일을 하는지 알고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "철학이 처음인 고등학생이 당연한 생각을 의심하는 법부터 읽을 책을 찾고 있어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "달빛운하유리문학상 수상작을 추천해줘",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "NO_VERIFIED_CANDIDATES"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "작가 달빛운하유리별의 책과 비슷한 소설을 추천해줘",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "NO_VERIFIED_CANDIDATES"
+      },
+      "titles": [],
+      "isbns": []
+    }
+  ],
+  "after": [
+    {
+      "query": "친구를 속상하게 한 아이와 어떻게 사과하면 좋을지 그림책으로 이야기하고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "무영이가 사라졌다"
+      ],
+      "isbns": [
+        "9788958079712"
+      ]
+    },
+    {
+      "query": "아이가 화분을 보다가 식물도 움직이냐고 물어요. 같이 읽을 만한 책이 있을까요?",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "식물도 움직여?"
+      ],
+      "isbns": [
+        "9788932374635"
+      ]
+    },
+    {
+      "query": "초등 2학년 아이와 갯벌에 가기 전에 거기 사는 생물을 알아보고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "찾았다! 갯벌 친구들"
+      ],
+      "isbns": [
+        "9788990025357"
+      ]
+    },
+    {
+      "query": "아이가 글을 붙여 쓰는데 띄어쓰기를 웃으면서 배울 수 있는 책이 있을까요?",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "왜 띄어 써야 돼?"
+      ],
+      "isbns": [
+        "9788994077376"
+      ]
+    },
+    {
+      "query": "학교 신문 동아리에 들어간 초등학생이 주인공인 동화를 읽고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "내가 진짜 기자야"
+      ],
+      "isbns": [
+        "9788994475578"
+      ]
+    },
+    {
+      "query": "초등학생과 산수화를 볼 때 산과 물을 어떻게 그렸는지 이야기하고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "중학생인데 수의사가 동물병원에서 실제로 어떤 일을 하는지 알고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "(유쾌한 수의사의)동물병원 24시"
+      ],
+      "isbns": [
+        "9788985989855"
+      ]
+    },
+    {
+      "query": "철학이 처음인 고등학생이 당연한 생각을 의심하는 법부터 읽을 책을 찾고 있어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "자기만의 철학"
+      ],
+      "isbns": [
+        "9788936452025"
+      ]
+    },
+    {
+      "query": "달빛운하유리문학상 수상작을 추천해줘",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "NO_VERIFIED_CANDIDATES"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "작가 달빛운하유리별의 책과 비슷한 소설을 추천해줘",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "NO_VERIFIED_CANDIDATES"
+      },
+      "titles": [],
+      "isbns": []
+    }
+  ],
+  "after-fix": [
+    {
+      "query": "친구를 속상하게 한 아이와 어떻게 사과하면 좋을지 그림책으로 이야기하고 싶어요.",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "사과는 이렇게 하는 거야",
+        "무영이가 사라졌다"
+      ],
+      "isbns": [
+        "9791197525377",
+        "9788958079712"
+      ]
+    },
+    {
+      "query": "아이가 화분을 보다가 식물도 움직이냐고 물어요. 같이 읽을 만한 책이 있을까요?",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "식물도 움직여?"
+      ],
+      "isbns": [
+        "9788932374635"
+      ]
+    },
+    {
+      "query": "초등 2학년 아이와 갯벌에 가기 전에 거기 사는 생물을 알아보고 싶어요.",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "찾았다! 갯벌 친구들"
+      ],
+      "isbns": [
+        "9788990025357"
+      ]
+    },
+    {
+      "query": "아이가 글을 붙여 쓰는데 띄어쓰기를 웃으면서 배울 수 있는 책이 있을까요?",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "왜 띄어 써야 돼?"
+      ],
+      "isbns": [
+        "9788994077376"
+      ]
+    },
+    {
+      "query": "학교 신문 동아리에 들어간 초등학생이 주인공인 동화를 읽고 싶어요.",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "내가 진짜 기자야"
+      ],
+      "isbns": [
+        "9788994475578"
+      ]
+    },
+    {
+      "query": "초등학생과 산수화를 볼 때 산과 물을 어떻게 그렸는지 이야기하고 싶어요.",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "(정선의 진경산수화로 배우는) 옛 그림속 자연"
+      ],
+      "isbns": [
+        "9788961960908"
+      ]
+    },
+    {
+      "query": "중학생인데 수의사가 동물병원에서 실제로 어떤 일을 하는지 알고 싶어요.",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "(유쾌한 수의사의)동물병원 24시"
+      ],
+      "isbns": [
+        "9788985989855"
+      ]
+    },
+    {
+      "query": "철학이 처음인 고등학생이 당연한 생각을 의심하는 법부터 읽을 책을 찾고 있어요.",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "자기만의 철학"
+      ],
+      "isbns": [
+        "9788936452025"
+      ]
+    },
+    {
+      "query": "달빛운하유리문학상 수상작을 추천해줘",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "NO_VERIFIED_CANDIDATES"
+      },
+      "titles": [],
+      "isbns": []
+    },
+    {
+      "query": "작가 달빛운하유리별의 책과 비슷한 소설을 추천해줘",
+      "count": 141,
+      "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "NO_VERIFIED_CANDIDATES"
+      },
+      "titles": [],
+      "isbns": []
+    }
+  ],
+  "hold-before": [
+    {
+      "query": "아이가 밤하늘을 좋아해요. 초등학생과 함께 별과 행성을 알아볼 책 있어요?",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "Space Encyclopedia: A Tour of Our Solar System and Beyond"
+      ],
+      "isbns": [
+        "9781426309489"
+      ]
+    },
+    {
+      "query": "중학생 동아리에서 기후위기를 토론해요. 청소년이 읽고 서로 질문할 만한 책을 찾습니다.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "Cool: Women Leaders Reversing Global Warming"
+      ],
+      "isbns": [
+        "9781576879542"
+      ]
+    },
+    {
+      "query": "첫 월급을 받았어요. 투자 전에 예산을 짜고 저축하는 법부터 읽고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "(돈을 벌기 시작한) 사회 초년생을 위한 돈 공부 : 첫 월급을 받는 직장인, 이제 뭐부터 해야 하지?",
+        "(NEW)내 월급 사용설명서 : 배고픈 월급쟁이를 위한 달달한 짠테크",
+        "Your Money or Your Life"
+      ],
+      "isbns": [
+        "9791165342548",
+        "9791155425770",
+        "9780143115762"
+      ]
+    },
+    {
+      "query": "글자를 막 읽기 시작한 아이와 동물을 주인공으로 한 한국 그림책을 읽고 싶어요.",
+      "count": 125,
+      "release": "0e960437f8a713c61064f8f9098ef23bf9e5f3915c8c290cea3b613cf9ac035e",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    }
+  ],
+  "hold-after": [
+    {
+      "query": "아이가 밤하늘을 좋아해요. 초등학생과 함께 별과 행성을 알아볼 책 있어요?",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "Space Encyclopedia: A Tour of Our Solar System and Beyond"
+      ],
+      "isbns": [
+        "9781426309489"
+      ]
+    },
+    {
+      "query": "중학생 동아리에서 기후위기를 토론해요. 청소년이 읽고 서로 질문할 만한 책을 찾습니다.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "Cool: Women Leaders Reversing Global Warming"
+      ],
+      "isbns": [
+        "9781576879542"
+      ]
+    },
+    {
+      "query": "첫 월급을 받았어요. 투자 전에 예산을 짜고 저축하는 법부터 읽고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "MODEL",
+        "reason_code": "NONE"
+      },
+      "titles": [
+        "(돈을 벌기 시작한) 사회 초년생을 위한 돈 공부 : 첫 월급을 받는 직장인, 이제 뭐부터 해야 하지?",
+        "(NEW)내 월급 사용설명서 : 배고픈 월급쟁이를 위한 달달한 짠테크",
+        "Your Money or Your Life"
+      ],
+      "isbns": [
+        "9791165342548",
+        "9791155425770",
+        "9780143115762"
+      ]
+    },
+    {
+      "query": "글자를 막 읽기 시작한 아이와 동물을 주인공으로 한 한국 그림책을 읽고 싶어요.",
+      "count": 141,
+      "release": "141537905a582bc88eeb009e5337a3a74ceaa2297ad115a4ad7511059798ecba",
+      "outcome": {
+        "status": "NO_MATCH",
+        "reason_code": "MODEL_NO_MATCH"
+      },
+      "titles": [],
+      "isbns": []
+    }
+  ],
+  "metrics": {
+    "before": {
+      "first_match": 0,
+      "controls": 2
+    },
+    "after": {
+      "first_match": 6,
+      "controls": 2
+    },
+    "after-fix": {
+      "first_match": 8,
+      "controls": 2
+    }
+  },
+  "candidate_diagnosis": [
+    {
+      "query": "친구를 속상하게 한 아이와 어떻게 사과하면 좋을지 그림책으로 이야기하고 싶어요.",
+      "expected_title": "사과는 이렇게 하는 거야",
+      "requested_form": "STORY",
+      "domain": null,
+      "book_type": "EDUCATIONAL",
+      "candidate_titles": [
+        "무영이가 사라졌다",
+        "엄마 아빠 때문에 힘들어",
+        "이 선이 필요할까?",
+        "게임을 안 해도 심심하지 않아",
+        "도서관을 훔친 아이",
+        "작별인사",
+        "불량 아빠 만세",
+        "상자 세상",
+        "전놀이",
+        "공정 무역, 행복한 카카오 농장 이야기"
+      ]
+    },
+    {
+      "query": "초등학생과 산수화를 볼 때 산과 물을 어떻게 그렸는지 이야기하고 싶어요.",
+      "expected_title": "(정선의 진경산수화로 배우는) 옛 그림속 자연",
+      "requested_form": "STORY",
+      "domain": null,
+      "book_type": "NONFICTION",
+      "candidate_titles": [
+        "박뛰엄이 노는 법",
+        "무영이가 사라졌다",
+        "야외 수영장",
+        "엄마 까투리",
+        "이 선이 필요할까?",
+        "보글보글 지구가 끓고 있어요",
+        "랑과 나의 사막",
+        "천 개의 파랑",
+        "두 발로 걷는 개",
+        "불량 아빠 만세"
+      ]
+    }
+  ],
+  "release_first": {
+    "run": "3338fe9f-6617-4dc7-828d-95adf7a208d6",
+    "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+    "first": 18,
+    "any": 18,
+    "controls": 2,
+    "questions": [
+      {
+        "query": "SF 소설 추천",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791130610320",
+            "title": "씁니다, 우주일지"
+          },
+          {
+            "isbn": "9788954697392",
+            "title": "내 정체는 국가 기밀, 모쪼록 비밀"
+          },
+          {
+            "isbn": "9791190090261",
+            "title": "천 개의 파랑"
+          },
+          {
+            "isbn": "9791158790400",
+            "title": "스테이션 일레븐"
+          },
+          {
+            "isbn": "9788956607108",
+            "title": "다이버전트"
+          }
+        ],
+        "suitable_isbns": [
+          "9791130610320",
+          "9788954697392",
+          "9791190090261",
+          "9791158790400",
+          "9788956607108"
+        ]
+      },
+      {
+        "query": "추리소설을 읽고 싶어. 수사 기법을 설명하는 실용서는 빼줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791189178376",
+            "title": "서점 탐정 유동인"
+          },
+          {
+            "isbn": "9788982737695",
+            "title": "핼러윈 파티"
+          },
+          {
+            "isbn": "9791171257522",
+            "title": "미로장의 참극"
+          },
+          {
+            "isbn": "9788956609959",
+            "title": "종의 기원"
+          }
+        ],
+        "suitable_isbns": [
+          "9791189178376",
+          "9788982737695",
+          "9791171257522",
+          "9788956609959"
+        ]
+      },
+      {
+        "query": "감성적인 에세이",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791190786133",
+            "title": "더는 태울 수 없어서 : '번아웃' 서른 살, 진짜 나를 되찾은 베를린 생활기"
+          },
+          {
+            "isbn": "9791191114591",
+            "title": "여행의 이유"
+          },
+          {
+            "isbn": "9791169090742",
+            "title": "밑바닥에서"
+          }
+        ],
+        "suitable_isbns": [
+          "9791190786133",
+          "9791191114591",
+          "9791169090742"
+        ]
+      },
+      {
+        "query": "일본 소설 말고 한국 작가가 쓴 가족 소설을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          },
+          {
+            "isbn": "9788937473135",
+            "title": "82년생 김지영"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936433598",
+          "9788937473135"
+        ]
+      },
+      {
+        "query": "따뜻한 이야기를 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781639732449",
+            "title": "Welcome to the Hyunam-dong Bookshop"
+          },
+          {
+            "isbn": "9788954646079",
+            "title": "바깥은 여름"
+          },
+          {
+            "isbn": "9791130605210",
+            "title": "오베라는 남자"
+          },
+          {
+            "isbn": "9791158883737",
+            "title": "내가 죽기 일주일 전"
+          }
+        ],
+        "suitable_isbns": [
+          "9781639732449",
+          "9791130605210"
+        ]
+      },
+      {
+        "query": "어두운 분위기의 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788956609959",
+            "title": "종의 기원"
+          }
+        ],
+        "suitable_isbns": [
+          "9788956609959"
+        ]
+      },
+      {
+        "query": "오래된 서점이나 도서관을 배경으로 사람들이 가까워지는 소설이 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781639732449",
+            "title": "Welcome to the Hyunam-dong Bookshop"
+          },
+          {
+            "isbn": "9791189178376",
+            "title": "서점 탐정 유동인"
+          }
+        ],
+        "suitable_isbns": [
+          "9781639732449"
+        ]
+      },
+      {
+        "query": "상실을 겪은 뒤 일상을 회복해 가는 이야기가 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791130605210",
+            "title": "오베라는 남자"
+          },
+          {
+            "isbn": "9791124591055",
+            "title": "애니가 남긴 것"
+          }
+        ],
+        "suitable_isbns": [
+          "9791130605210",
+          "9791124591055"
+        ]
+      },
+      {
+        "query": "김영하 작가의 소설을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791191114225",
+            "title": "작별인사"
+          }
+        ],
+        "suitable_isbns": [
+          "9791191114225"
+        ]
+      },
+      {
+        "query": "조지 오웰 작가가 쓴 책과 유사한 분위기의 책을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781451673319",
+            "title": "Fahrenheit 451"
+          },
+          {
+            "isbn": "9788956607108",
+            "title": "다이버전트"
+          }
+        ],
+        "suitable_isbns": [
+          "9781451673319",
+          "9788956607108"
+        ]
+      },
+      {
+        "query": "한강 작가가 쓴 소설을 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936434120",
+            "title": "소년이 온다"
+          },
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936434120",
+          "9788936433598"
+        ]
+      },
+      {
+        "query": "『1984』처럼 감시 사회를 그린 소설을 골라줘. 1984 자체는 이미 읽었어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781451673319",
+            "title": "Fahrenheit 451"
+          }
+        ],
+        "suitable_isbns": [
+          "9781451673319"
+        ]
+      },
+      {
+        "query": "동기부여를 얻을 수 있는 자기계발책을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9780735211292",
+            "title": "Atomic Habits"
+          },
+          {
+            "isbn": "9791199092907",
+            "title": "나는 다시 나를 설계하기로 했다 : 독일 최고의 멘탈 코치가 증명한 생각·행동·습관 설계의 핵심 52"
+          }
+        ],
+        "suitable_isbns": [
+          "9780735211292",
+          "9791199092907"
+        ]
+      },
+      {
+        "query": "창업 입문자를 위한 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9780307887894",
+            "title": "The Lean Startup"
+          },
+          {
+            "isbn": "9780691149134",
+            "title": "The Founder’s Dilemmas"
+          }
+        ],
+        "suitable_isbns": [
+          "9780307887894",
+          "9780691149134"
+        ]
+      },
+      {
+        "query": "월급을 받기 시작한 사회초년생이 예산과 저축을 배우기 좋은 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791165342548",
+            "title": "(돈을 벌기 시작한) 사회 초년생을 위한 돈 공부 : 첫 월급을 받는 직장인, 이제 뭐부터 해야 하지?"
+          },
+          {
+            "isbn": "9780143115762",
+            "title": "Your Money or Your Life"
+          },
+          {
+            "isbn": "9791155425770",
+            "title": "(NEW)내 월급 사용설명서 : 배고픈 월급쟁이를 위한 달달한 짠테크"
+          }
+        ],
+        "suitable_isbns": [
+          "9791165342548",
+          "9780143115762",
+          "9791155425770"
+        ]
+      },
+      {
+        "query": "심리학을 처음 접하는 일반인이 사례로 배울 수 있는 책을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9780205609994",
+            "title": "Influence: Science and Practice"
+          },
+          {
+            "isbn": "9788972219651",
+            "title": "(엄마와 아이사이)아들러식 대화법"
+          }
+        ],
+        "suitable_isbns": [
+          "9780205609994",
+          "9788972219651"
+        ]
+      },
+      {
+        "query": "판타지 소설 중에서 청소년 주인공이 성장하는 이야기를 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936434601",
+            "title": "위저드 베이커리"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936434601"
+        ]
+      },
+      {
+        "query": "한국 소설 중 문학상을 받은 작품을 골라줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936433598"
+        ]
+      },
+      {
+        "query": "달빛운하유리문학상 수상작을 추천해줘",
+        "outcome": "NO_MATCH",
+        "books": []
+      },
+      {
+        "query": "작가 달빛운하유리별의 책과 비슷한 소설을 추천해줘",
+        "outcome": "NO_MATCH",
+        "books": []
+      },
+      {
+        "query": "번아웃 올 때 읽을 만한 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936478445",
+            "title": "내가 뭘 했다고 번아웃일까요"
+          },
+          {
+            "isbn": "9791190786133",
+            "title": "더는 태울 수 없어서 : '번아웃' 서른 살, 진짜 나를 되찾은 베를린 생활기"
+          },
+          {
+            "isbn": "9781639732449",
+            "title": "Welcome to the Hyunam-dong Bookshop"
+          }
+        ]
+      }
+    ]
+  },
+  "release_second": {
+    "run": "49422c73-6595-476d-80c7-0592fa625af6",
+    "release": "ee9cf3f68aff38536c0da87381cfc472fda06839b6bb547430390b597aadfea4",
+    "first": 17,
+    "any": 18,
+    "controls": 2,
+    "questions": [
+      {
+        "query": "SF 소설 추천",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791130610320",
+            "title": "씁니다, 우주일지"
+          },
+          {
+            "isbn": "9788954697392",
+            "title": "내 정체는 국가 기밀, 모쪼록 비밀"
+          },
+          {
+            "isbn": "9791190090261",
+            "title": "천 개의 파랑"
+          },
+          {
+            "isbn": "9791158790400",
+            "title": "스테이션 일레븐"
+          },
+          {
+            "isbn": "9788956607108",
+            "title": "다이버전트"
+          }
+        ],
+        "suitable_isbns": [
+          "9791130610320",
+          "9788954697392",
+          "9791190090261",
+          "9791158790400",
+          "9788956607108"
+        ]
+      },
+      {
+        "query": "추리소설을 읽고 싶어. 수사 기법을 설명하는 실용서는 빼줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791189178376",
+            "title": "서점 탐정 유동인"
+          },
+          {
+            "isbn": "9788982737695",
+            "title": "핼러윈 파티"
+          },
+          {
+            "isbn": "9791171257522",
+            "title": "미로장의 참극"
+          },
+          {
+            "isbn": "9788956609959",
+            "title": "종의 기원"
+          },
+          {
+            "isbn": "9791162203620",
+            "title": "파과"
+          }
+        ],
+        "suitable_isbns": [
+          "9791189178376",
+          "9788982737695",
+          "9791171257522",
+          "9788956609959"
+        ]
+      },
+      {
+        "query": "감성적인 에세이",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791190786133",
+            "title": "더는 태울 수 없어서 : '번아웃' 서른 살, 진짜 나를 되찾은 베를린 생활기"
+          },
+          {
+            "isbn": "9791191114591",
+            "title": "여행의 이유"
+          }
+        ],
+        "suitable_isbns": [
+          "9791190786133",
+          "9791191114591"
+        ]
+      },
+      {
+        "query": "일본 소설 말고 한국 작가가 쓴 가족 소설을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          },
+          {
+            "isbn": "9788937473135",
+            "title": "82년생 김지영"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936433598",
+          "9788937473135"
+        ]
+      },
+      {
+        "query": "따뜻한 이야기를 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781639732449",
+            "title": "Welcome to the Hyunam-dong Bookshop"
+          },
+          {
+            "isbn": "9788958079712",
+            "title": "무영이가 사라졌다"
+          }
+        ],
+        "suitable_isbns": [
+          "9781639732449",
+          "9788958079712"
+        ]
+      },
+      {
+        "query": "어두운 분위기의 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791162203620",
+            "title": "파과"
+          },
+          {
+            "isbn": "9788982737695",
+            "title": "핼러윈 파티"
+          },
+          {
+            "isbn": "9788956609959",
+            "title": "종의 기원"
+          }
+        ],
+        "suitable_isbns": [
+          "9788982737695",
+          "9788956609959"
+        ]
+      },
+      {
+        "query": "오래된 서점이나 도서관을 배경으로 사람들이 가까워지는 소설이 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781639732449",
+            "title": "Welcome to the Hyunam-dong Bookshop"
+          },
+          {
+            "isbn": "9788956606798",
+            "title": "배를 엮다"
+          }
+        ],
+        "suitable_isbns": [
+          "9781639732449"
+        ]
+      },
+      {
+        "query": "상실을 겪은 뒤 일상을 회복해 가는 이야기가 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791130605210",
+            "title": "오베라는 남자"
+          },
+          {
+            "isbn": "9791124591055",
+            "title": "애니가 남긴 것"
+          }
+        ],
+        "suitable_isbns": [
+          "9791130605210",
+          "9791124591055"
+        ]
+      },
+      {
+        "query": "김영하 작가의 소설을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791191114225",
+            "title": "작별인사"
+          }
+        ],
+        "suitable_isbns": [
+          "9791191114225"
+        ]
+      },
+      {
+        "query": "조지 오웰 작가가 쓴 책과 유사한 분위기의 책을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781451673319",
+            "title": "Fahrenheit 451"
+          },
+          {
+            "isbn": "9788956607108",
+            "title": "다이버전트"
+          }
+        ],
+        "suitable_isbns": [
+          "9781451673319",
+          "9788956607108"
+        ]
+      },
+      {
+        "query": "한강 작가가 쓴 소설을 읽고 싶어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936434120",
+            "title": "소년이 온다"
+          },
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936434120",
+          "9788936433598"
+        ]
+      },
+      {
+        "query": "『1984』처럼 감시 사회를 그린 소설을 골라줘. 1984 자체는 이미 읽었어",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9781451673319",
+            "title": "Fahrenheit 451"
+          }
+        ],
+        "suitable_isbns": [
+          "9781451673319"
+        ]
+      },
+      {
+        "query": "동기부여를 얻을 수 있는 자기계발책을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9780735211292",
+            "title": "Atomic Habits"
+          },
+          {
+            "isbn": "9791199092907",
+            "title": "나는 다시 나를 설계하기로 했다 : 독일 최고의 멘탈 코치가 증명한 생각·행동·습관 설계의 핵심 52"
+          }
+        ],
+        "suitable_isbns": [
+          "9780735211292",
+          "9791199092907"
+        ]
+      },
+      {
+        "query": "창업 입문자를 위한 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9780307887894",
+            "title": "The Lean Startup"
+          },
+          {
+            "isbn": "9780691149134",
+            "title": "The Founder’s Dilemmas"
+          }
+        ],
+        "suitable_isbns": [
+          "9780307887894",
+          "9780691149134"
+        ]
+      },
+      {
+        "query": "월급을 받기 시작한 사회초년생이 예산과 저축을 배우기 좋은 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9791165342548",
+            "title": "(돈을 벌기 시작한) 사회 초년생을 위한 돈 공부 : 첫 월급을 받는 직장인, 이제 뭐부터 해야 하지?"
+          },
+          {
+            "isbn": "9780143115762",
+            "title": "Your Money or Your Life"
+          },
+          {
+            "isbn": "9791155425770",
+            "title": "(NEW)내 월급 사용설명서 : 배고픈 월급쟁이를 위한 달달한 짠테크"
+          }
+        ],
+        "suitable_isbns": [
+          "9791165342548",
+          "9780143115762",
+          "9791155425770"
+        ]
+      },
+      {
+        "query": "심리학을 처음 접하는 일반인이 사례로 배울 수 있는 책을 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9780205609994",
+            "title": "Influence: Science and Practice"
+          },
+          {
+            "isbn": "9788972219651",
+            "title": "(엄마와 아이사이)아들러식 대화법"
+          }
+        ],
+        "suitable_isbns": [
+          "9780205609994",
+          "9788972219651"
+        ]
+      },
+      {
+        "query": "판타지 소설 중에서 청소년 주인공이 성장하는 이야기를 추천해줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936434601",
+            "title": "위저드 베이커리"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936434601"
+        ]
+      },
+      {
+        "query": "한국 소설 중 문학상을 받은 작품을 골라줘",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936433598",
+            "title": "채식주의자"
+          }
+        ],
+        "suitable_isbns": [
+          "9788936433598"
+        ]
+      },
+      {
+        "query": "달빛운하유리문학상 수상작을 추천해줘",
+        "outcome": "NO_MATCH",
+        "books": []
+      },
+      {
+        "query": "작가 달빛운하유리별의 책과 비슷한 소설을 추천해줘",
+        "outcome": "NO_MATCH",
+        "books": []
+      },
+      {
+        "query": "번아웃 올 때 읽을 만한 책",
+        "outcome": "MODEL",
+        "books": [
+          {
+            "isbn": "9788936478445",
+            "title": "내가 뭘 했다고 번아웃일까요"
+          },
+          {
+            "isbn": "9791190786133",
+            "title": "더는 태울 수 없어서 : '번아웃' 서른 살, 진짜 나를 되찾은 베를린 생활기"
+          },
+          {
+            "isbn": "9781639732449",
+            "title": "Welcome to the Hyunam-dong Bookshop"
+          }
+        ]
+      }
+    ]
+  },
+  "verified_api": [
+    {
+      "query": "친구를 속상하게 한 아이와 어떻게 사과하면 좋을지 그림책으로 이야기하고 싶어요.",
+      "status_code": 200,
+      "outcome": "MODEL",
+      "reason_code": "NONE",
+      "titles": [
+        "사과는 이렇게 하는 거야",
+        "무영이가 사라졌다"
+      ]
+    },
+    {
+      "query": "초등학생과 산수화를 볼 때 산과 물을 어떻게 그렸는지 이야기하고 싶어요.",
+      "status_code": 200,
+      "outcome": "MODEL",
+      "reason_code": "NONE",
+      "titles": [
+        "(정선의 진경산수화로 배우는) 옛 그림속 자연"
+      ]
+    },
+    {
+      "query": "장애가 있는 사람이 자기 일상을 직접 쓴 책을 읽고 수업에서 이야기하고 싶어요.",
+      "status_code": 200,
+      "outcome": "MODEL",
+      "reason_code": "NONE",
+      "titles": [
+        "실격당한 자들을 위한 변론"
+      ]
+    }
+  ]
+}

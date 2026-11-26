@@ -12,6 +12,10 @@ from app.services.prompt_templates import PromptTemplateBuilder
     ("아이가 화가 나서 울 때 서로 말이 안 통해요. 실제 부모와 아이의 대화 예시가 많은 책 있을까요?", "PRACTICAL"),
     ("직장에서 쓸 수 있는 대화의 사례를 담은 책을 찾습니다.", "PRACTICAL"),
     ("부모와 아이의 대화 장면이 많은 책", "ANY"),
+    ("아이와 산수화를 보면서 이야기하고 싶어요", "ANY"),
+    ("친구와 함께 그림책을 읽고 이야기를 나누고 싶어요", "ANY"),
+    ("실화를 읽고 독서 모임에서 이야기해 보고 싶어요", "STORY"),
+    ("서점 주인의 이야기를 읽고 모임에서 이야기하고 싶어요", "STORY"),
     ("가족의 대화 예시를 독서 모임에서 나눌 수 있는 소설", "STORY"),
 ])
 async def test_conversation_examples_and_narrative_requests(query, form):
