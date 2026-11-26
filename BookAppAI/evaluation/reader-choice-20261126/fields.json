@@ -1,0 +1,110 @@
+[
+  {
+    "isbn": "9791155425770",
+    "field": "title",
+    "value": "(NEW)내 월급 사용설명서 : 배고픈 월급쟁이를 위한 달달한 짠테크",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000123288",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9791155425770",
+    "field": "authors",
+    "value": "전인구 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000123288",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9791155425770",
+    "field": "contents",
+    "value": "전인구는 한 달 동안 벌고 쓴 돈과 현재 가진 재산·빚을 각각 가계부에 적는 법을 설명한다. 식비와 통신비를 줄이는 사례, 통장을 네 개로 나눠 월급을 관리하는 방법도 다룬다. 지난달 생활비에서 어느 항목을 줄여 저축할지 직접 계산해 보고 싶은 독자가 펼쳐 볼 만하다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "source_ref": "repo:BookAppAI/evaluation/reader-choice-20261126/fields.json#9791155425770",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-20"
+  },
+  {
+    "isbn": "9791190786133",
+    "field": "title",
+    "value": "더는 태울 수 없어서 : '번아웃' 서른 살, 진짜 나를 되찾은 베를린 생활기",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000228376",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9791190786133",
+    "field": "authors",
+    "value": "이재은 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000228376",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9791190786133",
+    "field": "contents",
+    "value": "서른 살 직장인 이재은은 번아웃을 겪고 베를린으로 간다. 운동화 차림으로 다니는 사람들, 길에서 빈 병을 모으는 풍경을 글과 사진으로 담았다. 바삐 살아온 사람이 잠시 일을 떠나 낯선 도시를 어떻게 바라봤는지 한 꼭지씩 읽을 수 있는 에세이다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "source_ref": "repo:BookAppAI/evaluation/reader-choice-20261126/fields.json#9791190786133",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-20"
+  },
+  {
+    "isbn": "9791165342548",
+    "field": "title",
+    "value": "(돈을 벌기 시작한) 사회 초년생을 위한 돈 공부 : 첫 월급을 받는 직장인, 이제 뭐부터 해야 하지?",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000244381",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9791165342548",
+    "field": "authors",
+    "value": "라이프 포트폴리오 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000244381",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9791165342548",
+    "field": "contents",
+    "value": "첫 월급을 받은 사람이 생활비와 저축을 어떻게 나눌지 생각해 보는 한국 금융 입문서다. 용도에 따라 통장을 나누는 방법과 자기 재무제표를 작성하는 법을 다룬다. 2020년판에 실린 사회초년생의 자금 배분 예시를 자기 월급과 나란히 놓고 볼 수 있다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "source_ref": "repo:BookAppAI/evaluation/reader-choice-20261126/fields.json#9791165342548",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-20"
+  },
+  {
+    "isbn": "9788936478445",
+    "field": "title",
+    "value": "내가 뭘 했다고 번아웃일까요",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000248015",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9788936478445",
+    "field": "authors",
+    "value": "안주연 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000248015",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-24"
+  },
+  {
+    "isbn": "9788936478445",
+    "field": "contents",
+    "value": "정신건강의학과 의사 안주연은 일에 지친 사람이 퇴근하고도 긴장을 풀기 어려운 까닭을 살핀다. 번아웃의 신호를 자기 일상에서 짚어 보고 싶을 때, 호흡을 가다듬거나 하루 동안 오감으로 느낀 일을 일기에 적는 연습부터 읽어 볼 수 있다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "source_ref": "repo:BookAppAI/evaluation/reader-choice-20261126/fields.json#9788936478445",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-20"
+  }
+]
