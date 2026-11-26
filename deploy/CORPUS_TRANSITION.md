@@ -70,3 +70,24 @@ python -m tools.reviewed_corpus import approved-fields.json --new-only
 외부 AI 전송이 허용된 제목·저자·소개가 있는 책은 현재 입력 버전의 Gemini 태그도 사용한다. 태그가 없으면 서재 조회 시 ISBN·입력 버전·모델별로 한 번 등록하고 백그라운드에서 처리한다. 처리 직전에 이용조건과 입력 버전을 다시 확인한다. 키워드를 한글로 통일한 뒤 책 한 권당 한 번씩 세고, 각 키워드의 근거 ISBN을 반환한다. 갈피 점검 중에도 서재 키워드를 조회할 수 있다. 공유 링크에서 추천하는 책은 갈피 공개 판정을 통과한 목록에서 고른다.
 
 갈피 응답 시간의 수정 전후 측정값, 단계별 로그와 재현 절차는 [검색 성능 개선 기록](../BookAppAI/evaluation/search-latency/README.md)에 있다.
+
+## 검증한 판본을 OCI에 추가하기
+
+`tools.promote_reviewed`는 운영에서 공개 중인 ISBN과 입력·태그·벡터 버전을 로컬 검증 DB와 대조한다. 운영에 있는 판본이 바뀌거나 빠졌으면 중단한다. 추가분에는 제목·저자·소개와 이용조건, 태그·임베딩, 같은 릴리스에서 통과한 최근 품질 평가 두 건이 들어간다. 운영 사용자 기록은 이관 대상에서 제외한다.
+
+프로젝트 루트에서 다음과 같이 진행한다. `readonme-oci`는 SSH 접속 별칭 예시다. 초기 배포처럼 운영 이미지에 아직 도구가 없으면 아래와 같이 로컬 스크립트를 표준 입력으로 전달할 수 있다. 두 번째 명령은 승인된 **로컬 검증 DB**를 가리키는 AI 실행 환경에서 수행한다. 운영 목록과 전송 파일은 Git 바깥의 운영자 전용 디렉터리에 보관한다.
+
+```sh
+umask 077
+ssh readonme-oci 'sudo -n docker exec -i readonme-beta-ai-1 python - inventory' \
+    < BookAppAI/tools/promote_reviewed.py > "$report/live.json"
+(cd BookAppAI && python -m tools.promote_reviewed export < "$report/live.json") > "$report/bundle.json"
+jq '{old:(.base.editions|length), added:(.additions|length), release, isbns:(.additions|keys)}' "$report/bundle.json"
+deploy/stage-galpi-corpus.sh "$report/bundle.json" ssh readonme-oci
+```
+
+마지막 명령은 SHA-256으로 파일을 대조하고 OCI에 갈피 테이블 네 개를 백업한 뒤 한 트랜잭션으로 추가 판본을 비활성 상태로 저장한다. 같은 파일로 적재를 재시도할 수 있다. 기존 판본이나 필드 ID가 충돌하면 원인을 조사한다. 필드 ID는 모델 입력 버전에 포함되므로 임의로 다시 매기면 재평가가 필요하다.
+
+출력된 OCI 디렉터리에는 `run.sh`와 백업이 있다. 검증에 사용한 검색 코드·모델을 배포하고 Spring·AI 컨테이너에 같은 `GALPI_REVIEWED_RELEASE`를 적용한 다음, 해당 디렉터리에서 `sudo bash run.sh activate`를 실행한다. 운영 이미지 교체·설정 전환은 OCI 배포 잠금과 조율한다. 활성화 시 전체 자료 지문과 두 평가를 다시 확인한다. `inventory`와 Spring의 `/api/ai/availability`, 실제 추천·상세 조회를 함께 점검한다.
+
+복구할 때는 새 도구가 있는 디렉터리에서 `sudo bash run.sh rollback`으로 이번 판본만 비활성화하고, 이전 이미지와 릴리스 설정을 복구한다. 재기동 뒤 `sudo bash run.sh inventory`의 릴리스와 ISBN 목록을 작업 전 파일과 대조한다. 이후 다른 묶음이 활성화된 상태에서 과거 묶음을 되돌리려 하면 도구가 중단한다.
