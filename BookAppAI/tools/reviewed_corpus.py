@@ -64,4 +64,6 @@ if __name__ == "__main__":
     rank.add_argument("isbn", nargs="+")
     rank.add_argument("--output", required=True, type=Path)
     logging.basicConfig(level=logging.INFO)
+    # HTTPX logs complete request URLs, including provider keys in query parameters.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
     asyncio.run(run(parser.parse_args()))

@@ -1,0 +1,947 @@
+[
+  {
+    "isbn": "9791198363596",
+    "field": "title",
+    "value": "젊음의 나라 : 손원평 장편소설",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251127102734776100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791198363596",
+    "field": "authors",
+    "value": "손원평",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251127102734776100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791198363596",
+    "field": "contents",
+    "value": "문학 분야『젊음의 나라』는 저출생 고령화로 세대 구조가 역전된 가까운 미래를 배경으로 청년 ‘유나라’가 타인의 결핍을 이해하고 견디는 과정을 통해 진정한 행복의 의미를 찾아가는 이야기다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.12 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791194531074",
+    "field": "title",
+    "value": "내 생의 가장 아름다운 완성 : 나이 듦과 웰에이징에 관한 9인 교수들의 행복 예찬",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251128094850987100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791194531074",
+    "field": "authors",
+    "value": "공저: 최신한,김진식,공병혜,김수배,이관표,김선희,안종수,김경미,이기호",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251128094850987100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791194531074",
+    "field": "contents",
+    "value": "사회과학 분야『내 생의 가장 아름다운 완성』은 노년기를 삶의 퇴화가 아닌 완성의 시기로 바라보며, 웰에이징의 존재론적 의미를 탐구한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.12 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791171179503",
+    "field": "title",
+    "value": "아주 오래된 행복론",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251128133323422100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791171179503",
+    "field": "authors",
+    "value": "알랭 지음 ;김정은 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251128133323422100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791171179503",
+    "field": "contents",
+    "value": "인문예술 분야『아주 오래된 행복론』은 프랑스 철학자 알랭이 20세기 초 신문에 연재한 철학적 단상을 엮은 책으로, 짧지만 단단한 사유를 통해 삶을 바라보는 시선을 새롭게 열어준다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.12 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791139723281",
+    "field": "title",
+    "value": "회복탄력성의 뇌과학 : 하버드대 의사가 알려주는 5가지 회복탄력성 리셋 버튼",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251128143440678100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791139723281",
+    "field": "authors",
+    "value": "아디티 네루카 지음 ;박미경 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20251128143440678100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791139723281",
+    "field": "contents",
+    "value": "자연과학 분야『회복탄력성의 뇌과학』은 작은 습관의 변화가 스트레스를 줄이고 행복감을 높일 수 있음을 과학적으로 보여주며, 실용적인 조언을 제시한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.12 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=54553",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191122916",
+    "field": "title",
+    "value": "소풍을 빌려드립니다 : 복합문화공간 : 문하연 장편소설",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250929093336976100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191122916",
+    "field": "authors",
+    "value": "문하연",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250929093336976100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191122916",
+    "field": "contents",
+    "value": "문학 분야『소풍을 빌려드립니다』는 서울에서 온 주인공 ‘연재’가 춘하시에 ‘소풍’ 이라는 복합문화공간을 열면서 다양한 사연을 지닌 사람들과 만나게 되고, 위로와 치유를 나누며 함께 성장하는 이야기를 담은 작품이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.10 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=53696",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=53696",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791194087199",
+    "field": "title",
+    "value": "꽃을 공부합니다 : 가드너의 꽃, 문화, 그리고 과학 이야기",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250923100824266100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791194087199",
+    "field": "authors",
+    "value": "박원순",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250923100824266100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791194087199",
+    "field": "contents",
+    "value": "자연과학 분야『꽃을 공부합니다』는 일상에서 쉽게 만나는 꽃들의 생태적 특성, 상징, 인간과의 관계를 살피며 자연의 섬세한 아름다움과 생명의 신비를 보여준다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.10 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=53696",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=53696",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791162851685",
+    "field": "title",
+    "value": "경이로운 한국인",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250924095408212100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791162851685",
+    "field": "authors",
+    "value": "장클로드 드크레센조 지음 ;이소영 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250924095408212100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791162851685",
+    "field": "contents",
+    "value": "사회과학 분야『경이로운 한국인』은 프랑스 한국학자가 바라본 한국인의 정체성과 문화적 특징을 탐구한 책으로, K-문화가 세계적인 주목을 받는 가운데 한국 사회의 독창성과 역동성을 새로운 시각에서 조명하였다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.10 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=53696",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=53696",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193690109",
+    "field": "title",
+    "value": "스테로이드 인류 : 기적과 죽음의 연대기",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250725102208513100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193690109",
+    "field": "authors",
+    "value": "백승만 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250725102208513100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193690109",
+    "field": "contents",
+    "value": "자연과학 분야 『스테로이드 인류』는 ‘젊어지고 싶은’ 인간의 욕망에서 출발한 스테로이드를 둘러싼 의약품 개발의 역사와 그 뒤에 숨겨진 이야기를 다룬 과학서이다. 의학 발전을 위한 과학자들의 끈질긴 노력과 시행착오의 과정을 생생히 그려내며, 스테로이드가 인류에게 가져온 의료적 혜택과 오남용의 위험성을 균형 있게 조명한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=52511",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=52511",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791164053018",
+    "field": "title",
+    "value": "감상의 심리학 : 예술 작품을 볼 때 머릿속에서는 무슨일이 벌어질까?",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250729132219134100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791164053018",
+    "field": "authors",
+    "value": "오성주 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250729132219134100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791164053018",
+    "field": "contents",
+    "value": "인문·예술 분야『감상의 심리학』은 예술 감상을 분석한 인문서로, 우리가 예술을 바라보는 순간 감정과 사고가 어떻게 얽히고 반응하는지 설명하여 이를 통해 예술 작품을 이해하는 새로운 관점을 제시한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=52511",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=52511",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791130664996",
+    "field": "title",
+    "value": "단역배우 김순효 씨 : 이수정 장편소설",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250729145320841100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791130664996",
+    "field": "authors",
+    "value": "이수정",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250729145320841100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791130664996",
+    "field": "contents",
+    "value": "문학 분야『단역배우 김순효 씨』는 작품 속 다큐멘터리 작가 이경주가 어머니 김순효의 삶을 카메라에 담으며 자신의 존재와 가족의 의미를 재발견하는 이야기다. 이 소설은 인터뷰를 매개로 어머니의 생애뿐 아니라 화자 자신의 삶과 내면을 함께 드러내며, 진실, 상처, 사랑의 본질을 되묻게 한다. 평범한 삶의 서사 속에서 울림을 찾고 싶은 이들에게 추천한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=52511",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=52511",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791170612025",
+    "field": "title",
+    "value": "텔로미어",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250519152206817100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791170612025",
+    "field": "authors",
+    "value": "박성신",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250519152206817100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791170612025",
+    "field": "contents",
+    "value": "문학 분야의『텔로미어』는 인간의 진화와 생명 윤리를 탐구한다. 노화 종식을 목표로 한 신약 개발과 영생을 추구하는 사회에서 발생하는 갈등을 통해, 과학의 양면성과 인류의 미래를 조명한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.6 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=51474",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=51474",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193591123",
+    "field": "title",
+    "value": "시간의 지배자 : 사피엔스를 지구의 정복자로 만든 예지의 과학",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250530112456140100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193591123",
+    "field": "authors",
+    "value": "토머스 서든도프,조너선 레드쇼,애덤 벌리 지음 ;조은영 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250530112456140100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193591123",
+    "field": "contents",
+    "value": "인문·예술 분야의『시간의 지배자』는 인간이 진화 과정에서 과거를 기억하고 미래를 예측하는 '예지력'을 획득하며 문명을 비약적으로 발전시켜 온 과정을 살펴본다. 시간 감각 이라는 인간 고유의 인지능력을 인문학적 시선으로 비추면서, 이를 뒷받침하는 다양한 과학적 사례와 연구를 유기적으로 엮어낸다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.6 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=51474",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=51474",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788965966241",
+    "field": "title",
+    "value": "숨 쉬는 것들은 어떻게든 진화한다 : 변화 가득한 오늘을 살아내는 자연 생태의 힘",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250528111124487100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788965966241",
+    "field": "authors",
+    "value": "마들렌 치게 지음 ;배명자 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250528111124487100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788965966241",
+    "field": "contents",
+    "value": "자연과학 분야의『숨 쉬는 것들은 어떻게든 진화한다』는 도시 생태계에서 살아남는 동물들의 적응력을 관찰하며 스트레스가 단지 해로운 것이 아니라 변화에 적응하는 탄력적 과정을 통해 진화를 이끄는 핵심 원동력임을 보여준다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.6 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=51474",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=51474",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791198752444",
+    "field": "title",
+    "value": "침묵을 배우는 시간 : 말이 넘쳐나는 세상 속, 더욱 빛을 발하는 침묵의 품격",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250327081908607100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791198752444",
+    "field": "authors",
+    "value": "코르넬리아 토프 지음 ;장혜경 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250327081908607100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791198752444",
+    "field": "contents",
+    "value": "사회과학 분야『침묵을 배우는 시간』은 소음과 정보 과잉 시대 속에서 침묵의 가치와 내면의 성찰을 강조하며, 현대인이 잃어버린 고요함의 의미를 되찾게 한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.4 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50887",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50887",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193937198",
+    "field": "title",
+    "value": "빛이 이끄는 곳으로 : 백희성 장편소설",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250327154349831100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193937198",
+    "field": "authors",
+    "value": "백희성",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250327154349831100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193937198",
+    "field": "contents",
+    "value": "문학 분야『빛이 이끄는 곳으로』는 건축가인 저자가 실제 수집한 사례를 토대로 쓴 소설로, 빛과 기억을 따라 건축이 품은 사랑과 비밀을 감동적으로 풀어낸다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.4 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50887",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50887",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788932323879",
+    "field": "title",
+    "value": "코끼리는 암에 걸리지 않는다 : 삶의 한계에 도전하는 동물들, 그 경이로움에 관하여",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250401090822506100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788932323879",
+    "field": "authors",
+    "value": "데이비드 B. 아구스 지음 ;허성심 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250401090822506100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788932323879",
+    "field": "contents",
+    "value": "자연과학 분야『코끼리는 암에 걸리지 않는다』는 동물들의 생존 방식을 통해 인간이 건강하고 행복하게 살아가는 방법을 탐구하며, 다양한 생명체와의 공존과 존중을 일깨워주는 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.4 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50887",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50887",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193078259",
+    "field": "title",
+    "value": "오렌지와 빵칼 : 청예 장편소설",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250131161458248100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193078259",
+    "field": "authors",
+    "value": "청예",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250131161458248100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193078259",
+    "field": "contents",
+    "value": "문학 분야의『오렌지와 빵칼』은 유치원 교사인 주인공을 통해 억눌린 사회적 관계와 개인의 감정을 섬세하게 풀어내며, 자유와 통제의 본질에 대해 성찰한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.2 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50271",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50271",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191013740",
+    "field": "title",
+    "value": "완벽이라는 중독 : 불안한 완벽주의자를 위한 심리학",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250131141944350100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191013740",
+    "field": "authors",
+    "value": "토머스 커런 지음 ;김문주 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20250131141944350100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191013740",
+    "field": "contents",
+    "value": "인문예술 분야의『완벽이라는 중독』은 현대 사회에 만연한 완벽주의 문제를 심도 있게 다루며, 개인과 사회에 미치는 부정적 영향을 분석한다. 나아가 이를 극복하기 위한 구체적인 해결책과 완벽주의에서 벗어날 수 있는 통찰도 함께 제시한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2025.2 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50271",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=50271",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791192886473",
+    "field": "title",
+    "value": "윈터 씨의 해빙기 : 슈테판 쿨만 장편소설",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20241126143923423100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791192886473",
+    "field": "authors",
+    "value": "슈테판 쿨만 ;옮긴이: 양혜영",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20241126143923423100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791192886473",
+    "field": "contents",
+    "value": "문학 분야의『윈터 씨의 해빙기』는 인생에서 가장 소중한 존재인 부인을 잃고 스스로 고립된 주인공이 타인과의 관계를 통해 마음을 열어가는 과정을 그린 소설이다. 섬세한 문체와 따뜻한 이야기를 통해 외롭고 고립된 이들에게 희망과 연결의 가능성을 제시한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.12 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49811",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49811",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791162543481",
+    "field": "title",
+    "value": "세상에서 가장 긴 행복 탐구 보고서 : '행복의 조건'을 찾는 하버드의 연구는 지금도 계속된다",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20241128162153986100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791162543481",
+    "field": "authors",
+    "value": "로버트 월딩거,마크 슐츠 지음 ;박선령 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20241128162153986100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791162543481",
+    "field": "contents",
+    "value": "인문예술 분야의『세상에서 가장 긴 행복 탐구 보고서』는 하버드 성인 발달연구를 바탕으로, 공유와 따뜻한 관계가 건강하고 풍요로운 삶의 지혜임을 다양한 사례와 연구 성과를 통해 보여준다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.12 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49811",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49811",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788935678563",
+    "field": "title",
+    "value": "자화상 내 마음을 그리다",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240927085132722100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788935678563",
+    "field": "authors",
+    "value": "김선현 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240927085132722100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788935678563",
+    "field": "contents",
+    "value": "인문예술분야의『자화상 내 마음을 그리다』는 프리다 칼로, 폴 고갱, 앤디 워홀 등 유명 화가들의 자화상을 통해 내면의 상처를 대면하고 진정한 자아를 발견할 수 있도록 돕는 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.10 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49323",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49323",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791189327316",
+    "field": "title",
+    "value": "살아있니, 황금두더지 : 사라져 가는 존재에 대한 기억",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240927091854208100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791189327316",
+    "field": "authors",
+    "value": "캐서린 런델 글 ;탈야 볼드윈 그림 ;조은영 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240927091854208100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791189327316",
+    "field": "contents",
+    "value": "마지막으로 자연과학분야의『살아있니, 황금두더지』는 황금두더지를 포함한 21종의 동물을 유머러스하면서도 서정적 문체로 소개하며, 생명의 경이로움과 생태계 보전의 중요성을 강조하고 있다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.10 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49323",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49323",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791192638379",
+    "field": "title",
+    "value": "쓰게 될 것 : 최진영 소설집",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240927093334576100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791192638379",
+    "field": "authors",
+    "value": "최진영",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240927093334576100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791192638379",
+    "field": "contents",
+    "value": "문학분야의『쓰게 될 것』은 기후 위기, 전쟁, AI 등 현대 사회의 주요이슈를 다룬 단편 소설집으로 어려운 상황에서도 포기하지 않고 살아가는 인물들의 이야기를 통해 삶의 가치와 의미를 재확인하고 있다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.10 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49323",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=49323",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193193020",
+    "field": "title",
+    "value": "전시디자인, 미술의 발견 : 작품은 어떻게 스토리가 되는가",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240730101432857100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193193020",
+    "field": "authors",
+    "value": "김용주",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240730101432857100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193193020",
+    "field": "contents",
+    "value": "인문과학분야의『전시디자인, 미술의 발견』은 저자가 전시디자이너로 일했던 경험을 담은 책으로 여러 가지 전시 사례를 통해 전시디자인의 다양한 측면을 보여주고 있다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48905",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48905",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193378106",
+    "field": "title",
+    "value": "해파리의 시간은 거꾸로 간다 : 세월의 무게를 덜어 주는 경이로운 노화 과학",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240731093709740100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193378106",
+    "field": "authors",
+    "value": "니클라스 브렌보르 지음 ;배동근 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240731093709740100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791193378106",
+    "field": "contents",
+    "value": "마지막으로 자연과학분야의『해파리의 시간은 거꾸로 간다』는 노화과학을 연구하는 저자가 늙지 않는 자연계의 장수 생명체들을 소개하며 지금까지 밝혀낸 노화의 비밀을 쉽게 설명하는 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48905",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48905",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788936403010",
+    "field": "title",
+    "value": "한 사람의 노래가 온 거리에 노래를 : 창비시선 500 특별시선집",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240801090158947100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788936403010",
+    "field": "authors",
+    "value": "신경림,강성은,고형렬,곽재구,김경미,김경후,김기택,김남주,김명수,김사인,김선우,김수영,김승희,김언희,김용택,김정환,김중일,김태정,김해자,김현,나희덕,도종환,문태준,민영,박성우,박소란,박철,박형준,박흥식,백무산,손택수,송경동,신동엽,신미나,신용목,심재휘,안도현,안미옥,안현미,안희연,양애경,엄원태,유병록,유이우,이근화,이동순,이병률,이상국,이성부,이시영,이영광,이장욱,이정록,이정훈,이제니,장석남,전동균,전욱진,정호승,정희성,조말선,조연호,조온윤,조태일,주하림,진은영,천양희,최영숙,최정례,최지인,허수경,황유원,황인찬 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240801090158947100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788936403010",
+    "field": "contents",
+    "value": "문학분야의『한 사람의 노래가 온 거리에 노래를』은 창비의 500번째 시선집 발간을 기념하는 특별선집이다. 창비시선 전체(1~499)에 걸쳐 즐겨 읽히는 시를 한 권으로 모아, 반세기를 관통하는 우리 삶의 면면을 ‘시’라는 특별한 언어로 담아냈다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48905",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48905",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788954692199",
+    "field": "title",
+    "value": "나의 문학 답사 일지 : 배움을 찾아 떠난 국문학자의 여행",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240530093338264100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788954692199",
+    "field": "authors",
+    "value": "정병설 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240530093338264100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788954692199",
+    "field": "contents",
+    "value": "문학분야의『나의 문학 답사 일지』는 국문학자인 저자가 대한민국 곳곳을 탐방하며 문학과 역사의 자취를 추적한 여행기이자 문학 안내서로 문학에 대한 열정과 성찰이 돋보이는 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.6 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48415",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48415",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791160405675",
+    "field": "title",
+    "value": "경성 맛집 산책",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240531112310577100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791160405675",
+    "field": "authors",
+    "value": "박현수 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240531112310577100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791160405675",
+    "field": "contents",
+    "value": "사회과학분야의 『경성 맛집 산책』은 식민지 시대의 소설을 통해 음식문화를 소개하는 책으로 경성의 다채로운 음식 문화와 함께 식민지 시대의 현실도 함께 살펴볼 수 있다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.6 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48415",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48415",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791164500598",
+    "field": "title",
+    "value": "우리나라 탐조지 100",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240603081741322100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791164500598",
+    "field": "authors",
+    "value": "김성현,최순규 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240603081741322100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791164500598",
+    "field": "contents",
+    "value": "자연과학분야의『우리나라 탐조지 100』은 대한민국 각 지역의 지리적 특성, 접근성, 계절에 따른 조류의 종류 등을 설명하는 탐조 안내서로 조류 관찰에 최적화된 100개의 장소를 소개한 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.6 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48415",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=48415",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788967260590",
+    "field": "title",
+    "value": "과학에서 인문학을 만나다 : 챗GPT의 시대 인문학에서 답을 찾다",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240328105133076100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788967260590",
+    "field": "authors",
+    "value": "김유항,황진명 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240328105133076100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788967260590",
+    "field": "contents",
+    "value": "자연과학분야의 『과학에서 인문학을 만나다』는 과학자들의 생애와 사상 등 과학자들의 인간적 면모를 흥미롭게 풀어내며 챗GPT 시대에 인간성의 근원을 탐구한 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.4 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=47846",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=47846",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788965966005",
+    "field": "title",
+    "value": "80억 인류, 가보지 않은 미래 : 한중일 고령화, 서구의 극단주의, 신흥국의 인구폭발까지 세계정세의 대전환을 꿰뚫는 인구통계학의 통찰",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240401115529297100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788965966005",
+    "field": "authors",
+    "value": "제니퍼 D. 스쿠바 지음 ;김병순 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20240401115529297100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788965966005",
+    "field": "contents",
+    "value": "사회과학분야의 『80억 인류, 가보지 않은 미래』는 대전환기를 맞고 있는 세계 인구 변동의 흐름을 인구통계학의 관점으로 소개하고 있으며, 인구학 기초 지식 없이도 쉽게 읽을 수 있도록 구성하였다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2024.4 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=47846",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=47846",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191360608",
+    "field": "title",
+    "value": "외로움 수업 : 온전한 나와 마주하는 시간에 대하여",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230725080620733100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191360608",
+    "field": "authors",
+    "value": "김민식 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230725080620733100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791191360608",
+    "field": "contents",
+    "value": "「외로움 수업」은 누구나 수시로 느낄 수 있는 외로움과 불안함에 대한 저자의 통찰과 현실적인 솔루션을 제시해주는 책이다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2023.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788959066711",
+    "field": "title",
+    "value": "도둑맞은 뇌 : 뇌과학이 발견한 기억의 7가지 오류",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230725110528081100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788959066711",
+    "field": "authors",
+    "value": "대니얼 샥터 지음 ;홍보람 옮김",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230725110528081100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788959066711",
+    "field": "contents",
+    "value": "「도둑맞은 뇌」에선 인간의 기억에 대해 수년간 연구해 온 저자가 기억의 오류와 이를 최소화하는 방법을 제시하며 기억의 힘과 소중함을 이야기한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2023.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791190400442",
+    "field": "title",
+    "value": "기후를 위한 경제학 : 지구 한계 안에서 좋은 삶을 모색하는 생태경제학 입문",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230727140331835100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791190400442",
+    "field": "authors",
+    "value": "김병권 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230727140331835100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9791190400442",
+    "field": "contents",
+    "value": "사회과학분야 「기후를 위한 경제학」 기후위기에 대응하는 사회과학적 해법인 생태경제학을 간결한 설명으로 소개하고 있어 환경과 경제, 사회에 대한 이해도를 높여준다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2023.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788962464924",
+    "field": "title",
+    "value": "모자의 나라 조선 : 그 많던 조선의 모자는 왜 그렇게 빨리 사라졌을까?",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230727151241291100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788962464924",
+    "field": "authors",
+    "value": "이승우 지음",
+    "provider": "NLK_RECOMMENDATION_BIB",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N20500000000.do?schM=view&recomNo=20230727151241291100",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  },
+  {
+    "isbn": "9788962464924",
+    "field": "contents",
+    "value": "마지막으로 새로운 소재의 역사서인 인문과학분야 「모자의 나라 조선」은 넷플릭스 드라마 <킹덤>으로 세계적인 인기를 끌었던 ‘갓’을 포함하여 조선시대 모자의 역사를 되짚어본다. 신분에 따라, 시기에 따라 다양했던 조선시대 모자의 기원과 종류를 각종 역사자료와 함께 보여주며 ‘모자왕국’ 조선을 재조명한다.\n\n출처: 국립중앙도서관 사서추천도서 보도자료, 2023.8 (공공누리 제1유형). https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "provider": "NLK_PRESS_TEXT",
+    "source_ref": "https://www.nl.go.kr/NL/contents/N50603000000.do?schM=view&id=46269",
+    "checked_on": "2026-11-26",
+    "policy_version": "2026-11-23"
+  }
+]

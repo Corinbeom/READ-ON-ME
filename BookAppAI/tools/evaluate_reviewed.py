@@ -14,8 +14,15 @@ QUESTIONS = Path(__file__).resolve().parents[1] / "evaluation/reviewed/questions
 BURNOUT = "번아웃 올 때 읽을 만한 책"
 
 
-async def run(output, *, reader_scenarios=False):
-    if reader_scenarios:
+async def run(output, *, reader_scenarios=False, questions_path=None):
+    if questions_path is not None:
+        questions = json.loads(questions_path.read_text())
+        if not isinstance(questions, list) or not questions or not all(
+            isinstance(case, dict) and isinstance(case.get("query"), str) and case["query"].strip()
+            for case in questions
+        ):
+            raise ValueError(f"{questions_path} must contain a nonempty list of questions with query text")
+    elif reader_scenarios:
         questions = json.loads(QUESTIONS.with_name("reader-scenarios.json").read_text())
     else:
         questions = json.loads(QUESTIONS.read_text())
@@ -44,6 +51,8 @@ async def run(output, *, reader_scenarios=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("output", type=Path)
-    parser.add_argument("--reader-scenarios", action="store_true", help="Evaluate the diverse reader questions")
+    cases = parser.add_mutually_exclusive_group()
+    cases.add_argument("--reader-scenarios", action="store_true", help="Evaluate the diverse reader questions")
+    cases.add_argument("--questions", type=Path, help="Evaluate a batch's JSON list of reader questions")
     args = parser.parse_args()
-    asyncio.run(run(args.output, reader_scenarios=args.reader_scenarios))
+    asyncio.run(run(args.output, reader_scenarios=args.reader_scenarios, questions_path=args.questions))
