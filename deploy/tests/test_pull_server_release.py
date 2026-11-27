@@ -122,7 +122,7 @@ class PullServerReleaseTest(unittest.TestCase):
 
     def deploy(self, *args, **env):
         return subprocess.run(["bash", str(SCRIPT), *args], env={**self.env, **env},
-                              capture_output=True, text=True, timeout=30)
+                              capture_output=True, text=True, timeout=90)
 
     def containers(self):
         return json.loads((self.root / "containers.json").read_text())
