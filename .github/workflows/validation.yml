@@ -123,7 +123,7 @@ jobs:
           WEB_API_URL: ${{ vars.WEB_API_URL || 'https://152.67.222.15' }}
         run: bash deploy/plan-server-release.sh
       - uses: docker/setup-buildx-action@v3
-        if: steps.plan.outputs.mode == 'build'
+        if: steps.plan.outputs.mode != 'reuse'
       - uses: docker/build-push-action@v6
         if: steps.plan.outputs.mode == 'build'
         id: spring
@@ -134,7 +134,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/spring:${{ github.sha }}
           labels: org.opencontainers.image.revision=${{ github.sha }}
       - uses: docker/build-push-action@v6
-        if: steps.plan.outputs.mode == 'build'
+        if: steps.plan.outputs.mode == 'build' || steps.plan.outputs.mode == 'ai'
         id: ai
         with:
           context: BookAppAI
@@ -144,11 +144,11 @@ jobs:
           tags: ${{ env.REGISTRY }}/ai:${{ github.sha }}
           labels: org.opencontainers.image.revision=${{ github.sha }}
       - name: Publish the matched image pair
-        if: steps.plan.outputs.mode == 'build'
+        if: steps.plan.outputs.mode != 'reuse'
         env:
           GH_TOKEN: ${{ github.token }}
-          SPRING_DIGEST: ${{ steps.spring.outputs.digest }}
-          AI_DIGEST: ${{ steps.ai.outputs.digest }}
+          SPRING_DIGEST: ${{ steps.spring.outputs.digest || steps.plan.outputs.spring_digest }}
+          AI_DIGEST: ${{ steps.ai.outputs.digest || steps.plan.outputs.ai_digest }}
         run: |
           latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
           if [ "$latest" != "$GITHUB_SHA" ]; then
