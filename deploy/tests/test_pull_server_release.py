@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -32,14 +33,44 @@ def configured_image(path, service):
 if args[:2] == ["image", "inspect"]:
     print(os.environ["LABELS"])
 elif args[0] == "inspect":
-    print(images[args[-1]])
+    if "project" in args[2]:
+        print("beta")
+    elif args[2] == "{{.State.Running}}":
+        print("true")
+    else:
+        print(images[args[-1]])
+elif args[0] == "ps":
+    print("standby" if "standby" in images else "")
+elif args[0] == "exec":
+    if args[2] == "printenv":
+        print(os.environ.get("SPRING_AI_URL", "http://ai-router:8000") if args[-1] == "AI_BASE_URL" else "d"*64)
+    elif args[2] == "curl":
+        if "-D" in args:
+            standby = Path(".oci-deploy/ai-router/standby")
+            target = "standby" if standby.exists() else "primary"
+            with Path("routes").open("a") as routes:
+                print(target, file=routes)
+            print(f"X-Readonme-AI-Route: {target}")
+        else:
+            print('{"data":true}')
+    elif os.getenv("FAIL_STANDBY") and args[1] == "standby":
+        sys.exit(2)
+    elif os.getenv("FAIL_CANONICAL") and args[1] == "ai" and images["ai"] == os.environ["LABELS"].split()[2]:
+        sys.exit(2)
+elif args[0] == "rm":
+    images.pop(args[-1])
+    state.write_text(json.dumps(images))
 elif args[0] == "compose":
-    if "config" in args:
+    if "run" in args:
+        images["standby"] = configured_image(args[args.index("run")-1], "ai")
+        state.write_text(json.dumps(images))
+        print("standby")
+    elif "config" in args and "exec" not in args:
         print(configured_image(args[2], args[-1]))
     elif "ps" in args:
         print(args[-1])
     elif "up" in args:
-        images[args[-1]] = configured_image(args[4], args[-1])
+        images[args[-1]] = configured_image(args[args.index("up")-1], args[-1])
         state.write_text(json.dumps(images))
     elif "exec" in args:
         if "postgres" in args:
@@ -104,6 +135,63 @@ class PullServerReleaseTest(unittest.TestCase):
         marker = self.root / "deploy-status/server-release.json"
         marker.write_text(json.dumps({"commit": "f" * 40}))
         return old
+
+    def enable_handoff(self):
+        self.start_with_matching_spring()
+        router = self.root / ".oci-deploy/ai-router"
+        router.mkdir(parents=True)
+        (router / "enabled").touch()
+        shutil.copyfile(SCRIPT.with_name("ai-handoff.sh"), self.root / "ai-handoff.sh")
+
+    def test_unmigrated_spring_does_not_begin_or_consume_the_release_attempt(self):
+        self.enable_handoff()
+        result = self.deploy(SPRING_AI_URL="http://ai:8000")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.mutations(), [])
+        self.assertFalse((self.root / ".oci-deploy/in-progress").exists())
+        self.assertFalse((self.root / ".oci-deploy/last-attempt").exists())
+
+    def test_verified_handoff_drains_old_and_returns_to_canonical_ai(self):
+        self.enable_handoff()
+        result = self.deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((self.root / "routes").read_text().splitlines(),
+                         ["standby", "primary"])
+        self.assertEqual(self.containers(), {"backend": SPRING, "ai": AI})
+        self.assertEqual(self.mutations(), [("stop", "ai"), ("up", "ai"), ("stop", "standby")])
+
+    def test_refused_standby_never_receives_traffic_or_restarts_canonical_ai(self):
+        self.enable_handoff()
+        result = self.deploy(FAIL_STANDBY="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual((self.root / "routes").read_text().splitlines(), ["primary"])
+        self.assertEqual(self.mutations(), [("stop", "standby")])
+        self.assertEqual(self.containers(), {"backend": SPRING, "ai": OLD["ai"]})
+        self.assertFalse((self.root / ".oci-deploy/in-progress").exists())
+
+    def test_failed_canonical_returns_to_old_image_while_standby_serves(self):
+        self.enable_handoff()
+        result = self.deploy(FAIL_CANONICAL="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.containers(), {"backend": SPRING, "ai": OLD["ai"]})
+        self.assertEqual((self.root / "routes").read_text().splitlines(),
+                         ["standby"] * 2 + ["primary"])
+        self.assertFalse((self.root / ".oci-deploy/in-progress").exists())
+
+    def test_interrupted_handoff_keeps_standby_serving_during_recovery(self):
+        self.enable_handoff()
+        state = self.root / ".oci-deploy"
+        (state / "last-attempt").write_text("123.1")
+        (state / "in-progress").write_text("handoff")
+        (state / "ai-router/standby").write_text("beta-ai-standby\n")
+        (state / "rollback.yml").write_text(f'services:\n  backend:\n    image: "{SPRING}"\n  ai:\n    image: "{OLD["ai"]}"\n')
+        (self.root / "containers.json").write_text(json.dumps({"backend": SPRING, "ai": AI, "standby": AI}))
+        result = self.deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.containers(), {"backend": SPRING, "ai": OLD["ai"]})
+        self.assertEqual((self.root / "routes").read_text().splitlines(),
+                         ["standby", "primary"])
+        self.assertFalse((state / "in-progress").exists())
 
     def test_ai_only_apply_keeps_spring_running(self):
         self.start_with_matching_spring()

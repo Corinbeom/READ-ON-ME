@@ -1,0 +1,16 @@
+services:
+  backend:
+    environment:
+      AI_BASE_URL: http://ai-router:8000
+    depends_on:
+      ai-router: {condition: service_started}
+  ai-router:
+    image: caddy:2
+    restart: unless-stopped
+    mem_limit: 32m
+    environment:
+      GOMEMLIMIT: 20MiB
+      STANDBY_HOST: ${COMPOSE_PROJECT_NAME}-ai-standby
+    command: [caddy, run, --config, /etc/galpi/Caddyfile, --adapter, caddyfile]
+    volumes:
+      - ./.oci-deploy/ai-router:/etc/galpi:ro

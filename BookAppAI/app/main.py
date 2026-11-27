@@ -10,6 +10,8 @@ from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from alembic import command
 from alembic.config import Config
+from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from fastapi.responses import JSONResponse
 from app.corpus_policy import CorpusPermissionError, hold_pending_jobs
 
@@ -27,9 +29,22 @@ def upgrade_database() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     validate_prod_config()  # 먼저 검증 — DATABASE_URL 포함
-    await asyncio.to_thread(upgrade_database)
+    temporary = getattr(app.state, "standby", False)
+    if not temporary:
+        await asyncio.to_thread(upgrade_database)
     _db.init_db()           # 검증 통과 후 엔진 생성
     try:
+        if temporary:
+            config = Config(str(Path(__file__).resolve().parents[1] / "alembic.ini"))
+            expected = set(ScriptDirectory.from_config(config).get_heads())
+            async with _db.engine.connect() as connection:
+                installed = await connection.run_sync(
+                    lambda conn: set(MigrationContext.configure(conn).get_current_heads())
+                )
+            if installed != expected:
+                raise RuntimeError("AI standby requires the currently installed database schema")
+            yield
+            return
         async with _db.async_session() as db, db.begin():
             await hold_pending_jobs(db)
         worker = asyncio.create_task(run_shelf_keyword_worker())
@@ -43,6 +58,12 @@ async def lifespan(app: FastAPI):
         await _db.engine.dispose()
 
 app = FastAPI(lifespan=lifespan)
+
+def standby():
+    """Uvicorn factory for the temporary process used during an AI-only deployment."""
+    app.state.standby = True
+    return app
+
 
 @app.exception_handler(CorpusPermissionError)
 async def corpus_unavailable(request, exc):

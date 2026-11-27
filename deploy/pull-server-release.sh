@@ -8,6 +8,11 @@ status=deploy-status/server-release.json
 manifest=$registry/deployment:production
 base=(docker compose -f compose.beta.yml)
 
+if [[ -f "$state/ai-router/enabled" ]]; then
+    base+=(-f compose.ai-handoff.yml)
+    source ./ai-handoff.sh
+fi
+
 mkdir -p "$state"
 exec 9>"$state/lock"
 flock -n 9 || exit 0
@@ -28,6 +33,11 @@ apply_images() {
     local override=$1 target_spring=$2 target_ai=$3 running_spring
     local compose=( "${base[@]}" -f "$override" )
     running_spring=$(container_image backend) || return 1
+    if [[ -f "$state/ai-router/enabled" && $(cat "$state/in-progress") == handoff ]]; then
+        [[ $running_spring == "$target_spring" ]] || { echo 'Spring changed during AI handoff.' >&2; return 1; }
+        handoff_ai "$override" "$target_ai"
+        return $?
+    fi
     if [[ $running_spring != "$target_spring" ]]; then
         "${compose[@]}" stop ai || return 1
         "${compose[@]}" up -d --no-deps backend || return 1
@@ -105,6 +115,13 @@ fi
 old_spring=$(container_image backend)
 old_ai=$(container_image ai)
 [[ -n $old_spring && -n $old_ai ]] || { echo 'Could not identify the running image pair' >&2; exit 1; }
+if [[ -f "$state/ai-router/enabled" && $old_spring == "$spring" ]]; then
+    backend=$("${base[@]}" ps -q backend)
+    if [[ $(docker exec "$backend" printenv AI_BASE_URL) != http://ai-router:8000 ]]; then
+        echo 'Waiting for the initial Spring switch to the AI router. Existing release is still serving.' >&2
+        exit 1
+    fi
+fi
 if [[ $old_spring != "$spring" ]]; then docker pull --quiet "$spring" >/dev/null; fi
 if [[ $old_ai != "$ai" ]]; then docker pull --quiet "$ai" >/dev/null; fi
 write_images "$state/rollback.yml" "$old_spring" "$old_ai"
@@ -112,7 +129,12 @@ write_images "$state/candidate.yml" "$spring" "$ai"
 
 "${base[@]}" exec -T postgres pg_dump -U readonme -d readonme -Fc > "$state/db-backup.tmp"
 mv "$state/db-backup.tmp" "$state/db-backup.dump"
-touch "$state/in-progress"
+if [[ -f "$state/ai-router/enabled" && $old_spring == "$spring" ]]; then
+    printf 'handoff\n' > "$state/in-progress.tmp"
+else
+    printf 'apply\n' > "$state/in-progress.tmp"
+fi
+mv "$state/in-progress.tmp" "$state/in-progress"
 printf '%s\n' "$attempt" > "$state/last-attempt"
 
 if apply_images "$state/candidate.yml" "$spring" "$ai"; then
