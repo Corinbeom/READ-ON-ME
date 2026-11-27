@@ -14,7 +14,7 @@ export function getHomeBookCollectionStyles(theme: 'light' | 'dark') {
     book: { flex: 1, minWidth: 0 },
     coverFrame: { width: '100%', maxWidth: 132, alignSelf: 'center', borderWidth: 2, borderColor: 'transparent', padding: 3 },
     selectedCover: { borderColor: c.text },
-    cover: { width: '100%', aspectRatio: 110 / 158, backgroundColor: c.surface2 },
+    cover: { width: '100%', height: 'auto', aspectRatio: 110 / 158, backgroundColor: c.surface2 },
     selectionLabel: { ...Typography.caption, color: c.inkSoft, height: Typography.caption.lineHeight, marginTop: Spacing.xxs },
     angle: { ...Typography.compactLabel, color: c.text, marginTop: Spacing.xxs },
     bookTitle: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.xxs },

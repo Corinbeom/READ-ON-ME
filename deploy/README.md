@@ -38,11 +38,11 @@ Spring 배포 시 Flyway V5가 카카오 계정용 컬럼을 추가한다. 이�
 
 Spring과 AI의 GHCR 게시, OCI 설치 및 활성화 절차는 [OCI 자동 배포](OCI_PULL_DEPLOY.md)를 참고합니다.
 
-운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. Oracle 서버 이미지·DB의 배포 절차는 기존과 같으며 이 자동화에 포함하지 않는다.
+운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. OCI 자동 배포가 켜져 있으면 서버 이미지 입력이 바뀐 경우에만 새 이미지를 게시한다. 웹은 필요한 서버 버전을 확인한 뒤 게시한다.
 
 프론트 검사에서 한 번 생성한 `dist`를 커밋 SHA별 Actions artifact로 보관하고 배포 작업에서 그대로 내려받는다. 배포 단계는 API 주소·폰트와 커밋 정보를 다시 검증한다. 배포 작업은 동시에 한 건만 실행하며, 대기 중인 작업이 최신 main보다 오래된 커밋이면 건너뛴다. 배포 런타임은 Node 22(22.12 이상)이며 Wrangler는 4.162.0으로 고정한다.
 
-배포 후 `https://read-on-me-beta.pages.dev/release.json`의 `commit`이 해당 main SHA와 같은지 확인한다. 이 파일은 공개 커밋 SHA와 Actions 실행 ID만 담는다. 검사나 빌드가 실패하면 배포 단계는 실행하지 않는다. 업로드 이후 확인 단계가 실패한 경우 이미 배포가 이루어졌을 수 있으므로 실제 release.json과 Pages 배포 기록을 먼저 확인한다.
+배포 후 `https://read-on-me-beta.pages.dev/release.json`의 `commit`이 해당 main SHA와 같은지 확인한다. OCI 자동 배포를 사용하는 릴리스는 이 파일의 `serverCommit`에 게시 시 확인한 서버 커밋도 기록한다. 검사나 빌드가 실패하면 배포 단계는 실행하지 않는다. 업로드 이후 확인 단계가 실패한 경우 이미 배포가 이루어졌을 수 있으므로 실제 release.json과 Pages 배포 기록을 먼저 확인한다.
 
 ### 최초 인증 설정
 
@@ -60,7 +60,7 @@ GitHub 저장소 Settings → Secrets and variables → Actions에 다음 reposi
 ### 일반 릴리스와 복구
 
 1. 기능 브랜치에서 변경·테스트 후 PR을 생성한다.
-2. `backend`, `ai`, `frontend` 검사를 확인한다. 웹이 새 API를 사용하는 릴리스는 OCI의 Spring·AI 이미지를 먼저 업데이트하고, 운영 API 응답을 확인한 뒤 main으로 병합한다.
+2. `backend`, `ai`, `frontend` 검사를 확인한다. OCI 자동 배포가 켜져 있으면 병합 후 Actions가 서버 입력을 비교하고, 필요한 서버 커밋을 확인한 뒤 웹을 게시한다.
 3. main의 Validation 실행에서 `Deploy production web` 완료와 공개 `release.json`을 확인한다.
 4. 배포 실패 시 원인을 수정한 PR을 병합하거나, 같은 최신 main의 실패 작업을 재실행한다. 과거 릴리스로 되돌리려면 main에 revert를 반영해 다시 배포한다. 오래된 실행 재실행은 최신 main 검사에 의해 배포를 건너뛴다.
 
