@@ -14,6 +14,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/src/store';
 import { useHomeBooks, calcAgeGroup } from '@/hooks/useHomeBooks';
 import { getHomeScreenStyles } from '@/src/styles/HomeScreen.styles';
+import { recommendationCriteria } from '@/src/types/homeRecommendations';
 import BookCarousel from '@/components/BookCarousel';
 import AppButton from '@/components/ui/AppButton';
 import HomeAiPrompt from '@/components/HomeAiPrompt';
@@ -97,6 +98,28 @@ export default function HomeScreen() {
         <HomeAiPrompt />
         <HomeBookCollection />
       </GalpiAvailability>
+      {/* ── 개인 추천 ── */}
+      {isAuthenticated && (
+        <View testID="home-recommendations">
+          <View style={styles.sectionHeader}>
+            <Text accessibilityRole="header" style={styles.sectionTitle}>다음엔 이런 책 어때요?</Text>
+            <AppButton title="추천 기준" variant="ghost" compact onPress={() => setModalVisible(true)} />
+          </View>
+          <View style={styles.sectionDivider} />
+          <BookCarousel
+            title=""
+            books={recommendations.books}
+            loading={recommendations.loading}
+            error={recommendations.error} onRetry={recommendations.retry} loadingLabel="추천 책 목록을 불러오고 있어요"
+            lookupCovers
+            emptyMessage="아직 추천할 책을 찾지 못했어요"
+          />
+          {!recommendations.loading && !recommendations.error && recommendations.books.length === 0 && (
+            <AppButton title="내 서재 보기" variant="ghost" compact onPress={() => router.push('/my-library')} />
+          )}
+        </View>
+      )}
+
       <HomeRecentBooks />
 
       {/* ── 인기 책 (도서관 정보나루) ── */}
@@ -130,42 +153,20 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* ── 개인 추천 ── */}
-      {isAuthenticated && (
-        <View>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {recommendations.type === 'personalized'
-                ? '나와 같은 취향의 사람들이 읽은 책'
-                : `${user?.nickname}님을 위한 인기 도서`}
-            </Text>
-            <AppButton title="추천 기준" variant="ghost" compact onPress={() => setModalVisible(true)} />
-          </View>
-          <View style={styles.sectionDivider} />
-          <BookCarousel
-            title=""
-            books={recommendations.books}
-            loading={recommendations.loading}
-            error={recommendations.error} onRetry={recommendations.retry} loadingLabel="추천 책 목록을 불러오고 있어요"
-            emptyMessage="독서 활동을 시작하면 추천이 생성돼요."
-          />
-        </View>
-      )}
-
       <AppButton title="의견 보내기" compact variant="ghost" onPress={() => router.push('/feedback')} />
 
       {/* ── Modal ── */}
       <Modal
         animationType="fade"
         transparent={true}
-        visible={modalVisible}
+        visible={isAuthenticated && modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.centeredView}>
           <View style={styles.modalView}>
-            <Text style={styles.modalTitle}>사용자 기반 추천이란?</Text>
+            <Text style={styles.modalTitle}>추천 기준</Text>
             <Text style={styles.modalText}>
-              비슷한 독서 취향을 가진 사용자들이 읽은 책을 보여드립니다.
+              {recommendationCriteria[recommendations.basis]}
             </Text>
             <AppButton title="닫기" onPress={() => setModalVisible(false)} />
           </View>

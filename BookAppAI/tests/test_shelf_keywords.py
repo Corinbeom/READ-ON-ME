@@ -75,6 +75,8 @@ async def test_model_jobs_are_deduplicated_and_checked_again_before_dispatch(mon
             """), {"uses": sorted(MODEL_USES)})
             for field, value in (("title", "별"), ("authors", "저자"), ("contents", "별과 우주의 기원에 관한 이야기")):
                 await record_field(db, isbn, field, value, "SHELF_TEST", "v1", "fixture", date.today())
+            assert not (await shelf_keywords(db, [isbn], 12, enqueue_missing=False))["keywords"]
+            assert await db.scalar(text("SELECT count(*) FROM shelf_keyword_jobs WHERE isbn=:isbn"), {"isbn": isbn}) == 0
             for _ in range(2):
                 result = await shelf_keywords(db, [isbn], 12)
                 assert result["pending"] == 1

@@ -83,6 +83,10 @@ class GalpiMaintenanceTest {
         assertNull(identity.getTitle());
         assertEquals("KAKAO", jdbc.queryForObject(
                 "SELECT provider FROM catalog_field_observation WHERE isbn=? AND field_name='title'", String.class, isbn));
+        mvc.perform(get("/api/recommendations/home")).andExpect(status().is4xxClientError());
+        mvc.perform(get("/api/recommendations/home").with(user(principal)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.basis").value("EMPTY"))
+                .andExpect(jsonPath("$.books").isEmpty());
         long id = identity.getId();
         mvc.perform(post("/api/library/" + id).with(user(principal)).param("status", "READING"))
                 .andExpect(status().isOk());

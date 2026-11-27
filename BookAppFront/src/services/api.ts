@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
+import type { HomeRecommendations } from '../types/homeRecommendations';
 import type { BookDto } from '../types/BookDto';
 import type { AiSearchTiming } from '../utils/aiSearchTiming';
 import type { KakaoExchange, KakaoStart } from '../utils/kakaoLogin';
@@ -351,6 +352,7 @@ export const reviewApi = {
 
 // 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
 export const recommendationApi = {
+  getHome: (options?: LocalRequestOptions) => api.get<HomeRecommendations>('/api/recommendations/home', options),
   getRecommendations: (options?: LocalRequestOptions) =>
     api.get<{ type: string; bookIds: number[] }>('/api/recommendations', options),
 };

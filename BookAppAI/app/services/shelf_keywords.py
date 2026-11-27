@@ -11,7 +11,7 @@ from app import database
 from app.corpus_policy import CorpusPermissionError, MODEL_USES, permits
 from app.services.gemini_tagger import GEMINI_DEFAULT_MODEL, GeminiTagger
 from app.services.reading_keyword_picks import korean_tags, library_keywords
-from app.services.reviewed_corpus import derived, read_inputs
+from app.services.reviewed_corpus import derived, read_input_batch, read_inputs
 
 CATALOG = Path(__file__).resolve().parents[1] / "data" / "seongnam-20260107.sqlite3"
 CATALOG_USES = {"store", "display", "publish_derivative", "commercial"}
@@ -29,7 +29,7 @@ def catalog_tags(isbns):
     return result
 
 
-async def shelf_keywords(db, requested, limit):
+async def shelf_keywords(db, requested, limit, *, enqueue_missing=True):
     isbns = sorted({s for s in requested if len(s) == 13 and s.isascii() and s.isdigit()})
     catalog = {}
     pending = set()
@@ -42,23 +42,19 @@ async def shelf_keywords(db, requested, limit):
         catalog = await asyncio.to_thread(catalog_tags, isbns)
     labels = {isbn: tags.copy() for isbn, tags in catalog.items()}
 
-    candidates = await db.scalars(text("""
-        SELECT DISTINCT isbn FROM corpus_field_versions WHERE current AND field='contents'
-        AND isbn=ANY(CAST(:isbns AS text[])) ORDER BY isbn
-    """), {"isbns": isbns})
-    for isbn in candidates:
-        try:
-            _, version = await read_inputs(db, isbn, MODEL_USES)
-        except CorpusPermissionError:
-            continue
+    inputs = await read_input_batch(db, isbns, MODEL_USES)
+    versions = {isbn: version for isbn, (_, version) in inputs.items()}
+    artifacts = await db.execute(text("""
+        SELECT a.isbn, a.result FROM unnest(CAST(:isbns AS text[]), CAST(:versions AS text[])) AS v(isbn, version)
+        JOIN corpus_derived_artifacts a ON a.isbn=v.isbn AND a.input_version=v.version
+        WHERE a.kind='tags' AND a.model_version=:model AND a.context_key=''
+    """), {"isbns": list(versions), "versions": list(versions.values()), "model": GEMINI_DEFAULT_MODEL})
+    missing = versions.copy()
+    for isbn, result in artifacts:
+        labels.setdefault(isbn, []).extend(korean_tags(result.get("tags")))
+        missing.pop(isbn)
+    for isbn, version in (missing.items() if enqueue_missing else ()):
         params = dict(isbn=isbn, version=version, model=GEMINI_DEFAULT_MODEL)
-        result = await db.scalar(text("""
-            SELECT result FROM corpus_derived_artifacts WHERE isbn=:isbn AND kind='tags'
-            AND input_version=:version AND model_version=:model AND context_key=''
-        """), params)
-        if result is not None:
-            labels.setdefault(isbn, []).extend(korean_tags(result.get("tags")))
-            continue
         existing = (await db.execute(text("""
             SELECT status,run_after<=now() AS due FROM shelf_keyword_jobs
             WHERE isbn=:isbn AND input_version=:version AND model=:model

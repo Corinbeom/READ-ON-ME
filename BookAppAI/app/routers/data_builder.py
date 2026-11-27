@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.corpus_policy import require_verified_corpus
 from app import database
 from app.database import get_db
+from app.services.home_picks import home_picks
 from app.services.reading_keyword_picks import public_picks
 from app.services.shelf_keywords import shelf_keywords
 from app.services.search_timing import measure_search_db
@@ -13,7 +14,7 @@ from app.services import corpus_ingestion
 from app.services.reviewed_corpus import search_reviewed, read_inputs
 from app.services.reviewed_release import configured_release, require_index, require_release
 from app.security import require_internal_token
-from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
+from app.schemas import KeywordRequest, SingleBookRequest, AiSearchRequest, HomePicksRequest, ReadingTagsRequest, ReadingKeywordPicksRequest
 
 router = APIRouter()
 # --- Endpoints ---
@@ -163,3 +164,15 @@ async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depen
 @router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])
 async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest, books=Depends(keyword_books)):
     return public_picks(books, request.keywords)
+
+@router.post("/api/user/home-picks", dependencies=[Depends(require_internal_token)])
+async def get_home_picks(request: HomePicksRequest, x_reviewed_release: str = Header(),
+                         release: str = Depends(configured_release), db: AsyncSession = Depends(get_db)):
+    if release != x_reviewed_release:
+        raise HTTPException(status_code=503, detail="AI_SEARCH_MAINTENANCE")
+    from sqlalchemy import text
+    async with db.begin():
+        await db.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ"))
+        books = await require_release(db, release)
+        shelf = await shelf_keywords(db, request.reading, 12, enqueue_missing=False)
+        return home_picks(books, shelf["keywords"], set(request.owned) | set(request.reading), request.peers)

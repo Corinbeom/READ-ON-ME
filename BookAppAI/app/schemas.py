@@ -34,3 +34,9 @@ class ReadingKeywordPicksRequest(BaseModel):
     keywords: list[Annotated[str, StringConstraints(
         strip_whitespace=True, min_length=1, max_length=100, pattern=r"^[^\x00-\x1f\x7f-\x9f]+$",
     )]] = Field(min_length=1, max_length=3)
+
+
+class HomePicksRequest(BaseModel):
+    reading: list[str]
+    owned: list[str]
+    peers: list[str]

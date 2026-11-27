@@ -3,6 +3,7 @@ package bookapp.bookappback.ai.service;
 import bookapp.bookappback.ai.dto.ReadingKeywordPickDto;
 import bookapp.bookappback.ai.dto.ReadingTagsRequestDto;
 import bookapp.bookappback.common.exception.AppException;
+import bookapp.bookappback.recommendation.dto.HomeRecommendations;
 import bookapp.bookappback.userbookstatus.dto.UserBookIsbnDto;
 import bookapp.bookappback.userbookstatus.service.UserBookStatusService;
 import io.netty.channel.ChannelOption;
@@ -99,6 +100,23 @@ public class ReadingKeywordService {
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<ReadingKeywordPickDto>>() {})
                 .timeout(Duration.ofSeconds(15));
+    }
+
+    public HomeRecommendations getHomePicks(List<String> reading, List<String> owned, List<String> peers) {
+        if (availability.release().isBlank()) return HomeRecommendations.empty();
+        try {
+            return Objects.requireNonNull(webClient.post()
+                    .uri("/api/user/home-picks")
+                    .header("X-Reviewed-Release", availability.release())
+                    .headers(this::setInternalToken)
+                    .bodyValue(Map.of("reading", reading, "owned", owned, "peers", peers))
+                    .retrieve()
+                    .bodyToMono(HomeRecommendations.class)
+                    .timeout(Duration.ofSeconds(15)).block());
+        } catch (Exception e) {
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "HOME_RECOMMENDATIONS_UNAVAILABLE",
+                    "추천 책을 불러오지 못했어요.");
+        }
     }
 
     private void setInternalToken(HttpHeaders headers) {
