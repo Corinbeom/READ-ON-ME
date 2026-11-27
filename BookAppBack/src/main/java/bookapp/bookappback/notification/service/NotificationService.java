@@ -1,5 +1,6 @@
 package bookapp.bookappback.notification.service;
 
+import bookapp.bookappback.common.exception.AppException;
 import bookapp.bookappback.common.exception.NotificationExceptions;
 import bookapp.bookappback.common.exception.UserExceptions;
 import bookapp.bookappback.notification.dto.NotificationResponse;
@@ -11,6 +12,8 @@ import bookapp.bookappback.user.entity.User;
 import bookapp.bookappback.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -27,7 +30,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class NotificationService {
+public class NotificationService implements SmartLifecycle {
 
     private static final long DEFAULT_TIMEOUT = 60L * 60 * 1000; // 1시간
 
@@ -36,7 +39,31 @@ public class NotificationService {
 
     private final Map<Long, List<SseEmitter>> emitters = new ConcurrentHashMap<>();
 
-    public SseEmitter subscribe(Long userId) {
+    private volatile boolean running;
+
+    @Override
+    public boolean isRunning() {
+        return running;
+    }
+
+    @Override
+    public synchronized void start() {
+        running = true;
+    }
+
+    // The default SmartLifecycle phase stops before Tomcat waits for open requests.
+    @Override
+    public synchronized void stop() {
+        running = false;
+        emitters.values().forEach(streams -> streams.forEach(SseEmitter::complete));
+        emitters.clear();
+    }
+
+    public synchronized SseEmitter subscribe(Long userId) {
+        if (!running) {
+            throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "NOTIFICATION_STREAM_UNAVAILABLE",
+                    "알림 연결을 잠시 후 다시 시도해 주세요.");
+        }
         SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT);
         emitter.onCompletion(() -> removeEmitter(userId, emitter));
         emitter.onTimeout(() -> removeEmitter(userId, emitter));

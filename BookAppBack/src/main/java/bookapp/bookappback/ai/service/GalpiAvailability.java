@@ -1,6 +1,7 @@
 package bookapp.bookappback.ai.service;
 
 import bookapp.bookappback.common.exception.AppException;
+import bookapp.bookappback.ai.repository.AiSearchJobRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -26,17 +27,24 @@ public class GalpiAvailability {
 
     private final AiSearchService client;
     private final String release;
+    private final AiSearchJobRepository jobs;
 
     public GalpiAvailability(AiSearchService client,
-                             @org.springframework.beans.factory.annotation.Value("${galpi.reviewed-release:}") String release) {
+                             @org.springframework.beans.factory.annotation.Value("${galpi.reviewed-release:}") String release,
+                             AiSearchJobRepository jobs) {
         this.client = client;
         this.release = release;
+        this.jobs = jobs;
     }
 
     public String release() { return release; }
 
     public State state() {
-        return release.isBlank() ? State.MAINTENANCE : client.releaseState(release);
+        if (release.isBlank()) return State.MAINTENANCE;
+        State state = client.releaseState(release);
+        // A rejected candidate can roll back. Keep existing jobs retryable until the switch is verified.
+        if (state == State.MAINTENANCE && jobs.deploymentHoldsClaims()) return State.UNCONFIRMED;
+        return state;
     }
 
     public boolean underMaintenance() {
