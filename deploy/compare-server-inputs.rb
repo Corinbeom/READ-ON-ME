@@ -1,4 +1,4 @@
-# Print whether the same production images can serve the target web release.
+# Spring or shared build changes require the full rollout. An AI-only change keeps Spring running.
 require "open3"
 require "yaml"
 
@@ -18,13 +18,20 @@ def inputs(revision)
     options = step.fetch("with")
     context = options.fetch("context")
     tree = git("rev-parse", "--verify", "#{revision}:#{context}").strip
-    [tree, step.fetch("uses"), options, step["env"]]
+    [id, [tree, step.fetch("uses"), options, step["env"]]]
   end
   builder = job.fetch("steps").find { |step| step.fetch("uses", "").start_with?("docker/setup-buildx-action@") }
   abort "Missing Docker builder" unless builder
   publisher = git("rev-parse", "--verify", "#{revision}:deploy/publish-server-release.sh").strip
-  [builds, builder.values_at("uses", "with", "env"), workflow["env"], job["env"], publisher]
+  builds.to_h.merge("shared" => [builder.values_at("uses", "with", "env"), workflow["env"], job["env"], publisher])
 end
 
 abort "Expected published and target revisions" unless ARGV.length == 2
-puts(inputs(ARGV[0]) == inputs(ARGV[1]) ? "reuse" : "build")
+published, target = ARGV.map { |revision| inputs(revision) }
+if published == target
+  puts "reuse"
+elsif published.values_at("shared", "spring") == target.values_at("shared", "spring")
+  puts "ai"
+else
+  puts "build"
+end

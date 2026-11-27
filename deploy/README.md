@@ -38,7 +38,7 @@ Spring 배포 시 Flyway V5가 카카오 계정용 컬럼을 추가한다. 이�
 
 Spring과 AI의 GHCR 게시, OCI 설치 및 활성화 절차는 [OCI 자동 배포](OCI_PULL_DEPLOY.md)를 참고합니다.
 
-운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. OCI 자동 배포가 켜져 있으면 서버 이미지 입력이 바뀐 경우에만 새 이미지를 게시한다. 웹은 필요한 서버 버전을 확인한 뒤 게시한다.
+운영 웹은 `.github/workflows/validation.yml`로 배포한다. 기능 브랜치는 PR로 검증하고 main에 병합한다. main 갱신 시 Spring·AI·프론트 검사가 모두 성공해야 Cloudflare Pages의 `read-on-me-beta` 프로젝트에 배포된다. PR과 기능 브랜치에서는 운영 배포를 실행하지 않는다. OCI 자동 배포가 켜져 있으면 AI 입력만 바뀐 경우 기존 Spring 이미지와 새 AI 이미지를 함께 지정한다. OCI에서 해당 Spring이 실행 중이면 AI만 교체한다. 웹은 필요한 서버 버전을 확인한 뒤 게시한다.
 
 프론트 검사에서 한 번 생성한 `dist`를 커밋 SHA별 Actions artifact로 보관하고 배포 작업에서 그대로 내려받는다. 배포 단계는 API 주소·폰트와 커밋 정보를 다시 검증한다. 배포 작업은 동시에 한 건만 실행하며, 대기 중인 작업이 최신 main보다 오래된 커밋이면 건너뛴다. 배포 런타임은 Node 22(22.12 이상)이며 Wrangler는 4.162.0으로 고정한다.
 
