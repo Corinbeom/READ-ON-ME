@@ -6,6 +6,11 @@ from app.services.keyword_language import korean_keyword
 from app.services.text_utils import MULTI_BOOK_SET_TITLE, contains_exclusion_terms
 
 
+# A shared audience, format or broad catalog section alone is weak evidence for a crossover.
+BROAD_LABELS = frozenset("기억 교양 청소년 어린이 청년 소설 한국소설 문학 동화 그림책 회고록 에세이 장편소설 단편소설 "
+                         "사회 사회과학 자연과학 인문예술 인문 예술 자기계발 일상 삶 실용서 영어판 영어원서".split())
+
+
 def korean_tags(tags):
     if not isinstance(tags, list):
         return set()

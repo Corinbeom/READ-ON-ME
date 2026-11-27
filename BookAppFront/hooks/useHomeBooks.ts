@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { bookApi, recommendationApi } from '@/src/services/api';
+import { useFocusEffect } from 'expo-router';
+import { recommendationCriteria, type HomeBook, type HomeRecommendations } from '@/src/types/homeRecommendations';
 import type { Book } from '@/src/types/book';
 
 interface LibraryBook {
   bookImageURL?: string | null;
   ranking: string; bookname: string; authors: string; publisher: string; isbn13: string; as_of: string; loan_count: string; source: string; age_group: number;
 }
-interface ListState {
-  key: string | null; books: Book[]; loading: boolean; error: string; type: string;
+interface ListState<T> {
+  key: string | null; books: T[]; loading: boolean; error: string;
 }
-const initial: ListState = { key: null, books: [], loading: true, error: '', type: 'personalized' };
-const start = (previous: ListState, key: string): ListState =>
-  previous.key === key ? { ...previous, loading: true, error: '' } : { ...initial, key };
+const initial = { key: null, books: [], loading: true, error: '' };
+const initialRecommendations = { ...initial, basis: 'EMPTY' as HomeRecommendations['basis'] };
 export const calcAgeGroup = (birthYear: number): number =>
   Math.max(10, Math.min(60, Math.floor((new Date().getFullYear() - birthYear) / 10) * 10));
 const mapBook = (item: LibraryBook, index: number): Book => ({
@@ -22,8 +23,8 @@ const mapBook = (item: LibraryBook, index: number): Book => ({
 });
 
 export function useHomeBooks(userId?: number, birthYear?: number) {
-  const [popular, setPopular] = useState<ListState>(initial);
-  const [recommendations, setRecommendations] = useState<ListState>(initial);
+  const [popular, setPopular] = useState<ListState<Book>>(initial);
+  const [recommendations, setRecommendations] = useState<ListState<HomeBook> & Pick<HomeRecommendations, 'basis'>>(initialRecommendations);
   const [popularAttempt, setPopularAttempt] = useState(0);
   const [recommendationAttempt, setRecommendationAttempt] = useState(0);
   const ageGroup = birthYear ? calcAgeGroup(birthYear) : undefined;
@@ -32,8 +33,8 @@ export function useHomeBooks(userId?: number, birthYear?: number) {
 
   useEffect(() => {
     const controller = new AbortController();
-    setPopular((previous) => start(previous, popularKey));
-    const update = (patch: Partial<ListState>) => {
+    setPopular((previous) => ({ ...(previous.key === popularKey ? previous : initial), key: popularKey, loading: true, error: '' }));
+    const update = (patch: Partial<ListState<Book>>) => {
       if (!controller.signal.aborted) setPopular((previous) => previous.key === popularKey ? { ...previous, ...patch } : previous);
     };
     void (async () => {
@@ -48,34 +49,33 @@ export function useHomeBooks(userId?: number, birthYear?: number) {
     return () => controller.abort();
   }, [ageGroup, popularKey, popularAttempt]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!recommendationKey) {
-      setRecommendations(initial);
+      setRecommendations(initialRecommendations);
       return;
     }
     const controller = new AbortController();
     const options = { signal: controller.signal, handleErrorLocally: true };
-    setRecommendations((previous) => start(previous, recommendationKey));
-    const update = (patch: Partial<ListState>) => {
+    setRecommendations((previous) => ({ ...(previous.key === recommendationKey ? previous : initialRecommendations), key: recommendationKey, loading: true, error: '' }));
+    const update = (patch: Partial<HomeRecommendations & ListState<HomeBook>>) => {
       if (!controller.signal.aborted) setRecommendations((previous) => previous.key === recommendationKey ? { ...previous, ...patch } : previous);
     };
     void (async () => {
       try {
-        const { data } = await recommendationApi.getRecommendations(options);
-        if (controller.signal.aborted) return;
-        if (!Array.isArray(data?.bookIds)) throw new Error('Invalid recommendations response');
-        const books = data.bookIds.length ? (await bookApi.getBooksByIds(data.bookIds, options)).data : [];
-        if (!Array.isArray(books)) throw new Error('Invalid book details response');
-        update({ books, type: data.type, loading: false });
+        const { data } = await recommendationApi.getHome(options);
+        if (!Array.isArray(data?.books) || !Object.prototype.hasOwnProperty.call(recommendationCriteria, data.basis)) {
+          throw new Error('Invalid home recommendations response');
+        }
+        update({ books: data.books, basis: data.basis, loading: false });
       } catch {
         update({ loading: false, error: '추천 책을 불러오지 못했어요.' });
       }
     })();
     return () => controller.abort();
-  }, [recommendationKey, recommendationAttempt]);
+  }, [recommendationKey, recommendationAttempt]));
 
   return {
     popular: { ...(popular.key === popularKey ? popular : initial), retry: () => setPopularAttempt((value) => value + 1) },
-    recommendations: { ...(recommendations.key === recommendationKey ? recommendations : initial), retry: () => setRecommendationAttempt((value) => value + 1) },
+    recommendations: { ...(recommendations.key === recommendationKey ? recommendations : initialRecommendations), retry: () => setRecommendationAttempt((value) => value + 1) },
   };
 }

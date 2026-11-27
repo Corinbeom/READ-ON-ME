@@ -1,7 +1,9 @@
 import React from 'react';
 import { FlatList, TouchableOpacity, View, Text } from 'react-native';
 import { Link } from 'expo-router';
-import { Book } from '../src/types/book';
+import type { Book } from '../src/types/book';
+import type { HomeBook } from '../src/types/homeRecommendations';
+
 import { getIsbn13 } from '../src/utils/bookUtils';
 import { getBookCarouselStyles } from './styles/BookCarousel.styles';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -10,9 +12,12 @@ import ScreenState from '@/components/ui/ScreenState';
 import AppButton from '@/components/ui/AppButton';
 import BookCover from '@/components/BookCover';
 
+type CarouselBook = HomeBook & Partial<Pick<Book, 'id' | 'isbn10' | 'loanRanking' | 'publisher'>>;
+
 interface BookCarouselProps {
   title: React.ReactNode;
-  books: Book[];
+  books: CarouselBook[];
+  lookupCovers?: boolean;
   loading: boolean;
   emptyMessage?: string;
   error?: string;
@@ -23,18 +28,18 @@ interface BookCarouselProps {
 const BookCarousel: React.FC<BookCarouselProps> = ({ 
   title,
   books,
-  loading,
+  loading, lookupCovers = false,
   emptyMessage = '표시할 책이 없습니다.', error, onRetry, loadingLabel = '책 목록을 불러오고 있어요'
 }) => {
   const colorScheme = useColorScheme() ?? 'dark';
   const styles = getBookCarouselStyles(colorScheme);
 
-  const renderBookItem = ({ item }: { item: Book }) => {
+  const renderBookItem = ({ item }: { item: CarouselBook }) => {
     const isbn13 = getIsbn13(item);
 
     const bookContent = (
       <>
-        <BookCover uri={item.thumbnail} style={styles.bookThumbnail} />
+        <BookCover uri={item.thumbnail} lookupIsbn={lookupCovers ? isbn13 : undefined} style={styles.bookThumbnail} />
         {item.loanRanking && <Text style={styles.bookAuthor}>{item.loanRanking.rank}위 · {item.loanRanking.count}회 대출</Text>}
         <Text style={styles.bookTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.bookAuthor} numberOfLines={1}>
@@ -78,7 +83,8 @@ const BookCarousel: React.FC<BookCarouselProps> = ({
             horizontal
             showsHorizontalScrollIndicator={false}
             data={books}
-            keyExtractor={(item) => item.id.toString()}
+            initialNumToRender={3}
+            keyExtractor={(item) => item.id != null ? String(item.id) : item.isbn13}
             renderItem={renderBookItem}
             contentContainerStyle={styles.listContentContainer}
           />

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { ReadingStatus } from '../types/readingStatus'
+import type { HomeRecommendations } from '../types/homeRecommendations';
 import type { BookDto } from '../types/BookDto';
 import type { AiSearchTiming } from '../utils/aiSearchTiming';
 import type { KakaoExchange, KakaoStart } from '../utils/kakaoLogin';
@@ -61,6 +62,7 @@ export const api = axios.create({
 });
 
 const galpiAvailabilityPath = '/api/ai/availability';
+const dailyChoicesPath = '/api/books/daily-choices';
 const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
 const kakaoAuthPath = '/api/users/kakao/';
 const feedbackPath = '/api/feedback';
@@ -72,6 +74,7 @@ api.interceptors.request.use(async (config) => {
     '/api/books/search',
     '/api/books/detail',
     readingKeywordPicksPath,
+    dailyChoicesPath,
     '/api/users/signin',
     '/api/users/signup',
     kakaoAuthPath,
@@ -95,6 +98,7 @@ const silentPaths = [
   '/api/ai/jobs',
   galpiAvailabilityPath,
   readingKeywordPicksPath,
+  dailyChoicesPath,
   '/api/users/profile',
   '/api/users/signin',
   '/api/users/signup',
@@ -290,7 +294,18 @@ export const operationsApi = {
 type LocalRequestOptions = { signal?: AbortSignal; handleErrorLocally?: boolean };
 export type ReadingKeywordPick = Pick<BookDto, 'isbn13' | 'title' | 'authors' | 'thumbnail'>;
 
+export interface DailyBookChoice {
+  isbn: string;
+  title: string;
+  authors: string;
+  contents: string;
+  topic: string;
+  prompt: string;
+}
+
 export const bookApi = {
+  getDailyChoices: (signal: AbortSignal) => api.get<DailyBookChoice[]>(dailyChoicesPath, { signal }),
+
   getReadingKeywordPicks: (keywords: string[], signal: AbortSignal) => {
     const params = new URLSearchParams();
     keywords.forEach(keyword => params.append('tag', keyword));
@@ -351,6 +366,7 @@ export const reviewApi = {
 
 // 🔮 추천 관련 API (Spring Boot 직접 호출로 변경 — FastAPI 불필요)
 export const recommendationApi = {
+  getHome: (options?: LocalRequestOptions) => api.get<HomeRecommendations>('/api/recommendations/home', options),
   getRecommendations: (options?: LocalRequestOptions) =>
     api.get<{ type: string; bookIds: number[] }>('/api/recommendations', options),
 };

@@ -64,9 +64,11 @@ See [UI consistency validation](qa/ui-consistency-2026-11-16.md) for the respons
 
 The mascot is introduced as **AI 사서 갈피**. `HomeAiPrompt` keeps its isolated typing animation in a compact introduction; search examples remain available in the search tab and AI entry screen.
 
-`HomeBookCollection` provides one fixed editorial collection with three selectable books. Each selection updates the introduction and ISBN detail link. “이런 분위기의 책 더 찾기” prefills `/ai-books` through the `prompt` route parameter without submitting a search. Authentication preserves that condition using the fixed `returnTo=ai-books` flow. `src/utils/aiSearchEntry.ts` keeps explicit new drafts separate from completed results and protects queued/running searches. After a job is saved locally, the entry prompt is removed so a refresh resumes the submitted job.
+The public home collection uses `GET /api/books/daily-choices`. The server selects up to three distinct titles from the active reviewed Galpi release, rotating each Korean calendar day through story, nonfiction and practical books. Guests and signed-in readers see the same selection. Picking a book shows its credited description, edition detail link and an editable topic for Galpi. The selection uses existing classifications and does not call a model. Covers use the existing ISBN edition lookup and bundled fallback.
 
-Collection metadata lives in `src/constants/homeCollection.ts`. Match the ISBN, exact edition title, author, cover and recorded provider source when updating it. Introductions must be supported by that edition's description; do not infer reading time, difficulty or personal suitability. This fixed selection is distinct from AI ranking and popular loans, and adds no homepage API or model calls. Provider covers have a fallback; book selection and navigation remain available if an image fails. The collection is not automatically rotated daily.
+The Galpi button prefills `/ai-books` through the `prompt` route parameter. Authentication preserves the draft using `returnTo=ai-books`. A queued or running search stays visible until it finishes.
+
+Local verification on 2026-11-27 used a reviewed release of 176 editions. The seven Korean dates from November 27 through December 3 produced 21 distinct ISBNs. In mobile and desktop browser checks, the three choices stayed in order after refresh, the edition links matched their selections, and the selected question survived guest sign-in with zero search submissions. A simulated collection outage offered a retry and an empty response cleared the cards.
 
 See [initial discovery validation](qa/home-ai-discovery-2026-11-16.md) and [Galpi home validation](qa/home-galpi-discovery-2026-11-18.md) for the tested flows and remaining device coverage.
 
