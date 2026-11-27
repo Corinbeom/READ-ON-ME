@@ -24,6 +24,5 @@ export function getHomeBookCollectionStyles(theme: 'light' | 'dark') {
     invitation: { ...Typography.body, color: c.inkSoft, marginTop: Spacing.xs, minHeight: Typography.body.lineHeight * 3 },
     detailAction: { alignSelf: 'flex-start', paddingHorizontal: 0 },
     primaryAction: { marginTop: Spacing.sm },
-    basis: { ...Typography.caption, color: c.inkSoft, marginTop: Spacing.sm },
   });
 }

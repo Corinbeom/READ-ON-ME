@@ -12,53 +12,34 @@ function load(relative, require) {
   vm.runInNewContext(outputText, context);
   return context.exports;
 }
-const { HOME_COLLECTION } = load('src/constants/homeCollection.ts');
+const { untilNextKoreanDay } = load('src/utils/koreanDay.ts');
 const bookUtils = load('src/utils/bookUtils.ts');
-const { getIsbn13 } = bookUtils;
 const { aiSearchHref, authReturnParams, resolveAiSearchEntry } = load('src/utils/aiSearchEntry.ts', (name) => {
   assert.equal(name, './bookUtils');
   return bookUtils;
 });
 
-test('the editorial collection exposes three distinct, valid detail destinations', () => {
-  assert.equal(HOME_COLLECTION.books.length, 3);
-  assert.equal(new Set(HOME_COLLECTION.books.map(book => book.isbn)).size, 3);
-  for (const book of HOME_COLLECTION.books) {
-    assert.equal(getIsbn13({ isbn13: book.isbn }), book.isbn);
-    assert.ok(book.title && book.author && book.invitation && book.angle);
-  }
+test('an open home refreshes at midnight in Korea regardless of device timezone', () => {
+  assert.equal(untilNextKoreanDay(Date.parse('2026-11-26T14:59:59.900Z')), 100);
+  assert.equal(untilNextKoreanDay(Date.parse('2026-11-27T00:00:00+09:00')), 86_400_000);
 });
 
-test('each cover and its recorded description source refer to the same provider edition', () => {
-  for (const book of HOME_COLLECTION.books) {
-    const source = new URL(book.sourceUrl);
-    const cover = new URL(book.thumbnail);
-    const image = new URL(cover.searchParams.get('fname'));
-    assert.equal(source.protocol, 'https:');
-    assert.equal(cover.protocol, 'https:');
-    assert.ok(image.pathname.endsWith('/' + source.searchParams.get('bookId')));
-  }
+test('the selected question stays editable and survives the login return flow', () => {
+  const prompt = '우주에 대해 더 알고 싶어. 어떤 책부터 읽어볼까?';
+  const route = aiSearchHref(prompt);
+  assert.equal(route.pathname, '/ai-books');
+  const auth = authReturnParams('ai-books', route.params.prompt);
+  const restored = resolveAiSearchEntry(auth.prompt, { status: 'SUCCEEDED', query: '이전 조건' });
+  assert.equal(restored.job, null);
+  assert.equal(restored.query, prompt);
 });
 
-test('every selection opens its own editable theme and survives the login return flow', () => {
-  assert.equal(new Set(HOME_COLLECTION.books.map(book => book.prompt)).size, 3);
-  for (const book of HOME_COLLECTION.books) {
-    const route = aiSearchHref(book.prompt);
-    assert.equal(route.pathname, '/ai-books');
-    assert.equal(route.params.prompt, book.prompt);
-    const auth = authReturnParams('ai-books', route.params.prompt);
-    const restored = resolveAiSearchEntry(auth.prompt, { status: 'SUCCEEDED', query: '이전 조건' });
-    assert.equal(restored.job, null);
-    assert.equal(restored.query, book.prompt);
-  }
-});
-
-test('selecting a collection theme preserves an existing search until it finishes', () => {
+test('selecting a daily topic preserves an ongoing search until it finishes', () => {
   for (const status of ['QUEUED', 'RUNNING']) {
     const previous = { status, query: '이미 진행 중인 조건' };
-    const selected = resolveAiSearchEntry(HOME_COLLECTION.books[2].prompt, previous);
+    const selected = resolveAiSearchEntry('다음에 읽을 우주 이야기', previous);
     assert.equal(selected.job, previous);
     assert.equal(selected.query, previous.query);
-    assert.equal(selected.deferredPrompt, HOME_COLLECTION.books[2].prompt);
+    assert.equal(selected.deferredPrompt, '다음에 읽을 우주 이야기');
   }
 });

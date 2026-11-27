@@ -62,6 +62,7 @@ export const api = axios.create({
 });
 
 const galpiAvailabilityPath = '/api/ai/availability';
+const dailyChoicesPath = '/api/books/daily-choices';
 const readingKeywordPicksPath = '/api/books/reading-keyword-picks';
 const kakaoAuthPath = '/api/users/kakao/';
 const feedbackPath = '/api/feedback';
@@ -73,6 +74,7 @@ api.interceptors.request.use(async (config) => {
     '/api/books/search',
     '/api/books/detail',
     readingKeywordPicksPath,
+    dailyChoicesPath,
     '/api/users/signin',
     '/api/users/signup',
     kakaoAuthPath,
@@ -96,6 +98,7 @@ const silentPaths = [
   '/api/ai/jobs',
   galpiAvailabilityPath,
   readingKeywordPicksPath,
+  dailyChoicesPath,
   '/api/users/profile',
   '/api/users/signin',
   '/api/users/signup',
@@ -291,7 +294,18 @@ export const operationsApi = {
 type LocalRequestOptions = { signal?: AbortSignal; handleErrorLocally?: boolean };
 export type ReadingKeywordPick = Pick<BookDto, 'isbn13' | 'title' | 'authors' | 'thumbnail'>;
 
+export interface DailyBookChoice {
+  isbn: string;
+  title: string;
+  authors: string;
+  contents: string;
+  topic: string;
+  prompt: string;
+}
+
 export const bookApi = {
+  getDailyChoices: (signal: AbortSignal) => api.get<DailyBookChoice[]>(dailyChoicesPath, { signal }),
+
   getReadingKeywordPicks: (keywords: string[], signal: AbortSignal) => {
     const params = new URLSearchParams();
     keywords.forEach(keyword => params.append('tag', keyword));

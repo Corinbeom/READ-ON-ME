@@ -1,5 +1,6 @@
 package bookapp.bookappback.ai.controller;
 
+import bookapp.bookappback.ai.dto.DailyBookChoice;
 import bookapp.bookappback.ai.dto.ReadingKeywordPickDto;
 import bookapp.bookappback.ai.service.ReadingKeywordService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,17 @@ public class ReadingKeywordPicksController {
                         .body(picks))
                 .onErrorResume(error -> {
                     log.warn("공개 키워드 도서 조회 실패: {}", error.getClass().getSimpleName());
+                    return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build());
+                });
+    }
+
+    @GetMapping("/api/books/daily-choices")
+    public Mono<ResponseEntity<List<DailyBookChoice>>> getDailyChoices() {
+        return readingKeywordService.getDailyChoices()
+                .switchIfEmpty(Mono.error(new IllegalStateException("Empty corpus response")))
+                .map(books -> ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(books))
+                .onErrorResume(error -> {
+                    log.warn("오늘의 갈피 도서 조회 실패: {}", error.getClass().getSimpleName());
                     return Mono.just(ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build());
                 });
     }

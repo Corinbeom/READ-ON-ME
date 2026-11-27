@@ -21,7 +21,7 @@ import java.time.Duration;
 /**
  * 로그인 사용자는 사용자 ID, 익명 도서 검색은 연결 IP를 기준으로 Redis INCR/EXPIRE 사용.
  *
- * - /api/books/search, /api/books/reading-keyword-picks : 각각 분당 60회
+ * - /api/books/search, /api/books/reading-keyword-picks, /api/books/daily-choices : 각각 분당 60회
  * - POST /api/ai/search, /api/ai/jobs : 사용자별 분당 20회 (조회 폴링 제외)
  *
  * Redis 키: "rate:{endpoint}:{subject}" — TTL 1분
@@ -48,9 +48,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         String path = request.getRequestURI();
 
-        boolean keywordPicks = "GET".equals(request.getMethod()) && path.equals("/api/books/reading-keyword-picks");
-        if (path.startsWith("/api/books/search") || keywordPicks) {
-            String endpoint = keywordPicks ? "reading-keyword-picks" : "book-search";
+        boolean publicPicks = "GET".equals(request.getMethod())
+                && (path.equals("/api/books/reading-keyword-picks") || path.equals("/api/books/daily-choices"));
+        if (path.startsWith("/api/books/search") || publicPicks) {
+            String endpoint = publicPicks ? path.substring("/api/books/".length()) : "book-search";
             if (!consumeOrRespond(request, response, endpoint, BOOK_SEARCH_LIMIT)) {
                 return;
             }

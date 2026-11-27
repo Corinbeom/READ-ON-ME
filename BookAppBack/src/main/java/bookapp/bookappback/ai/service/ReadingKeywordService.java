@@ -1,5 +1,6 @@
 package bookapp.bookappback.ai.service;
 
+import bookapp.bookappback.ai.dto.DailyBookChoice;
 import bookapp.bookappback.ai.dto.ReadingKeywordPickDto;
 import bookapp.bookappback.ai.dto.ReadingTagsRequestDto;
 import bookapp.bookappback.common.exception.AppException;
@@ -100,6 +101,17 @@ public class ReadingKeywordService {
                 .retrieve()
                 .bodyToMono(new ParameterizedTypeReference<List<ReadingKeywordPickDto>>() {})
                 .timeout(Duration.ofSeconds(15));
+    }
+
+    public Mono<List<DailyBookChoice>> getDailyChoices() {
+        if (availability.release().isBlank()) return Mono.just(List.of());
+        return webClient.get()
+                .uri("/api/books/daily-choices")
+                .header("X-Reviewed-Release", availability.release())
+                .headers(this::setInternalToken)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<List<DailyBookChoice>>() {})
+                .timeout(Duration.ofSeconds(10));
     }
 
     public HomeRecommendations getHomePicks(List<String> reading, List<String> owned, List<String> peers) {

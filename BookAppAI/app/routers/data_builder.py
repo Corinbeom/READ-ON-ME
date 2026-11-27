@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.corpus_policy import require_verified_corpus
 from app import database
 from app.database import get_db
+from app.services.daily_choices import daily_choices, korean_today
 from app.services.home_picks import home_picks
 from app.services.reading_keyword_picks import public_picks
 from app.services.shelf_keywords import shelf_keywords
@@ -164,6 +165,12 @@ async def get_reading_tags(request: ReadingTagsRequest, db: AsyncSession = Depen
 @router.post("/api/books/reading-keyword-picks", dependencies=[Depends(require_internal_token)])
 async def get_reading_keyword_picks(request: ReadingKeywordPicksRequest, books=Depends(keyword_books)):
     return public_picks(books, request.keywords)
+
+
+@router.get("/api/books/daily-choices", dependencies=[Depends(require_internal_token)])
+async def get_daily_choices(books=Depends(keyword_books)):
+    return daily_choices(books, korean_today())
+
 
 @router.post("/api/user/home-picks", dependencies=[Depends(require_internal_token)])
 async def get_home_picks(request: HomePicksRequest, x_reviewed_release: str = Header(),
