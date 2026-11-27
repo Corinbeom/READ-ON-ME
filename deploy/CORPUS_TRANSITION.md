@@ -50,6 +50,8 @@ python -m tools.grade_reviewed run-2.jsonl judgments-2.json --record
 
 두 실행에서 첫 결과 13/18, 한 권 이상 15/18, 대조 2/2를 충족한 같은 데이터·모델 조합만 재개할 수 있다. 운영에 준비한 검증 DB에서 나온 release 값을 Spring과 AI의 GALPI_REVIEWED_RELEASE에 동시에 설정한다. 이 값이 비어 있거나 DB의 평가 기록·입력 버전·모델과 다르면 갈피가 점검 상태를 반환한다. 공개 후 AI 컨테이너 로그의 corpus_request_blocked 및 reviewed_search, 공급자 오류 로그, 정상 빈 결과 비율을 확인한다. 점검으로 복귀할 때는 이 값만 비우고 두 서비스를 재기동한다.
 
+상태 조회는 요청마다 DB에서 검증 대상의 변경 여부를 확인한다. AI 프로세스가 처음 확인하거나 정책·도서 필드·태그·임베딩·평가 기록이 바뀌면 전체 검증을 다시 수행한다. 새 추천 사유를 기록해도 검증 대상은 그대로다. 실제 검색은 매번 해당 트랜잭션에서 이용 권한과 입력을 검증한다.
+
 ## 한국어판 후보 발굴과 서재 키워드 검증
 
 하버드 도서관의 Alma 서지 레코드에서 한국어 종이책을 찾는다. 출처, 단일 판본 ISBN, 한국어 제목, 저자 역할, 미 의회도서관 주제명(LCSH)이 확인된 레코드의 필드만 후보 파일에 담는다. 소개 후보에는 카탈로그의 주제명만 들어간다. 출판사 책 소개와 표지 이미지는 수집하지 않는다. 데이터 제공처는 Harvard Library, OCLC, Library of Congress다. [서지 메타데이터 공개 조건](https://library.harvard.edu/services-tools/harvard-library-datasets)

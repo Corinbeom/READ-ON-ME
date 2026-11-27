@@ -12,6 +12,7 @@ from app.services.reading_keyword_picks import public_picks
 from app.services.shelf_keywords import shelf_keywords
 from app.services.search_timing import measure_search_db
 from app.services import corpus_ingestion
+from app.services.release_status import confirm_release_status
 from app.services.reviewed_corpus import search_reviewed, read_inputs
 from app.services.reviewed_release import configured_release, require_index, require_release
 from app.security import require_internal_token
@@ -61,7 +62,7 @@ async def embed_single_book(request: SingleBookRequest, db: AsyncSession = Depen
 
 @router.get("/api/ai/reviewed-release", dependencies=[Depends(require_internal_token)])
 async def release_status(release: str = Depends(configured_release), db: AsyncSession = Depends(get_db)):
-    await require_release(db, release)
+    await confirm_release_status(db, release)
     return {"release": release}
 
 
