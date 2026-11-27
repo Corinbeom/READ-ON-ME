@@ -34,7 +34,7 @@ class ReadingKeywordServiceTest {
             when(shelf.getUserBooksWithIsbn(1L)).thenReturn(List.of(
                     new UserBookIsbnDto("a", "READING"), new UserBookIsbnDto("b", "COMPLETED"),
                     new UserBookIsbnDto("c", "TO_READ")));
-            var service = new ReadingKeywordService(new GalpiAvailability(null, ""), WebClient.builder(),
+            var service = new ReadingKeywordService(new GalpiAvailability(null, "", null), WebClient.builder(),
                     "http://127.0.0.1:" + server.getAddress().getPort(), shelf, "test");
             assertEquals(2, service.getReadingKeywords(1L).get("analyzed"));
             var mapper = new ObjectMapper();

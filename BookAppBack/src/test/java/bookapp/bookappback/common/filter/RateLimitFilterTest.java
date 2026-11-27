@@ -1,6 +1,7 @@
 package bookapp.bookappback.common.filter;
 
 import bookapp.bookappback.ai.service.GalpiAvailability;
+import bookapp.bookappback.ai.repository.AiSearchJobRepository;
 import bookapp.bookappback.security.UserDetailsImpl;
 import bookapp.bookappback.user.entity.User;
 import jakarta.servlet.FilterChain;
@@ -40,7 +41,7 @@ class RateLimitFilterTest {
         when(values.increment(anyString())).thenReturn(1L);
         ai = mock(AiSearchService.class);
         when(ai.releaseState("release")).thenReturn(GalpiAvailability.State.AVAILABLE);
-        availability = new GalpiAvailability(ai, "release");
+        availability = new GalpiAvailability(ai, "release", mock(AiSearchJobRepository.class));
         filter = new RateLimitFilter(redis, availability);
     }
 

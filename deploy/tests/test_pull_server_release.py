@@ -73,7 +73,28 @@ elif args[0] == "compose":
         images[args[-1]] = configured_image(args[args.index("up")-1], args[-1])
         state.write_text(json.dumps(images))
     elif "exec" in args:
-        if "postgres" in args:
+        if "psql" in args:
+            if "-c" in args:
+                assert "RUNNING" in args[-1]
+                if os.getenv("DRAIN_READ_FAIL"):
+                    sys.exit(1)
+                print("t")
+            else:
+                statement = sys.stdin.read()
+                gate = Path("claims-paused")
+                if "CREATE OR REPLACE TRIGGER" in statement:
+                    gate.touch()
+                    with Path("drain-events").open("a") as log:
+                        print("pause",file=log)
+                elif "DROP TRIGGER" in statement:
+                    if os.getenv("FAIL_RESUME"):
+                        sys.exit(1)
+                    gate.unlink(missing_ok=True)
+                    with Path("drain-events").open("a") as log:
+                        print("resume",file=log)
+                else:
+                    sys.exit(1)
+        elif "postgres" in args:
             print("test backup")
         elif os.environ.get("FAIL_AI") and images["ai"] == os.environ["LABELS"].split()[2]:
             sys.exit(1)
@@ -115,15 +136,61 @@ class PullServerReleaseTest(unittest.TestCase):
         self.assertEqual(json.loads((self.root / "deploy-status/server-release.json").read_text()),
                          {"commit": REVISION})
         self.assertTrue((self.root / ".oci-deploy/db-backup.dump").is_file())
-        self.assertEqual(self.mutations(), [("stop", "ai"), ("up", "backend"), ("up", "ai")])
+        self.assertEqual(self.mutations(), [("stop", "backend"), ("stop", "ai"), ("up", "backend"), ("up", "ai")])
+        self.assertEqual((self.root / "drain-events").read_text().splitlines(), ["pause", "resume"])
 
     def test_unhealthy_ai_rolls_back_and_skips_the_same_attempt(self):
         result = self.deploy(FAIL_AI="1")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.containers(), OLD)
+        self.assertEqual((self.root / "drain-events").read_text().splitlines(), ["pause", "resume"])
         self.assertFalse((self.root / "deploy-status/server-release.json").exists())
         self.assertEqual(self.deploy().returncode, 0)
         self.assertEqual(self.containers(), OLD)
+
+    def test_drain_failure_keeps_running_containers_and_reopens_queue(self):
+        result = self.deploy(DRAIN_READ_FAIL="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.mutations(), [])
+        self.assertFalse((self.root / "claims-paused").exists())
+        self.assertFalse((self.root / ".oci-deploy/in-progress").exists())
+        self.assertFalse((self.root / "deploy-status/server-release.json").exists())
+
+    def test_restored_release_retries_reopening_without_switching_images(self):
+        failed = self.deploy(FAIL_AI="1", FAIL_RESUME="1")
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertEqual(self.containers(), OLD)
+        self.assertTrue((self.root / "claims-paused").exists())
+        self.assertEqual((self.root / ".oci-deploy/in-progress").read_text().strip(), "restored-drained")
+        mutations = self.mutations()
+        recovery = self.deploy()
+        self.assertEqual(recovery.returncode, 0, recovery.stderr)
+        self.assertFalse((self.root / "claims-paused").exists())
+        self.assertEqual(self.mutations(), mutations)
+        self.assertFalse((self.root / "deploy-status/server-release.json").exists())
+
+    def test_interrupted_drain_reopens_old_queue_without_replacing_containers(self):
+        state = self.root / ".oci-deploy"
+        state.mkdir()
+        (state / "in-progress").write_text("draining")
+        (state / "last-attempt").write_text("123.1")
+        (self.root / "claims-paused").touch()
+        result = self.deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / "claims-paused").exists())
+        self.assertEqual(self.mutations(), [])
+
+    def test_verified_release_retries_reopening_the_queue_before_publishing(self):
+        result = self.deploy(FAIL_RESUME="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue((self.root / "claims-paused").exists())
+        self.assertFalse((self.root / "deploy-status/server-release.json").exists())
+        mutations = self.mutations()
+        result = self.deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / "claims-paused").exists())
+        self.assertEqual(mutations, self.mutations())
+        self.assertTrue((self.root / "deploy-status/server-release.json").exists())
 
     def mutations(self):
         calls = (json.loads(line) for line in (self.root / "calls.jsonl").read_text().splitlines())

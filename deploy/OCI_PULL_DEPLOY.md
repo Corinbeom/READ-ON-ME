@@ -29,7 +29,13 @@ Spring이 내부 주소 `http://ai-router:8000`을 사용하면 AI 단독 배포
 
 1. 기존 배포가 완료됐는지 확인하고 현재 배포 스크립트와 Compose 설정을 보관합니다. 이 버전의 `pull-server-release.sh`, `ai-handoff.sh`, `compose.ai-handoff.yml`, `ai-router.Caddyfile`을 `/opt/readonme`에 설치합니다.
 2. 최초 설치 시 `.oci-deploy/ai-router/Caddyfile`에 `ai-router.Caddyfile`을 복사합니다. 임시 AI가 검증되면 스크립트가 같은 디렉터리에 `standby` 파일을 만들고, 기본 AI로 되돌린 뒤 제거합니다. 이 파일의 유무를 프록시가 요청마다 확인합니다. `docker compose -f compose.beta.yml -f compose.ai-handoff.yml up -d --no-deps ai-router`로 내부 프록시를 올립니다. 외부 공개 포트는 없습니다.
-3. `docker compose -f compose.beta.yml exec -T backend curl -fsS http://ai-router:8000/health`로 연결을 확인합니다. 정기 Spring 교체 시점에 배포 잠금 안에서 `.oci-deploy/ai-router/enabled`를 만들면 다음 전체 배포에서 Spring에 새 주소를 적용합니다. 점검 시간에 기존 이미지를 유지하면서 전환할 때는 같은 잠금 안에서 `docker compose -f compose.beta.yml -f compose.ai-handoff.yml -f .oci-deploy/active.yml up -d --no-deps backend`를 사용합니다. 적용 후 Spring의 `AI_BASE_URL`, 공개 갈피 이용 상태와 추천을 확인합니다. 이후 수동 Compose 작업에도 위 세 파일을 같은 순서로 지정합니다.
+3. `docker compose -f compose.beta.yml exec -T backend curl -fsS http://ai-router:8000/health`로 연결을 확인합니다. 정기 Spring 교체 시점에 배포 잠금 안에서 `.oci-deploy/ai-router/enabled`를 만들면 다음 전체 배포에서 Spring에 새 주소를 적용합니다. 배포 서비스가 진행 중인 추천의 저장을 확인하고 Spring을 교체할 때까지 기다립니다. 적용 후 Spring의 `AI_BASE_URL`, 공개 갈피 이용 상태와 추천을 확인합니다. 이후 수동 Compose 작업에도 위 세 파일을 같은 순서로 지정합니다.
 4. AI만 갱신하면 임시 컨테이너가 현재 DB 스키마와 Spring이 기대하는 검증 릴리스를 확인합니다. 임시 프로세스는 마이그레이션이나 백그라운드 작업을 실행하지 않습니다. 라우팅을 넘긴 뒤 Spring의 이용 상태를 확인하고 기존 AI에 최대 75초 동안 처리 중인 요청을 마칠 시간을 줍니다. 기본 AI 컨테이너가 새 이미지로 검증을 마치면 요청을 되돌리고 임시 컨테이너도 같은 순서로 종료합니다. 서재 작업과 코퍼스 운영 명령은 기본 AI 컨테이너에서 계속 실행합니다.
 
 후보의 출처·품질 검증이나 스키마 확인이 실패하면 기존 AI가 계속 응답하고 배포 커밋 표시는 유지됩니다. 스키마가 바뀌는 AI 업데이트는 기존·새 버전의 호환성을 확인하고 별도로 스키마를 적용하거나 정기 전체 배포로 진행합니다. 진행 중 중단됐을 때는 배포 서비스의 다음 실행이 저장된 이미지와 라우팅 파일로 복구합니다. 수동으로 이전의 직접 연결로 돌아갈 때는 점검 시간에 임시 컨테이너가 없고 진행 중인 배포가 없는지 확인한 뒤, Spring에 기존 Compose 설정과 `.oci-deploy/active.yml`을 적용하고 갈피 검증 성공 후 `enabled` 표시를 제거합니다.
+
+## Spring 정기 배포 중 갈피 작업
+
+Spring 이미지가 바뀔 때 배포 스크립트는 DB에 임시 트리거를 설치해 대기 중인 작업을 실행 상태로 바꾸는 동작만 막습니다. 새 요청 접수, 폴링, 진행 중인 추천 결과 저장은 계속됩니다. 스크립트가 `RUNNING` 작업이 모두 끝난 것을 확인한 뒤 Spring과 AI를 교체합니다. Spring에서 새 AI의 이용 상태까지 확인하면 트리거를 제거하고 기존 작업 ID로 처리를 이어갑니다. 최초 전환에서 아직 트리거를 인식하지 못하는 이전 Spring도 DB가 같은 경계를 보장합니다.
+
+진행 중인 작업이 90초 안에 끝나지 않거나 확인에 실패하면 기존 컨테이너를 유지하고 대기열을 다시 엽니다. 교체가 시작된 뒤 실패하면 이전 이미지의 준비 상태를 확인하고 대기열을 엽니다. 배포 프로세스 자체가 중단된 경우 다음 타이머 실행이 `.oci-deploy/in-progress`를 읽어 복구합니다. 단일 Spring을 재기동하는 동안에는 API 연결이 잠시 끊길 수 있으며, 이미 접수한 검색 화면은 같은 작업 ID로 조회를 재개합니다.

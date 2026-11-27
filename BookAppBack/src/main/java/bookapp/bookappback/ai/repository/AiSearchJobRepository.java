@@ -33,7 +33,22 @@ public interface AiSearchJobRepository extends JpaRepository<AiSearchJob, UUID> 
     void recordClientTiming(@Param("id") UUID id, @Param("owner") Long owner, @Param("now") LocalDateTime now,
                             @Param("timing") AiSearchClientTiming timing);
 
-    @Query(value = "SELECT * FROM ai_search_jobs WHERE status = 'QUEUED' AND expires_at > :now ORDER BY created_at, id LIMIT 1 FOR UPDATE SKIP LOCKED", nativeQuery = true)
+    String DEPLOYMENT_CLAIM_GUARD = """
+            SELECT 1 FROM information_schema.triggers
+            WHERE event_object_schema = current_schema AND event_object_table = 'ai_search_jobs'
+              AND trigger_name = 'readonme_hold_galpi_claim'
+            """;
+
+    @Query(value = "SELECT EXISTS (" + DEPLOYMENT_CLAIM_GUARD + ")", nativeQuery = true)
+    boolean deploymentHoldsClaims();
+
+    @Query(value = """
+            SELECT j.* FROM ai_search_jobs j
+            WHERE j.status = 'QUEUED' AND j.expires_at > :now AND NOT EXISTS (
+            """ + DEPLOYMENT_CLAIM_GUARD + """
+            )
+            ORDER BY j.created_at, j.id LIMIT 1 FOR UPDATE SKIP LOCKED
+            """, nativeQuery = true)
     Optional<AiSearchJob> lockNextQueued(@Param("now") LocalDateTime now);
 
     @Modifying
