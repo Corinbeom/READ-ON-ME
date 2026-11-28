@@ -140,7 +140,11 @@ export type RecommendationFeedback = { rating: RecommendationRating | null; comm
 export const aiJobApi = {
   availability: (signal: AbortSignal) => api.get<AiJobResponse<boolean>>(galpiAvailabilityPath, { signal }),
   submit: (query: string, key: string) =>
-    api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, { headers: { 'Idempotency-Key': key } }),
+    api.post<AiJobResponse<AiSearchJob>>('/api/ai/jobs', { query }, {
+      headers: { 'Idempotency-Key': key },
+      // A cold server may have accepted the search while the client is still waiting for its ID.
+      timeout: 30_000,
+    }),
   recordTiming: (id: string, timing: AiSearchTiming) =>
     api.put<void>(`/api/ai/jobs/${id}/client-timing`, timing),
   recent: () => api.get<AiJobResponse<AiSearchJob[]>>('/api/ai/jobs/recent'),

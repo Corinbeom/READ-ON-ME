@@ -122,3 +122,17 @@ test('only an explicit expired-session response notifies the session owner with 
   assert.deepEqual(rejected, ['previous-session']);
   assert.deepEqual(alerts, []);
 });
+
+test('job submission waits for the original acknowledgement without extending polling', async () => {
+  const { api, aiJobApi } = loadApi();
+  const calls = [];
+  api.defaults.adapter = async (config) => {
+    calls.push([config.method, config.timeout, config.headers.get('Idempotency-Key')]);
+    return { status: 200, statusText: 'OK', data: {}, headers: {}, config };
+  };
+
+  await aiJobApi.submit('책 추천', 'stable-key');
+  await aiJobApi.get('existing-job');
+
+  assert.deepEqual(calls, [['post', 30_000, 'stable-key'], ['get', 10_000, undefined]]);
+});
