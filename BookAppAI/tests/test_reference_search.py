@@ -1,3 +1,6 @@
+import subprocess
+import sys
+from textwrap import dedent
 from types import SimpleNamespace
 
 import pytest
@@ -5,6 +8,17 @@ import pytest
 from app.services.reference_search import (
     ReferenceAnchor, exclude_comparison_work, find_reference_anchor, has_theme_evidence, is_verified_similar_fallback,
 )
+
+
+def test_comparison_filter_does_not_load_numpy_on_first_search():
+    # A warmed interpreter would hide an import that only delays the first search.
+    subprocess.run([sys.executable, "-c", dedent("""
+        import sys
+        from app.services.reference_search import exclude_comparison_work
+        books = [{"title": "1984"}, {"title": "동물 농장"}]
+        assert exclude_comparison_work("1984처럼 어두운 책", books) == [books[1]]
+        assert "numpy" not in sys.modules
+    """)], check=True)
 
 
 class FakeResult:

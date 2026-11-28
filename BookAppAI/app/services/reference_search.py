@@ -3,15 +3,17 @@
 from collections import Counter
 from dataclasses import dataclass, field
 import re
+from typing import TYPE_CHECKING
 
-import numpy as np
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.book_corpus import BookCorpus
 from app.services.search_retrieval import _author_matches
 from app.services.text_utils import FICTION_LABELS, has_fiction_evidence, infer_book_form
 from app.services.embedding_backend import column as embedding_column
+
+if TYPE_CHECKING:
+    from app.models.book_corpus import BookCorpus
 
 
 @dataclass
@@ -65,7 +67,7 @@ def _work_title(title: str) -> str:
     return re.sub(r"\s*\([^)]*\)", "", title).strip().casefold()
 
 
-def _themes(books: list[BookCorpus]) -> list[str]:
+def _themes(books: list["BookCorpus"]) -> list[str]:
     counts: Counter[str] = Counter()
     for book in books:
         labels = [book.keyword, *(book.tags if isinstance(book.tags, list) else [])]
@@ -117,6 +119,10 @@ def _author_variants(name: str) -> list[str]:
 
 
 async def find_reference_anchor(db: AsyncSession, author: str) -> ReferenceAnchor | None:
+    # The reviewed search only uses the comparison-title filter in this module.
+    import numpy as np
+    from app.models.book_corpus import BookCorpus
+
     vector_attr = embedding_column()
     for variant in _author_variants(author):
         compact = variant.replace(" ", "").replace("%", "\\%").replace("_", "\\_")
