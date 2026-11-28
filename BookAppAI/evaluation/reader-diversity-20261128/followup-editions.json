@@ -1,0 +1,23 @@
+{
+  "9788925575162": {
+    "title": "웨이스트 랜드 : 쓰레기는 우리보다 오래 살아남는다",
+    "topic": "기후와 자원순환",
+    "source": "https://www.data.go.kr/data/15119625/fileData.do#CNL000350310",
+    "evidence": "https://oliverfranklinwallis.com/wasteland/",
+    "description_source": "READ_ON_ME_EDITORIAL"
+  },
+  "9788952771827": {
+    "title": "어둠의 왼손",
+    "topic": "상상과 과학소설",
+    "source": "https://www.data.go.kr/data/15119625/fileData.do#CNL000055028",
+    "evidence": "https://www.ursulakleguin.com/left-hand-darkness",
+    "description_source": "READ_ON_ME_EDITORIAL"
+  },
+  "9788952242044": {
+    "title": "바다의 생물, 플라스틱",
+    "topic": "바다와 지구",
+    "source": "https://www.data.go.kr/data/15119625/fileData.do#CNL000239051",
+    "evidence": "https://www.data.go.kr/data/15151124/fileData.do#row=242",
+    "description_source": "NLCY_LIBRARIAN_CSV"
+  }
+}

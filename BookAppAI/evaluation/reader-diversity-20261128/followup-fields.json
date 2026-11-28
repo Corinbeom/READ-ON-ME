@@ -1,0 +1,83 @@
+[
+  {
+    "isbn": "9788925575162",
+    "field": "title",
+    "value": "웨이스트 랜드 : 쓰레기는 우리보다 오래 살아남는다",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000350310",
+    "policy_version": "2026-11-24",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788925575162",
+    "field": "authors",
+    "value": "올리버 프랭클린-월리스 지음 ; 김문주 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000350310",
+    "policy_version": "2026-11-24",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788925575162",
+    "field": "contents",
+    "value": "분리수거함에 물건을 내려놓은 뒤에는 누가 그것을 맡을까. 기자 올리버 프랭클린월리스는 영국과 미국, 인도와 가나에서 쓰레기의 다음 행선지를 취재했다. 버려진 물건이 국경을 넘거나 매립지에 쌓이는 현장에서 그 일을 하는 사람들을 만난다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/followup-editions.json#9788925575162",
+    "policy_version": "2026-11-20",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788952771827",
+    "field": "title",
+    "value": "어둠의 왼손",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000055028",
+    "policy_version": "2026-11-24",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788952771827",
+    "field": "authors",
+    "value": "어슐러 K. 르 귄 지음 ; 최용준 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000055028",
+    "policy_version": "2026-11-24",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788952771827",
+    "field": "contents",
+    "value": "눈과 얼음에 덮인 행성으로 인간 외교관이 간다. 그곳의 주민들에게 성별은 평생 한 가지로 정해지지 않는다. 다른 세계와 관계를 맺으러 온 사람이 자신의 익숙한 사고방식부터 돌아보게 되는 어슐러 르 귄의 과학소설이다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/followup-editions.json#9788952771827",
+    "policy_version": "2026-11-20",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788952242044",
+    "field": "title",
+    "value": "바다의 생물, 플라스틱",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000239051",
+    "policy_version": "2026-11-24",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788952242044",
+    "field": "authors",
+    "value": "아나 페구, 이자베우 밍뇨스 마르칭스 [공]지음 ; 베르나르두 카르발류 그림 ; 이나현 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000239051",
+    "policy_version": "2026-11-24",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788952242044",
+    "field": "contents",
+    "value": "바다로 유입된 플라스틱 쓰레기는 분해되지 못한 채 장기간에 걸쳐 서서히 잘게 부수어진다. 수거가 거의 불가능하니 바다와 연안은 물론 갯벌 퇴적물에서도 발견되고 있다. 플랑크톤을 먹이로 하는 조개, 갯지렁이 등 무척추동물과 이를 먹이로 하는 척추동물인 어류에서도 미세플라스틱은 발견된다. 먹이사슬에 있는 모든 동물과 인간이 바다에서 온 플라스틱을 먹게 되는 것이다.\n\n출처: 국립어린이청소년도서관 사서추천도서, 2020-10 추천글 발췌. 추천 대상: 청소년. https://www.data.go.kr/data/15151124/fileData.do",
+    "provider": "NLCY_LIBRARIAN_CSV",
+    "source_ref": "https://www.data.go.kr/data/15151124/fileData.do#row=242",
+    "policy_version": "2026-11-23",
+    "checked_on": "2026-11-28"
+  }
+]

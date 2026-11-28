@@ -1,0 +1,83 @@
+[
+  {
+    "isbn": "9788937407413",
+    "field": "title",
+    "value": "스무 편의 사랑의 시와 한 편의 절망의 노래",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000132812",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937407413",
+    "field": "authors",
+    "value": "파블로 네루다 지음 ; 정현종 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000132812",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937407413",
+    "field": "contents",
+    "value": "파블로 네루다가 사랑을 노래한 스무 편에 마지막 한 편을 더한 시집이다. 사랑하는 사람을 향한 열정과 그 마음이 이별 뒤에 남기는 슬픔을 함께 읽을 수 있다. 정현종이 스물한 편을 우리말로 옮겼다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/poetry-editions.json#9788937407413",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937475306",
+    "field": "title",
+    "value": "셰익스피어 소네트",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000113743",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937475306",
+    "field": "authors",
+    "value": "윌리엄 셰익스피어 지음 ; 피천득 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000113743",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937475306",
+    "field": "contents",
+    "value": "윌리엄 셰익스피어의 연작 시집이다. 시를 말하는 사람과 그가 사랑하는 젊은 친구, 검은 머리의 여인 사이에 애정과 갈등이 오간다. 피천득이 한국어로 옮긴 소네트가 실려 있다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/poetry-editions.json#9788937475306",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788960907195",
+    "field": "title",
+    "value": "달이 떴다고 전화를 주시다니요 : 김용택의 사랑시 모음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000296236",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788960907195",
+    "field": "authors",
+    "value": "김용택 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000296236",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788960907195",
+    "field": "contents",
+    "value": "김용택이 쓴 사랑시를 한데 모은 한국 시집이다. 한 사람을 좋아하는 마음을 시로 전하고 싶을 때, 한 시인이 같은 주제를 여러 작품에서 어떻게 표현하는지 살펴볼 수 있다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/poetry-editions.json#9788960907195",
+    "checked_on": "2026-11-28"
+  }
+]

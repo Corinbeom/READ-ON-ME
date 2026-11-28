@@ -1,0 +1,191 @@
+[
+  {
+    "isbn": "9788937439872",
+    "field": "title",
+    "value": "(안정효의)자서전을 씁시다 : 글쓰기로 우리 인생을 되돌아보는 법",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000137073",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937439872",
+    "field": "authors",
+    "value": "안정효 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000137073",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788937439872",
+    "field": "contents",
+    "value": "자기 생애를 책으로 쓰려면 어떤 기억부터 꺼낼까. 소설가 안정효가 자서전을 쓰는 사람의 입장에서 기억을 고르고, 흩어진 일화를 배열하고, 자기 문장을 손보는 일을 다룬다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/reader-editions.json#9788937439872",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788949132143",
+    "field": "title",
+    "value": "(자연 다큐 백과)공룡과 화석",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000287099",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788949132143",
+    "field": "authors",
+    "value": "블레이크 호에나,폴 세레노 [공]지음 ; 조은영 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000287099",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788949132143",
+    "field": "contents",
+    "value": "공룡의 생김새를 어떻게 알게 됐을까. 어린이를 위한 이 사진 백과는 뼈가 묻혀 화석이 되는 과정과 연구자들이 그것을 땅에서 발굴하는 과정을 이어서 보여 준다. 공룡의 성장과 생태도 그림과 사진으로 살펴본다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/reader-editions.json#9788949132143",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788968571374",
+    "field": "title",
+    "value": "사진 구도가 달라지는 아이디어 100 : 스마트폰 & 카메라 좋은 구도 만드는 포토북",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000218555",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788968571374",
+    "field": "authors",
+    "value": "문철진 지음",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000218555",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788968571374",
+    "field": "contents",
+    "value": "문철진이 카메라와 스마트폰으로 사진 구도를 연습할 방법을 모았다. 같은 장면에서도 화면 테두리를 어디에 두느냐에 따라 사진이 달라진다는 데서 출발한다. 구도를 바꿔 보며 촬영할 때 펼쳐 볼 수 있는 사진책이다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/reader-editions.json#9788968571374",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788984319851",
+    "field": "title",
+    "value": "플레이 볼 : 이현 장편동화",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000006691",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788984319851",
+    "field": "authors",
+    "value": "이현 지음 ; 최민호 그림",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000006691",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9788984319851",
+    "field": "contents",
+    "value": "야구선수가 꿈인 주인공 동구는 구천초 야구부 주장이며, 4번 타자에 주전 투수입니다. 구천초는 만년 꼴찌팀입니다. 어느날 새로운 감독님이 부임한뒤 야구부는 달라집니다.\n\n출처: 국립어린이청소년도서관 사서추천도서, 2016-11 추천글 발췌. 추천 대상: 초등고학년. https://www.data.go.kr/data/15151124/fileData.do",
+    "provider": "NLCY_LIBRARIAN_CSV",
+    "policy_version": "2026-11-23",
+    "source_ref": "https://www.data.go.kr/data/15151124/fileData.do#row=565",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791155685709",
+    "field": "title",
+    "value": "에이스 김준수",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000338046",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791155685709",
+    "field": "authors",
+    "value": "박현정 글 ; 리페 그림",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000338046",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791155685709",
+    "field": "contents",
+    "value": "한편 야구부의 에이스 일준수는 주변의 지나친 관심과 압박감에 야구가 더 이상 즐겁지 않고 진로를 위한 중요한 경기 또한 잘 풀리지 않는다. 아이들의 고민과 깊어진 갈등은 풀릴 수 있을까? 야구에 진심인 아이들이 서로를 인정하고 건강한 경쟁으로 성장해가는 모습을 그린다.\n\n출처: 국립어린이청소년도서관 사서추천도서, 2024-06 추천글 발췌. 추천 대상: 초등고학년. https://www.data.go.kr/data/15151124/fileData.do",
+    "provider": "NLCY_LIBRARIAN_CSV",
+    "policy_version": "2026-11-23",
+    "source_ref": "https://www.data.go.kr/data/15151124/fileData.do#row=63",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791165215644",
+    "field": "title",
+    "value": "어쩌다 팀장 : 갑자기 팀장이 된 당신과 당신의 팀원을 위한 '진짜' 피드백 기술!",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000266884",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791165215644",
+    "field": "authors",
+    "value": "이시다 준 지음 ; 나지윤 옮김",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000266884",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791165215644",
+    "field": "contents",
+    "value": "회의를 더 열어도 달라지는 게 없다고 느낀 팀장을 위한 책이다. 이시다 준은 팀원 한 사람과 마주 앉아 관찰한 행동을 이야기하는 법을 소개한다. 개별 면담을 반복하면서 주고받는 피드백이 어떻게 달라지는지도 살핀다.",
+    "provider": "READ_ON_ME_EDITORIAL",
+    "policy_version": "2026-11-20",
+    "source_ref": "repo:BookAppAI/evaluation/reader-diversity-20261128/reader-editions.json#9791165215644",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791197047510",
+    "field": "title",
+    "value": "써드",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000235931",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791197047510",
+    "field": "authors",
+    "value": "최영희 지음 ; 도화 그림",
+    "provider": "CHUNGNAM_HOLDINGS_BIB",
+    "policy_version": "2026-11-24",
+    "source_ref": "https://www.data.go.kr/data/15119625/fileData.do#CNL000235931",
+    "checked_on": "2026-11-28"
+  },
+  {
+    "isbn": "9791197047510",
+    "field": "contents",
+    "value": "기계 인간이 도시를 빼앗고 인간은 로봇이 허락한 도시 바깥에서 마을을 이루고 살아가던 어느 날, 숲에서 마을 주민 압둘라가 죽은 채 발견된다.\n\n출처: 국립어린이청소년도서관 사서추천도서, 2020-12 추천글 발췌. 추천 대상: 초등고학년. https://www.data.go.kr/data/15151124/fileData.do",
+    "provider": "NLCY_LIBRARIAN_CSV",
+    "policy_version": "2026-11-23",
+    "source_ref": "https://www.data.go.kr/data/15151124/fileData.do#row=235",
+    "checked_on": "2026-11-28"
+  }
+]
