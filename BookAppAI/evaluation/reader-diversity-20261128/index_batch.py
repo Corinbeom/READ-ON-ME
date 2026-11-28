@@ -295,7 +295,9 @@ async def embed(client, ids, expected):
         return len(pending)
 
 
-async def run(manifest, decisions, chunk, tags_only, limit):
+async def run(manifest, decisions, chunk, tags_only, limit, *, embeddings_only=False):
+    if tags_only and embeddings_only:
+        raise ValueError("Choose one indexing phase")
     if not 1 <= chunk <= 25 or (limit is not None and limit <= 0):
         raise ValueError("Invalid batch size or document allowance")
     expected = {}
@@ -348,6 +350,9 @@ async def run(manifest, decisions, chunk, tags_only, limit):
                 for i in ids
                 if i not in existing and done.get(i, [None])[0] != versions[i][1]
             ]
+            if embeddings_only:
+                tagged = await cached(db, versions, "tags", GEMINI_DEFAULT_MODEL)
+                ids = [isbn for isbn in ids if isbn in tagged]
         if limit is not None:
             ids = ids[:limit]
         print("remaining in this run", len(ids), flush=True)
@@ -366,11 +371,13 @@ async def run(manifest, decisions, chunk, tags_only, limit):
                 )
                 previous = time.monotonic()
                 group = ids[start : start + chunk]
-                admitted, held = await admit(client, group, versions, done)
-                done.update(held)
-                tmp = decisions.with_suffix(".tmp")
-                tmp.write_text(json.dumps(done, ensure_ascii=False))
-                tmp.replace(decisions)
+                admitted = group
+                if not embeddings_only:
+                    admitted, held = await admit(client, group, versions, done)
+                    done.update(held)
+                    tmp = decisions.with_suffix(".tmp")
+                    tmp.write_text(json.dumps(done, ensure_ascii=False))
+                    tmp.replace(decisions)
                 indexed = 0 if tags_only else await embed(client, admitted, versions)
                 print(
                     start,
@@ -391,7 +398,13 @@ if __name__ == "__main__":
     parser.add_argument("manifest", type=Path)
     parser.add_argument("decisions", type=Path)
     parser.add_argument("--chunk", type=int, default=16)
-    parser.add_argument(
+    phases = parser.add_mutually_exclusive_group()
+    phases.add_argument(
+        "--embeddings-only",
+        action="store_true",
+        help="Only embed versions with an existing, verified classification",
+    )
+    phases.add_argument(
         "--tags-only",
         action="store_true",
         help="Verify classifications without consuming document embedding quota",
@@ -403,5 +416,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     asyncio.run(
-        run(args.manifest, args.decisions, args.chunk, args.tags_only, args.limit)
+        run(
+            args.manifest,
+            args.decisions,
+            args.chunk,
+            args.tags_only,
+            args.limit,
+            embeddings_only=args.embeddings_only,
+        )
     )
