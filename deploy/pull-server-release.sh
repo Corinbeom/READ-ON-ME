@@ -20,9 +20,22 @@ flock -n 9 || exit 0
 write_images() {
     {
         printf 'services:\n  backend:\n    image: "%s"\n' "$2"
-        if [[ ${4:-} == direct ]]; then printf '    environment: { AI_BASE_URL: "http://ai:8000" }\n'; fi
+        if [[ ${4:-} == direct || $# == 5 ]]; then printf '    environment:\n'; fi
+        if [[ ${4:-} == direct ]]; then printf '      AI_BASE_URL: "http://ai:8000"\n'; fi
+        if [[ $# == 5 ]]; then printf '      GALPI_REVIEWED_RELEASE: "%s"\n' "$5"; fi
         printf '  ai:\n    image: "%s"\n' "$3"
+        if [[ $# == 5 ]]; then printf '    environment:\n      GALPI_REVIEWED_RELEASE: "%s"\n' "$5"; fi
     } > "$1"
+}
+
+configured_corpus() {
+    "$@" config --format json backend ai | python3 -c '
+import json, re, sys
+services = json.load(sys.stdin)["services"]
+spring, ai = (services[name]["environment"]["GALPI_REVIEWED_RELEASE"] for name in ("backend", "ai"))
+if spring != ai or not (spring == "" or re.fullmatch("[0-9a-f]{64}", spring)):
+    sys.exit("Spring and AI need the same valid corpus release")
+print(spring)'
 }
 
 container_image() {
@@ -99,7 +112,7 @@ spring_ai_ready() {
 }
 
 apply_images() {
-    local override=$1 target_spring=$2 target_ai=$3 running_spring
+    local override=$1 target_spring=$2 target_ai=$3 running_spring backend wanted current restart=false
     local compose=( "${base[@]}" -f "$override" )
     running_spring=$(container_image backend) || return 1
     if [[ -f "$state/ai-router/enabled" && $(cat "$state/in-progress") == handoff ]]; then
@@ -108,6 +121,14 @@ apply_images() {
         return $?
     fi
     if [[ $running_spring != "$target_spring" ]]; then
+        restart=true
+    elif [[ $(cat "$state/in-progress") == drained ]] && grep -q 'GALPI_REVIEWED_RELEASE:' "$override"; then
+        wanted=$(configured_corpus "${compose[@]}") || return 1
+        backend=$("${base[@]}" ps -q backend) || return 1
+        current=$(docker exec "$backend" printenv GALPI_REVIEWED_RELEASE) || return 1
+        if [[ $current != "$wanted" ]]; then restart=true; fi
+    fi
+    if [[ $restart == true ]]; then
         if [[ -n $running_spring ]]; then
             "${compose[@]}" stop -t 75 backend || return 1
         fi
@@ -195,8 +216,11 @@ fi
 old_spring=$(container_image backend)
 old_ai=$(container_image ai)
 [[ -n $old_spring && -n $old_ai ]] || { echo 'Could not identify the running image pair' >&2; exit 1; }
-if [[ -f "$state/ai-router/enabled" && $old_spring == "$spring" ]]; then
-    backend=$("${base[@]}" ps -q backend)
+backend=$("${base[@]}" ps -q backend)
+old_release=$(docker exec "$backend" printenv GALPI_REVIEWED_RELEASE)
+[[ -z $old_release || $old_release =~ ^[0-9a-f]{64}$ ]] || { echo 'Invalid running corpus release' >&2; exit 1; }
+new_release=$(configured_corpus "${base[@]}")
+if [[ -f "$state/ai-router/enabled" && $old_spring == "$spring" && $old_release == "$new_release" ]]; then
     if [[ $(docker exec "$backend" printenv AI_BASE_URL) != http://ai-router:8000 ]]; then
         echo 'Waiting for the initial Spring switch to the AI router. Existing release is still serving.' >&2
         exit 1
@@ -205,19 +229,24 @@ fi
 if [[ $old_spring != "$spring" ]]; then docker pull --quiet "$spring" >/dev/null; fi
 if [[ $old_ai != "$ai" ]]; then docker pull --quiet "$ai" >/dev/null; fi
 previous_route=
-if [[ -f "$state/ai-router/enabled" && $old_spring != "$spring" ]]; then
-    backend=$("${base[@]}" ps -q backend)
+if [[ -f "$state/ai-router/enabled" && ( $old_spring != "$spring" || $old_release != "$new_release" ) ]]; then
     current_route=$(docker exec "$backend" printenv AI_BASE_URL)
     if [[ $current_route == http://ai:8000 ]]; then
         previous_route=direct
     fi
 fi
-write_images "$state/rollback.yml" "$old_spring" "$old_ai" "$previous_route"
-write_images "$state/candidate.yml" "$spring" "$ai"
+if [[ $old_release != "$new_release" ]]; then
+    # Both processes read the release at startup. Recovery must also restore the old value.
+    write_images "$state/rollback.yml" "$old_spring" "$old_ai" "$previous_route" "$old_release"
+    write_images "$state/candidate.yml" "$spring" "$ai" "" "$new_release"
+else
+    write_images "$state/rollback.yml" "$old_spring" "$old_ai" "$previous_route"
+    write_images "$state/candidate.yml" "$spring" "$ai"
+fi
 
 "${base[@]}" exec -T postgres pg_dump -U readonme -d readonme -Fc > "$state/db-backup.tmp"
 mv "$state/db-backup.tmp" "$state/db-backup.dump"
-if [[ $old_spring != "$spring" ]]; then
+if [[ $old_spring != "$spring" || $old_release != "$new_release" ]]; then
     phase=draining
 elif [[ -f "$state/ai-router/enabled" ]]; then
     phase=handoff
