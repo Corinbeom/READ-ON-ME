@@ -30,6 +30,14 @@ with Path("calls.jsonl").open("a") as log:
 def configured_image(path, service):
     refs = re.findall(r'image: "([^"]+)"', Path(path).read_text())
     return refs[0 if service == "backend" else 1]
+def desired_corpus(service):
+    files = [Path(args[i + 1]) for i, arg in enumerate(args) if arg == "-f"]
+    for path in reversed(files):
+        if path.exists():
+            pins = re.findall(r'GALPI_REVIEWED_RELEASE: "([^"]*)"', path.read_text())
+            if pins:
+                return pins[0 if service == "backend" else 1]
+    return os.environ.get("DESIRED_CORPUS", "d" * 64)
 if args[:2] == ["image", "inspect"]:
     print(os.environ["LABELS"])
 elif args[0] == "inspect":
@@ -43,7 +51,11 @@ elif args[0] == "ps":
     print("standby" if "standby" in images else "")
 elif args[0] == "exec":
     if args[2] == "printenv":
-        print(os.environ.get("SPRING_AI_URL", "http://ai-router:8000") if args[-1] == "AI_BASE_URL" else "d"*64)
+        record = Path(f"release-{args[1]}")
+        if args[-1] == "AI_BASE_URL":
+            print(os.environ.get("SPRING_AI_URL", "http://ai-router:8000"))
+        else:
+            print(record.read_text() if record.exists() else "d" * 64)
     elif args[2] == "curl":
         if "-D" in args:
             standby = Path(".oci-deploy/ai-router/standby")
@@ -65,11 +77,16 @@ elif args[0] == "compose":
         images["standby"] = configured_image(args[args.index("run")-1], "ai")
         state.write_text(json.dumps(images))
         print("standby")
+    elif "config" in args and "--format" in args:
+        services = {name: {"environment": {"GALPI_REVIEWED_RELEASE": desired_corpus(name)}}
+                    for name in ("ai", "backend")}
+        print(json.dumps({"services": services}))
     elif "config" in args and "exec" not in args:
         print(configured_image(args[2], args[-1]))
     elif "ps" in args:
         print(args[-1])
     elif "up" in args:
+        Path(f"release-{args[-1]}").write_text(desired_corpus(args[-1]))
         images[args[-1]] = configured_image(args[args.index("up")-1], args[-1])
         state.write_text(json.dumps(images))
     elif "exec" in args:
@@ -267,6 +284,25 @@ class PullServerReleaseTest(unittest.TestCase):
         self.assertEqual(self.mutations(), [("up", "ai")])
         self.assertEqual(self.containers(), {"backend": SPRING, "ai": AI})
         self.assertEqual(json.loads((self.root / "deploy-status/server-release.json").read_text())["commit"], REVISION)
+
+    def test_corpus_switch_drains_and_updates_both_services_with_unchanged_spring_image(self):
+        self.enable_handoff()
+        result = self.deploy(DESIRED_CORPUS="e" * 64)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.mutations(), [("stop", "backend"), ("stop", "ai"), ("up", "backend"), ("up", "ai")])
+        for service in ("backend", "ai"):
+            self.assertEqual((self.root / f"release-{service}").read_text(), "e" * 64)
+        self.assertEqual((self.root / "drain-events").read_text().splitlines(), ["pause", "resume"])
+
+    def test_corpus_switch_rollback_restores_old_release_even_with_new_compose_environment(self):
+        self.enable_handoff()
+        result = self.deploy(DESIRED_CORPUS="e" * 64, FAIL_AI="1")
+        self.assertNotEqual(result.returncode, 0)
+        for service in ("backend", "ai"):
+            self.assertEqual((self.root / f"release-{service}").read_text(), "d" * 64)
+        self.assertEqual(self.containers(), {"backend": SPRING, "ai": OLD["ai"]})
+        self.assertEqual((self.root / "drain-events").read_text().splitlines(), ["pause", "resume"])
+        self.assertEqual(json.loads((self.root / "deploy-status/server-release.json").read_text())["commit"], "f" * 40)
 
     def test_ai_only_failure_restores_only_ai_and_preserves_release(self):
         old = self.start_with_matching_spring()

@@ -188,11 +188,14 @@ async def rank_reviewed(db, query, isbns, outcome=None, requested_form="ANY", ch
 
 async def search_reviewed(db, query, outcome=None, *, index=None, timings=None):
     """Pilot retrieval in the reviewed embedding space, limited to current, permitted inputs."""
+    import_start = perf_counter()
     from app.services.reviewed_release import load_index
     from app.services import embedding_backend
     from app.services.intent_classifier import IntentAnalyzer
     from app.services.reference_search import exclude_comparison_work
 
+    if timings is not None:
+        timings["candidate_import_ms"] = (perf_counter() - import_start) * 1000
     if outcome is not None:
         outcome.update(status="NO_MATCH", reason_code="NO_VERIFIED_CANDIDATES")
     if index is None:
@@ -235,7 +238,10 @@ async def search_reviewed(db, query, outcome=None, *, index=None, timings=None):
         finally:
             if timings is not None:
                 timings["embed_ms"] = (perf_counter() - embed_start) * 1000
+    score_start = perf_counter()
     vectors.sort(key=lambda item: sum(a*b for a,b in zip(qv, item[2])), reverse=True)
+    if timings is not None:
+        timings["vector_score_ms"] = (perf_counter() - score_start) * 1000
     candidates = [{"isbn": isbn, **fields} for isbn, fields, _ in vectors]
     selected = exclude_comparison_work(query, candidates)[:10]
     return await rank_reviewed(db, query, [book["isbn"] for book in selected], outcome,
