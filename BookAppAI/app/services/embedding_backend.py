@@ -7,6 +7,7 @@ import os
 import httpx
 
 from app import corpus_policy
+from app.services.model_http import model_http_client
 
 
 GEMINI_EMBEDDING_MODEL = "gemini-embedding-001"
@@ -62,7 +63,7 @@ async def _embed(text: str, task_type: str) -> list[float]:
     timeout = float(os.getenv("GEMINI_EMBEDDING_TIMEOUT_SECONDS", "5"))
     if timeout <= 0:
         raise ValueError("GEMINI_EMBEDDING_TIMEOUT_SECONDS must be positive")
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with await model_http_client(timeout) as client:
         for attempt in range(2):
             try:
                 response = await client.post(

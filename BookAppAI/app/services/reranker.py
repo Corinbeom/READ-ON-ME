@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
+from app.services.model_http import model_http_client
+
 from app import corpus_policy
 from app.services import llm_cooldown
 from app.services.text_utils import (
@@ -247,7 +249,7 @@ async def _request_groq(
         },
     }
     try:
-        async with httpx.AsyncClient(timeout=GROQ_RERANK_TIMEOUT) as client:
+        async with await model_http_client(GROQ_RERANK_TIMEOUT) as client:
             response = await client.post(
                 GROQ_API_BASE, headers={"Authorization": f"Bearer {api_key}"}, json=payload,
             )
@@ -416,7 +418,7 @@ async def _rank_candidates(
         return await use_groq_or_fallback("COOLDOWN")
     url = f"{GEMINI_API_BASE}/models/{RERANK_MODEL}:generateContent"
     try:
-        async with httpx.AsyncClient(timeout=RERANK_TIMEOUT) as client:
+        async with await model_http_client(RERANK_TIMEOUT) as client:
             resp = await client.post(url, params={"key": GEMINI_API_KEY}, json=payload)
             resp.raise_for_status()
             llm_cooldown.succeeded()

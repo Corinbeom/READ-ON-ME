@@ -17,6 +17,7 @@ from app.corpus_policy import CorpusPermissionError, hold_pending_jobs
 
 from app.routers import data_builder, recommendation
 from app.services.shelf_keywords import run_worker as run_shelf_keyword_worker
+from app.services.model_http import model_tls_context
 from app.security import require_internal_token
 import app.database as _db
 from app.config import validate_prod_config
@@ -32,6 +33,12 @@ async def lifespan(app: FastAPI):
     temporary = getattr(app.state, "standby", False)
     if not temporary:
         await asyncio.to_thread(upgrade_database)
+    if os.getenv("GALPI_REVIEWED_RELEASE"):
+        try:
+            await asyncio.to_thread(model_tls_context)
+        except OSError:
+            # A provider configuration error must not take the local API down at startup.
+            logging.getLogger("uvicorn.error").warning("Could not prepare model provider TLS trust store")
     _db.init_db()           # 검증 통과 후 엔진 생성
     try:
         if temporary:
