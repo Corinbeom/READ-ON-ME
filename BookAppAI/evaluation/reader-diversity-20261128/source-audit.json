@@ -1,0 +1,50 @@
+{
+  "15151124": {
+    "ref": "https://www.data.go.kr/data/15151124/fileData.do",
+    "rows": 2464,
+    "sha256": "f4fb6ad3646cd4c6e309f63dceaa8cebfc06b5016c216674f892e56bda3681e3",
+    "isbn_column": "국제표준도서번호(ISBN)",
+    "rounded_looking": 0,
+    "blank_isbn": 2430
+  },
+  "15050063": {
+    "ref": "https://www.data.go.kr/data/15050063/fileData.do",
+    "rows": 790,
+    "sha256": "a07bb675ad1e7329eab6068c0177046be1f58d89ec2b2a086fcbd5c7358b6062",
+    "isbn_column": "국제표준도서번호(ISBN)",
+    "rounded_looking": 790,
+    "blank_isbn": 0
+  },
+  "15132725": {
+    "ref": "https://www.data.go.kr/data/15132725/fileData.do",
+    "rows": 2513,
+    "sha256": "e85b7cace599925027290f4b0b8ce34bdab2e230341028f5e6f2d37de0ad1d72",
+    "isbn_column": "ISBN 값",
+    "rounded_looking": 357,
+    "blank_isbn": 2153
+  },
+  "15145329": {
+    "ref": "https://www.data.go.kr/data/15145329/fileData.do",
+    "rows": 3799,
+    "sha256": "b354c8d4a694f7b82fa86c8df808e34e157883f20125674536f570d77e0fcc8a",
+    "isbn_column": null,
+    "rounded_looking": 0,
+    "blank_isbn": null
+  },
+  "15152879": {
+    "ref": "https://www.data.go.kr/data/15152879/fileData.do",
+    "rows": 997,
+    "sha256": "097a1c11e61ed4b724f79426ad6d05338a7e72d9007e4ae121071a42c6e5a93c",
+    "isbn_column": null,
+    "rounded_looking": 0,
+    "blank_isbn": null
+  },
+  "HARVARD_LIBRARY": {
+    "ref": "https://library.harvard.edu/services-tools/harvard-library-datasets",
+    "topics": 76,
+    "unique_eligible_bib": 3975,
+    "rich_records": 400,
+    "screened_for_native_titles": 179,
+    "native_title_author_subtitle_matches": 39
+  }
+}
