@@ -166,7 +166,7 @@ async def locked_fields(db, ids, expected):
     )
     inputs = await read_input_batch(db, ids, EMBEDDING_USES)
     if set(inputs) != set(ids) or any(
-        values != expected[i] for i, (values, _) in inputs.items()
+        observation != expected[i] for i, observation in inputs.items()
     ):
         raise ValueError("The reviewed manifest or its field permissions have changed")
     return inputs
@@ -240,7 +240,7 @@ async def embed(client, ids, expected):
             raise ValueError("A current classification is required")
         # Only the date-specific, evidence-checked manifests may supply new document vectors.
         for i, tags in approved.items():
-            fields = expected[i]
+            fields = inputs[i][0]
             if (
                 validate_classification(
                     dict(fields, contents=fields["contents"].split("\n\n출처:")[0]),
@@ -283,11 +283,18 @@ async def run(manifest, decisions, chunk, tags_only, limit):
     if not 1 <= chunk <= 25 or (limit is not None and limit <= 0):
         raise ValueError("Invalid batch size or document allowance")
     expected = {}
+    source_facts = {}
     for row in json.loads(manifest.read_text()):
         fields = expected.setdefault(row["isbn"], {})
         if row["field"] in fields:
             raise ValueError("Repeated field in manifest")
         fields[row["field"]] = row["value"]
+        source_facts[(row["isbn"], row["field"])] = (
+            row["provider"],
+            row["policy_version"],
+            row["source_ref"],
+            row["checked_on"],
+        )
     ids = list(expected)
     done = json.loads(decisions.read_text()) if decisions.exists() else {}
     database.init_db()
@@ -299,6 +306,20 @@ async def run(manifest, decisions, chunk, tags_only, limit):
             ):
                 raise ValueError(
                     "Manifest is incomplete or differs from reviewed fields"
+                )
+            provenance = await db.execute(
+                text("""SELECT isbn,field,provider,policy_version,source_ref,checked_on
+                FROM corpus_field_versions WHERE current AND isbn=ANY(:ids)
+                AND field IN ('title','authors','contents') FOR SHARE"""),
+                {"ids": ids},
+            )
+            observed = {
+                (isbn, field): (provider, policy, ref, day.isoformat())
+                for isbn, field, provider, policy, ref, day in provenance
+            }
+            if observed != source_facts:
+                raise ValueError(
+                    "Field source, policy or observation date differs from manifest"
                 )
             existing = await cached(
                 db,
@@ -329,12 +350,12 @@ async def run(manifest, decisions, chunk, tags_only, limit):
                 )
                 previous = time.monotonic()
                 group = ids[start : start + chunk]
-                admitted, held = await admit(client, group, expected, done)
+                admitted, held = await admit(client, group, versions, done)
                 done.update(held)
                 tmp = decisions.with_suffix(".tmp")
                 tmp.write_text(json.dumps(done, ensure_ascii=False))
                 tmp.replace(decisions)
-                indexed = 0 if tags_only else await embed(client, admitted, expected)
+                indexed = 0 if tags_only else await embed(client, admitted, versions)
                 print(
                     start,
                     len(admitted),

@@ -45,6 +45,12 @@
     "unique_eligible_bib": 3975,
     "rich_records": 400,
     "screened_for_native_titles": 179,
-    "native_title_author_subtitle_matches": 39
+    "native_title_author_subtitle_matches": 39,
+    "chungnam_full_overlap": {
+      "harvard": 3975,
+      "korean_holdings_hits": 1495,
+      "matching_base_title_and_authors": 1270,
+      "also_matching_descriptive_subtitle": 258
+    }
   }
 }

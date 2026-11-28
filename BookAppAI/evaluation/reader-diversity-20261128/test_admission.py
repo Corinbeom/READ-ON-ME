@@ -110,7 +110,14 @@ def test_rejects_truncated_and_invalid_isbns():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("readable", [{}, {"book": ({"title": "바뀐 책"}, "4,5,6")}])
+@pytest.mark.parametrize(
+    "readable",
+    [
+        {},
+        {"book": ({"title": "바뀐 책"}, "1,2,3")},
+        {"book": ({"title": "검토한 책"}, "4,5,6")},
+    ],
+)
 async def test_changed_or_ineligible_field_cannot_enter_a_model_request(
     monkeypatch, readable
 ):
@@ -124,4 +131,6 @@ async def test_changed_or_ineligible_field_cannot_enter_a_model_request(
 
     monkeypatch.setattr(batch, "read_input_batch", allowed)
     with pytest.raises(ValueError, match="permissions have changed"):
-        await batch.locked_fields(Session(), ["book"], {"book": {"title": "검토한 책"}})
+        await batch.locked_fields(
+            Session(), ["book"], {"book": ({"title": "검토한 책"}, "1,2,3")}
+        )
