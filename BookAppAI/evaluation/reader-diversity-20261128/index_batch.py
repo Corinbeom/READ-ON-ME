@@ -28,7 +28,8 @@ from app.services.gemini_tagger import (
 from app.services.reviewed_corpus import read_input_batch
 from app.services.text_utils import build_book_text
 
-BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
+CLASSIFICATION_BASE = "https://generativelanguage.googleapis.com/v1/models/"
+EMBEDDING_BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 ITEM = {
     "type": "OBJECT",
     "properties": {"ref": {"type": "STRING"}, **CLASSIFICATION_SCHEMA["properties"]},
@@ -51,14 +52,27 @@ INSTRUCTIONS += (
 
 
 async def request(client, method, body):
-    for attempt in range(3):
-        response = await client.post(BASE + method, json=body)
+    base = (
+        CLASSIFICATION_BASE if method.endswith(":generateContent") else EMBEDDING_BASE
+    )
+    delays = (10, 30, 60, 120)
+    for attempt in range(len(delays) + 1):
+        try:
+            response = await client.post(base + method, json=body)
+        except (httpx.TimeoutException, httpx.NetworkError):
+            if attempt == len(delays):
+                raise RuntimeError(f"Network unavailable for {method}") from None
+            await asyncio.sleep(delays[attempt])
+            continue
         if response.is_success:
             return response.json()
-        detail = response.json().get("error", {})
+        try:
+            detail = response.json().get("error", {})
+        except (ValueError, AttributeError):
+            detail = {}
         # Print only error codes, quota names and retry intervals, never the request.
         quotas = [
-            v.get("quotaId", "")
+            v.get("quotaId") or v.get("quotaMetric", "")
             for d in detail.get("details", [])
             for v in d.get("violations", [])
         ]
@@ -72,13 +86,15 @@ async def request(client, method, body):
         )
         if response.status_code == 429 and any("day" in q.lower() for q in quotas):
             raise RuntimeError("Daily quota exhausted for " + method)
-        if response.status_code not in (429, 500, 502, 503, 504) or attempt == 2:
+        if response.status_code not in (429, 500, 502, 503, 504) or attempt == len(
+            delays
+        ):
             raise RuntimeError(
                 f"{method} returned HTTP {response.status_code}: {detail.get('status')}"
             )
         await asyncio.sleep(
             max(
-                61 if response.status_code == 429 else 5,
+                61 if response.status_code == 429 else delays[attempt],
                 int(response.headers.get("retry-after", 0)),
             )
         )

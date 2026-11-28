@@ -19,7 +19,7 @@ export PYTHONPATH=.
 batch=evaluation/reader-diversity-20261128
 python "$batch/prepare_children.py" librarian.csv live.json children.json
 python "$batch/holdings.py" 판교도서관.xlsx 중앙도서관.xlsx excluded-isbns.json holdings.json --limit 2000
-python "$batch/manifest.py" holdings.json excluded-isbns.json fields.json
+python "$batch/manifest.py" holdings.json excluded-isbns.json fields.json --selection "$batch/holdings-editions.tsv"
 psql "$LOCAL_PSQL_URL" -v ON_ERROR_STOP=1 -f "$batch/policies.sql"
 python -m tools.reviewed_corpus import fields.json --new-only
 python "$batch/index_batch.py" fields.json held.json --tags-only
@@ -35,3 +35,5 @@ python "$batch/index_batch.py" fields.json held.json --limit 200
 분야별 질문 45개에는 실제 독자의 상황과 적합 판정 기준이 들어 있다. 기존 현장 질문 10개를 같은 문장으로 다시 실행해 검색 공백의 변화를 확인한다. 도서 수를 늘리는 동안 실시한 중간 실행은 묶음별 점검에만 사용한다. [분야별 질문](questions.json) · [기존 독자 사례](reader-scenarios.json)
 
 로컬 664권일 때 기존 독자 질문에서 첫 팀장 피드백, 공룡 발굴, 사진 구도, 야구팀 성장 이야기 네 사례에 적합한 책이 나왔다. 자서전 쓰기 책을 색인한 뒤에도 가족 기록 질문이 비었다. [664권 중간 실행 결과](reader-results-664.md)
+
+판교 294,844행과 중앙 536,738행은 소장 등록 건수다. 두 목록에서 선별한 2,000개 ISBN 중 선별 간 중복과 사전 검사를 반영해 1,995개 ISBN의 필드를 준비했다. [선별한 서명과 소장 등록번호](holdings-editions.tsv)

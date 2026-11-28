@@ -134,3 +134,54 @@ async def test_changed_or_ineligible_field_cannot_enter_a_model_request(
         await batch.locked_fields(
             Session(), ["book"], {"book": ({"title": "검토한 책"}, "1,2,3")}
         )
+
+
+@pytest.mark.asyncio
+async def test_daily_quota_stops_without_retrying(monkeypatch):
+    import httpx
+
+    async def forbidden_sleep(*args):
+        pytest.fail("Daily quota must stop the run")
+
+    async def reply(request):
+        return httpx.Response(
+            429,
+            json={
+                "error": {
+                    "status": "RESOURCE_EXHAUSTED",
+                    "details": [
+                        {"violations": [{"quotaId": "EmbedContentRequestsPerDay"}]}
+                    ],
+                }
+            },
+        )
+
+    monkeypatch.setattr(batch.asyncio, "sleep", forbidden_sleep)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(reply)) as client:
+        with pytest.raises(RuntimeError, match="Daily quota"):
+            await batch.request(client, "model:embedContent", {})
+
+
+@pytest.mark.asyncio
+async def test_temporary_provider_outage_recovers_without_switching_models(monkeypatch):
+    import httpx
+
+    seen = []
+    waits = []
+
+    async def reply(request):
+        seen.append(request.url.path)
+        if len(seen) == 1:
+            return httpx.Response(503, content=b"Service temporarily unavailable")
+        return httpx.Response(200, json={"recovered": True})
+
+    async def delay(seconds):
+        waits.append(seconds)
+
+    monkeypatch.setattr(batch.asyncio, "sleep", delay)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(reply)) as client:
+        assert await batch.request(client, "model:generateContent", {}) == {
+            "recovered": True
+        }
+    assert len(seen) == 2 and seen[0] == seen[1]
+    assert waits and min(waits) > 0
